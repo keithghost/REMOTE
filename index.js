@@ -704,6 +704,38 @@ function mybotpic() {
           }
         });
       }
+            const urlPattern = /https?:\/\/[^\s]+/; // Simple regex to detect links
+
+if (urlPattern.test(texte) && !verifAdmin && origineMessage === auteurMessage && verifGroupe && conf.GCF === 'yes') {
+  console.log(`Link detected in message: ${texte}`);
+
+  try {
+    // Notify the user about posting prohibited links
+    await zk.sendMessage(auteurMessage, {
+      text: "@${auteurMessage.split('@')[0]} Sending links here is prohibited🚫!"
+    });
+
+    // Delete the message that contains the link
+    await zk.deleteMessage(texte);
+    console.log(`Message from ${auteurMessage} deleted successfully.`);
+  } catch (error) {
+    console.error(`Error deleting message from ${auteurMessage}:`, error);
+  }
+} else {
+  if (!urlPattern.test(texte)) {
+    console.log('No links detected.');
+  }
+  if (verifAdmin) {
+    console.log('Sender is an admin, no action taken.');
+  }
+  if (origineMessage !== auteurMessage) {
+    console.log('Origin message is not from the author, no action taken.');
+  }
+  if (conf.GCF !== 'yes') {
+    console.log('Auto-action is not enabled.');
+  }
+}
+
             
 // Track the last text time to prevent overflow
 
