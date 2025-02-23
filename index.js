@@ -274,9 +274,6 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });
-
-      
-
         const isAnyLink = (message) => {
     // Regex pattern to detect any link
     const linkPattern = /https?:\/\/[^\s]+/;
@@ -315,17 +312,17 @@ zk.ev.on('messages.upsert', async (msg) => {
 
             // Check for any link
             if (isAnyLink(body)) {
-                // Delete the message
-                await zk.sendMessage(from, { delete: message.key });
-
-                // Remove the sender from the group
-                await zk.groupParticipantsUpdate(from, [sender], 'remove');
-
                 // Send a notification to the group
                 await zk.sendMessage(from, {
                     text: `🚫 Antilink detected 🚫\n\n@${sender.split('@')[0]} has been removed for sharing links.`,
                     mentions: [sender],
                 });
+
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
+
+                // Remove the sender from the group
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
             }
         }
     } catch (err) {
@@ -333,6 +330,10 @@ zk.ev.on('messages.upsert', async (msg) => {
     }
 });
 
+
+      
+
+        
        // Function to format notification message
 function createNotification(deletedMessage) {
   const deletedBy = deletedMessage.key.participant || deletedMessage.key.remoteJid;
