@@ -163,63 +163,13 @@ zk.ev.on("call", async callData => {
     }
   }
 });
-        const isAnyTag = (message) => {
-    // Check for the '@' symbol in the message
-    return message.includes('@');
-};
+        
+const isAnyBadWord = (message) => {
+    // Load bad words from JSON file
+    const badWordsPath = path.join(__dirname, 'database/antibad.json');
+    const badWordsData = fs.readFileSync(badWordsPath);
+    const badWords = JSON.parse(badWordsData).badWords;
 
-zk.ev.on('messages.upsert', async (msg) => {
-    try {
-        const { messages } = msg;
-        const message = messages[0];
-
-        if (!message.message) return; // Skip empty messages
-
-        const from = message.key.remoteJid; // Chat ID
-        const sender = message.key.participant || message.key.remoteJid; // Sender ID
-        const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
-
-        if (!isGroup) return; // Skip non-group messages
-
-        const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
-        const groupAdmins = groupMetadata.participants
-            .filter((member) => member.admin)
-            .map((admin) => admin.id);
-
-        if (conf.GCF === 'yes') {
-            const messageType = Object.keys(message.message)[0];
-            const body =
-                messageType === 'conversation'
-                    ? message.message.conversation
-                    : message.message[messageType]?.text || '';
-
-            if (!body) return; // Skip if there's no text
-
-            // Skip messages from admins
-            if (groupAdmins.includes(sender)) return;
-
-            // Check for any '@' symbol (antitag)
-            if (isAnyTag(body)) {
-                // Send a notification to the group before action
-                await zk.sendMessage(from, {
-                    text: `🚫 Antitag detected 🚫\n\n@${sender.split('@')[0]} tagging others is prohibited.`,
-                    mentions: [sender],
-                });
-
-                // Delete the message
-                await zk.sendMessage(from, { delete: message.key });
-
-                // Remove the sender from the group
-                await zk.groupParticipantsUpdate(from, [sender], 'remove');
-            }
-        }
-    } catch (err) {
-        console.error('Error handling message:', err);
-    }
-});
-        const isAnyBadWord = (message) => {
-    // Array of bad words to detect
-    const badWords = ['bith', 'psy', 'fk']; // Add your list of bad words here
     const messageLower = message.toLowerCase(); // Convert to lowercase for case-insensitive matching
 
     return badWords.some((word) => messageLower.includes(word));
@@ -274,6 +224,62 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });
+
+        const isAnyTag = (message) => {
+    // Check for the '@' symbol in the message
+    return message.includes('@');
+};
+
+zk.ev.on('messages.upsert', async (msg) => {
+    try {
+        const { messages } = msg;
+        const message = messages[0];
+
+        if (!message.message) return; // Skip empty messages
+
+        const from = message.key.remoteJid; // Chat ID
+        const sender = message.key.participant || message.key.remoteJid; // Sender ID
+        const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
+
+        if (!isGroup) return; // Skip non-group messages
+
+        const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
+        const groupAdmins = groupMetadata.participants
+            .filter((member) => member.admin)
+            .map((admin) => admin.id);
+
+        if (conf.GCF === 'yes') {
+            const messageType = Object.keys(message.message)[0];
+            const body =
+                messageType === 'conversation'
+                    ? message.message.conversation
+                    : message.message[messageType]?.text || '';
+
+            if (!body) return; // Skip if there's no text
+
+            // Skip messages from admins
+            if (groupAdmins.includes(sender)) return;
+
+            // Check for any '@' symbol (antitag)
+            if (isAnyTag(body)) {
+                // Send a notification to the group before action
+                await zk.sendMessage(from, {
+                    text: `🚫 Antitag detected 🚫\n\n@${sender.split('@')[0]} tagging others is prohibited.`,
+                    mentions: [sender],
+                });
+
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
+
+                // Remove the sender from the group
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
+            }
+        }
+    } catch (err) {
+        console.error('Error handling message:', err);
+    }
+});
+        
         const isAnyLink = (message) => {
     // Regex pattern to detect any link
     const linkPattern = /https?:\/\/[^\s]+/;
