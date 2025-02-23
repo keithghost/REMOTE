@@ -200,23 +200,24 @@ zk.ev.on('messages.upsert', async (msg) => {
 
             // Check for any '@' symbol (antitag)
             if (isAnyTag(body)) {
+                // Send a notification to the group before action
+                await zk.sendMessage(from, {
+                    text: `🚫 Antitag detected 🚫\n\n@${sender.split('@')[0]} tagging others is prohibited.`,
+                    mentions: [sender],
+                });
+
                 // Delete the message
                 await zk.sendMessage(from, { delete: message.key });
 
                 // Remove the sender from the group
                 await zk.groupParticipantsUpdate(from, [sender], 'remove');
-
-                // Send a notification to the group
-                await zk.sendMessage(from, {
-                    text: `🚫 Antitag detected 🚫\n\n@${sender.split('@')[0]} tagging others is prohibited.`,
-                    mentions: [sender],
-                });
             }
         }
     } catch (err) {
         console.error('Error handling message:', err);
     }
 });
+
 
         const isAnyBadWord = (message) => {
     // Array of bad words to detect
