@@ -225,7 +225,7 @@ zk.ev.on('messages.upsert', async (msg) => {
     }
 });
 
-        const isAnyTag = (message) => {
+       /* const isAnyTag = (message) => {
     // Check for the '@' symbol in the message
     return message.includes('@');
 };
@@ -278,7 +278,7 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});
+});*/
         
         const isAnyLink = (message) => {
     // Regex pattern to detect any link
