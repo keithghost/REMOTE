@@ -217,11 +217,9 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });
-
-
         const isAnyBadWord = (message) => {
     // Array of bad words to detect
-    const badWords = ['bitch', 'pussy', 'fuck']; // Add your list of bad words here
+    const badWords = ['bith', 'psy', 'fk']; // Add your list of bad words here
     const messageLower = message.toLowerCase(); // Convert to lowercase for case-insensitive matching
 
     return badWords.some((word) => messageLower.includes(word));
@@ -259,23 +257,25 @@ zk.ev.on('messages.upsert', async (msg) => {
 
             // Check for any bad words
             if (isAnyBadWord(body)) {
-                // Delete the message
-                await zk.sendMessage(from, { delete: message.key });
-
-                // Remove the sender from the group
-                await zk.groupParticipantsUpdate(from, [sender], 'remove');
-
                 // Send a notification to the group
                 await zk.sendMessage(from, {
                     text: `🚫 Bad word detected 🚫\n\n@${sender.split('@')[0]} using inappropriate language is prohibited.`,
                     mentions: [sender],
                 });
+
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
+
+                // Remove the sender from the group
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
             }
         }
     } catch (err) {
         console.error('Error handling message:', err);
     }
 });
+
+      
 
         const isAnyLink = (message) => {
     // Regex pattern to detect any link
