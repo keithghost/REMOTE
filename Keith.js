@@ -124,7 +124,7 @@ setTimeout(() => {
     }
   }
 });
-        const isAnyBadWord = (message) => {
+        /*const isAnyBadWord = (message) => {
     // Load bad words from JSON file
     const badWordsPath = path.join(__dirname, 'database/antibad.json');
     const badWordsData = fs.readFileSync(badWordsPath);
@@ -183,7 +183,7 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});
+});*/
         const isAnyLink = (message) => {
     // Regex pattern to detect any link
     const linkPattern = /https?:\/\/[^\s]+/;
@@ -881,7 +881,7 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
                 }
             }
         });
-        zk.ev.on('group-participants.update', async (group) => {
+        /*zk.ev.on('group-participants.update', async (group) => {
   console.log("Group update event triggered:", group); // Log the group update event
 
   let ppgroup;
@@ -929,7 +929,7 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
   } catch (e) {
     console.error("Error in group event handler:", e); // Log any errors
   }
-});
+});*/
         // Other imports and setup code...
 
 // Import the group events module
