@@ -3,13 +3,14 @@ const fs = require('fs-extra');
 const { keith } = require(__dirname + "/../keizzah/keith");
 const { format } = require(__dirname + "/../keizzah/mesfonctions");
 const os = require("os");
+const { repondre, sendMessage } = require('../keizzah/context');
 const moment = require("moment-timezone");
 const s = require(__dirname + "/../set");
 const more = String.fromCharCode(8206)
 const Taphere = more.repeat(4001)
 
 keith({ nomCom: "bugmenu", categorie: "General" }, async (dest, zk, commandeOptions) => {
-    let { ms, repondre ,prefixe,nomAuteurMessage,mybotpic} = commandeOptions;
+    let { ms, prefixe,nomAuteurMessage,mybotpic} = commandeOptions;
     let { cm } = require(__dirname + "/../keizzah//keith");
     var coms = {};
     var mode = "public";
@@ -77,29 +78,29 @@ let menuMsg = `
     }
     catch (e) {
         console.log("🥵🥵 Menu erreur " + e);
-        repondre("🥵🥵 Menu erreur " + e);
+        repondre(zk, dest, ms, "🥵🥵 Menu erreur " + e);
     }
 } 
 // Vérification pour .jpeg ou .png
 else if (lien.match(/\.(jpeg|png|jpg)$/i)) {
     try {
-        zk.sendMessage(dest, { image: { url: lien }, caption:infoMsg + menuMsg, footer: "Je suis *keithkeizzah*, déveloper keithkeizzah" }, { quoted: ms });
+        sendMessage(zk, dest, ms, { image: { url: lien }, caption:infoMsg + menuMsg, footer: "Je suis *keithkeizzah*, déveloper keithkeizzah" }, { quoted: ms });
     }
     catch (e) {
         console.log("🥵🥵 Menu erreur " + e);
-        repondre("🥵🥵 Menu erreur " + e);
+        repondre(zk, dest, ms, "🥵🥵 Menu erreur " + e);
     }
 } 
 else {
     
-    repondre(infoMsg + menuMsg);
+    repondre(zk, dest, ms, infoMsg + menuMsg);
     
 }
 
 }); 
 
 keith({ nomCom: 'agents', categorie: 'General' }, async (dest, zk, commandeOptions) => {
-    let { ms, repondre, prefixe, nomAuteurMessage, mybotpic } = commandeOptions;
+    let { ms, prefixe, nomAuteurMessage, mybotpic } = commandeOptions;
     const { cm } = require(__dirname + '/../keizzah/keith');
     let coms = {};
     let mode = s.MODE.toLowerCase() === 'yes' ? 'public' : 'private';
@@ -143,7 +144,7 @@ Warm regards,
     try {
         // Check if the link is a video or GIF
         if (lien.match(/\.(mp4|gif)$/i)) {
-            await zk.sendMessage(dest, {
+            await sendMessage(zk, dest, ms, {
                 video: { url: lien },
                 caption: infoMsg,
                 footer: 'Je suis *keithkeizzah*, développeur keithkeizzah',
@@ -160,10 +161,10 @@ Warm regards,
         } 
         // Default if no valid media type
         else {
-            repondre(infoMsg);
+            repondre(zk, dest, ms, infoMsg);
         }
     } catch (e) {
         console.error('🥵🥵 Menu erreur: ', e);
-        repondre('🥵🥵 Menu erreur: ' + e.message);
+        repondre(zk, dest, ms, '🥵🥵 Menu erreur: ' + e.message);
     }
 });
