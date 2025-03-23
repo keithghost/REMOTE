@@ -28,127 +28,81 @@ async function uploadToCatbox(filePath) {
 }
 
 // Define the command with aliases for play
-keith({
-  nomCom: "play",
-  aliases: ["song", "playdoc", "audio", "mp3"],
-  categorie: "download",
-  reaction: "🎥"
-}, async (dest, zk, commandOptions) => {
-  const { arg, ms } = commandOptions;
 
-  // Check if a query is provided
-  if (!arg[0]) {
-    return repondre(zk, dest, ms, "Please provide a video name.");
-  }
+  keith(
+    {
+      nomCom: "play",
+      aliases: ["song", "playdoc", "audio", "mp3"],
+      categorie: "download",
+      reaction: "🎥",
+    },
+    async (dest, zk, commandOptions) => {
+      const { arg, ms } = commandOptions;
 
-  const query = arg.join(" ");
+      // Check if a query is provided
+      if (!arg[0]) {
+        return repondre(zk, dest, ms, "Please provide a video name.");
+      }
 
-  try {
-    // Perform a YouTube search based on the query
-    const searchResults = await ytSearch(query);
+      const query = arg.join(" ");
 
-    // Check if any videos were found
-    if (!searchResults || !searchResults.videos.length) {
-      return repondre(zk, dest, ms, 'No video found for the specified query.');
-    }
-
-    const firstVideo = searchResults.videos[0];
-    const videoUrl = firstVideo.url;
-
-    // Function to get download data from APIs
-    const getDownloadData = async (url) => {
       try {
-        const response = await axios.get(url);
-        return response.data;
+        // Perform a YouTube search
+        const search = await ytSearch(query);
+        if (!search.all.length) {
+          return repondre(zk, dest, ms, "No results found for your query.");
+        }
+
+        const link = search.all[0].url;
+
+        // Generate the API URL
+        const apiUrl = `https://apis-keith.vercel.app/download/dlmp3?url=${link}`;
+
+        // Fetch the audio data from the API using axios
+        const response = await axios.get(apiUrl);
+        if (!response.data.status || !response.data.result) {
+          return repondre(
+            zk,
+            dest,
+            ms,
+            "Failed to fetch data from the API. Please try again."
+          );
+        }
+
+        const { title, downloadUrl, format, quality } = response.data.result;
+        const thumbnail = search.all[0].thumbnail;
+
+        // Send a message with song details and thumbnail
+        await sendMessage(zk, dest, ms, {
+          image: { url: thumbnail },
+          caption: `
+╭═════════════════⊷
+║ *Title*: ${title}
+║ *Format*: ${format}
+║ *Quality*: ${quality}
+╰═════════════════⊷
+*Powered by ${conf.BOT}*`,
+        });
+
+        // Send the audio file
+        await zk.sendMessage(dest, {
+          audio: { url: downloadUrl },
+          mimetype: "audio/mp4",
+        });
+
+        // Send the audio file as a document
+        await zk.sendMessage(dest, {
+          document: { url: downloadUrl },
+          mimetype: "audio/mp3",
+          fileName: `${title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
+        });
       } catch (error) {
-        console.error('Error fetching data from API:', error);
-        return { success: false };
+        // Handle unexpected errors
+        return repondre(zk, dest, ms, `An error occurred: ${error.message}`);
       }
-    };
-
-    // List of APIs to try
-    const apis = [
-      `https://api-rin-tohsaka.vercel.app/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
-      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(videoUrl)}`,
-      `https://www.dark-yasiya-api.site/download/ytmp3?url=${encodeURIComponent(videoUrl)}`,
-      `https://api.giftedtech.web.id/api/download/dlmp3?url=${encodeURIComponent(videoUrl)}&apikey=gifted-md`,
-      `https://api.dreaded.site/api/ytdl/audio?url=${encodeURIComponent(videoUrl)}`
-    ];
-
-    let downloadData;
-    for (const api of apis) {
-      downloadData = await getDownloadData(api);
-      if (downloadData && downloadData.success) break;
     }
-
-    // Check if a valid download URL was found
-    if (!downloadData || !downloadData.success) {
-      return repondre(zk, dest, ms, 'Failed to retrieve download URL from all sources. Please try again later.');
-    }
-
-    const downloadUrl = downloadData.result.download_url;
-    const videoDetails = downloadData.result;
-
-    // Prepare the message payload with external ad details
-    const messagePayloads = [
-      {
-        audio: { url: downloadUrl },
-        mimetype: 'audio/mp4',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
-      },
-      {
-        document: { url: downloadUrl },
-        mimetype: 'audio/mpeg',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
-      },
-      {
-        document: { url: downloadUrl },
-        mimetype: 'audio/mp4',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
-      }
-    ];
-
-    // Send the download link to the user for each payload
-    for (const messagePayload of messagePayloads) {
-      await sendMessage(zk, dest, ms, messagePayload);
-    }
-
-  } catch (error) {
-    console.error('Error during download process:', error);
-    return repondre(zk, dest, ms, `Download failed due to an error: ${error.message || error}`);
-  }
-});
-
+  );
+};
 // Define the command with aliases for video
 keith({
   nomCom: "video",
