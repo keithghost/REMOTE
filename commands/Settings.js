@@ -1,10 +1,9 @@
-
 const { keith } = require("../keizzah/keith");
 const conf = require(__dirname + "/../set");
 const axios = require('axios');
+const { repondre, sendMessage } = require('../keizzah/context');
 
-
-
+// Joke Command
 keith({
   nomCom: "joke",
   aliases: ["jokeapi", "getjoke"],
@@ -12,7 +11,7 @@ keith({
   categorie: "fun",
   reaction: '😂',
 }, async (dest, zk, context) => {
-  const { repondre } = context;
+  const { ms } = context;
 
   try {
     const apiUrl = "https://v2.jokeapi.dev/joke/Any?type=single";
@@ -20,7 +19,7 @@ keith({
     const data = response.data;
 
     if (data.error) {
-      return repondre("❌ Error fetching joke. Please try again later.");
+      return repondre(zk, dest, ms, "❌ Error fetching joke. Please try again later.");
     }
 
     let jokeMessage = `😂 *Random Joke:*\n\n${data.joke}\n\n`;
@@ -28,20 +27,21 @@ keith({
     jokeMessage += `*Safe:* ${data.safe}\n`;
     jokeMessage += `*ID:* ${data.id}\n`;
 
-    repondre(jokeMessage);
+    repondre(zk, dest, ms, jokeMessage);
   } catch (error) {
     console.error("Error fetching joke:", error);
-    repondre("❌ Error fetching joke. Please try again later.");
+    repondre(zk, dest, ms, "❌ Error fetching joke. Please try again later.");
   }
 });
 
+// Cricket Command
 keith({
   nomCom: "cricket",
   categorie: "soccer",
   desc: "Sends info of given query from Google Search.",
   reaction: "🏏",
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms } = commandeOptions;
+  const { ms } = commandeOptions;
 
   try {
     const apiUrl = "https://api.cricapi.com/v1/currentMatches?apikey=f68d1cb5-a9c9-47c5-8fcd-fbfe52bace78";
@@ -49,7 +49,7 @@ keith({
     const data = response.data;
 
     if (!data || !data.data.length) {
-      return repondre("*_Please Wait, Getting Cricket Info_*");
+      return repondre(zk, dest, ms, "*_Please Wait, Getting Cricket Info_*");
     }
 
     let text = "";
@@ -63,13 +63,14 @@ keith({
       text += `*Match Ended:* ${data.data[i].matchEnded}\n\n`;
     }
 
-    return repondre(text, { quoted: ms });
+    return repondre(zk, dest, ms, text);
   } catch (error) {
     console.error("*_Uhh dear, Did not get any results!_*", error);
-    return repondre("*_Uhh dear, Didn't get any results!_*");
+    return repondre(zk, dest, ms, "*_Uhh dear, Didn't get any results!_*");
   }
 });
 
+// Timezone Command
 keith({
   nomCom: "timezone",
   aliases: ["timee", "datee"],
@@ -77,18 +78,15 @@ keith({
   categorie: "tools",
   reaction: '🕒',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const timezone = arg[0];
 
   if (!timezone) {
-    return repondre("❌ Please provide a timezone code. Example: .timezone TZ");
+    return repondre(zk, dest, ms, "❌ Please provide a timezone code. Example: .timezone TZ");
   }
 
   try {
-    // Get current date and time
     const now = new Date();
-    
-    // Get local time and date in the specified timezone
     const options = { 
       hour: "2-digit", 
       minute: "2-digit", 
@@ -108,14 +106,14 @@ keith({
     const localTime = now.toLocaleTimeString("en-US", options);
     const localDate = now.toLocaleDateString("en-US", timeOptions);
 
-    // Send the local time and date as reply
-    repondre(`🕒 Current Local Time: ${localTime}\n📅 Current Date: ${localDate}`);
+    repondre(zk, dest, ms, `🕒 Current Local Time: ${localTime}\n📅 Current Date: ${localDate}`);
   } catch (e) {
     console.error("Error in .timezone command:", e);
-    repondre("❌ An error occurred. Please try again later.");
+    repondre(zk, dest, ms, "❌ An error occurred. Please try again later.");
   }
 });
 
+// Color Command
 keith({
   nomCom: "color",
   aliases: ["rcolor", "colorcode"],
@@ -123,7 +121,7 @@ keith({
   categorie: "coding",
   reaction: '⚔️',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   
   try {
     const colorNames = [
@@ -134,14 +132,14 @@ keith({
     const randomColorHex = "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
     const randomColorName = colorNames[Math.floor(Math.random() * colorNames.length)];
 
-    repondre(`🎨 *Random Color:* \nName: ${randomColorName}\nCode: ${randomColorHex}`);
+    repondre(zk, dest, ms, `🎨 *Random Color:* \nName: ${randomColorName}\nCode: ${randomColorHex}`);
   } catch (e) {
     console.error("Error in .color command:", e);
-    repondre("❌ An error occurred while generating the random color.");
+    repondre(zk, dest, ms, "❌ An error occurred while generating the random color.");
   }
 });
 
-
+// Binary Command
 keith({
   nomCom: "binary",
   aliases: ["binarydgt", "binarycode"],
@@ -149,11 +147,11 @@ keith({
   categorie: "coding",
   reaction: '⚔️',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
   
   if (!text) {
-    return repondre('Please provide a text to convert to binary.');
+    return repondre(zk, dest, ms, 'Please provide a text to convert to binary.');
   }
 
   try {
@@ -161,13 +159,14 @@ keith({
       return `00000000${char.charCodeAt(0).toString(2)}`.slice(-8);
     }).join(' ');
 
-    repondre(`🔑 *Binary Representation:* \n${binaryText}`);
+    repondre(zk, dest, ms, `🔑 *Binary Representation:* \n${binaryText}`);
   } catch (e) {
     console.error("Error in .binary command:", e);
-    repondre("❌ An error occurred while converting to binary.");
+    repondre(zk, dest, ms, "❌ An error occurred while converting to binary.");
   }
 });
 
+// Decode Binary Command
 keith({
   nomCom: "dbinary",
   aliases: ["binarydecode", "decodebinary"],
@@ -175,11 +174,11 @@ keith({
   categorie: "coding",
   reaction: '🔓',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
   
   if (!text) {
-    return repondre("❌ Please provide the binary string to decode.");
+    return repondre(zk, dest, ms, "❌ Please provide the binary string to decode.");
   }
 
   try {
@@ -188,13 +187,14 @@ keith({
       return String.fromCharCode(parseInt(bin, 2));
     }).join('');
 
-    repondre(`🔓 *Decoded Text:* \n${textDecoded}`);
+    repondre(zk, dest, ms, `🔓 *Decoded Text:* \n${textDecoded}`);
   } catch (e) {
     console.error("Error in .dbinary command:", e);
-    repondre("❌ An error occurred while decoding the binary string.");
+    repondre(zk, dest, ms, "❌ An error occurred while decoding the binary string.");
   }
 });
 
+// Base64 Encode Command
 keith({
   nomCom: "base64",
   aliases: ["base64encode", "encodebase64"],
@@ -202,25 +202,23 @@ keith({
   categorie: "coding",
   reaction: '🔑',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
   if (!text) {
-    return repondre("❌ Please provide the text to encode into Base64.");
+    return repondre(zk, dest, ms, "❌ Please provide the text to encode into Base64.");
   }
 
   try {
-    // Encode the text into Base64
     const encodedText = Buffer.from(text).toString('base64');
-    
-    // Send the encoded Base64 text
-    repondre(`🔑 *Encoded Base64 Text:* \n${encodedText}`);
+    repondre(zk, dest, ms, `🔑 *Encoded Base64 Text:* \n${encodedText}`);
   } catch (e) {
     console.error("Error in .base64 command:", e);
-    repondre("❌ An error occurred while encoding the text into Base64.");
+    repondre(zk, dest, ms, "❌ An error occurred while encoding the text into Base64.");
   }
 });
 
+// Base64 Decode Command
 keith({
   nomCom: "unbase64",
   aliases: ["base64decode", "decodebase64"],
@@ -228,25 +226,23 @@ keith({
   categorie: "coding",
   reaction: '🔓',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
   if (!text) {
-    return repondre("❌ Please provide the Base64 encoded text to decode.");
+    return repondre(zk, dest, ms, "❌ Please provide the Base64 encoded text to decode.");
   }
 
   try {
-    // Decode the Base64 text
     const decodedText = Buffer.from(text, 'base64').toString('utf-8');
-    
-    // Send the decoded text
-    repondre(`🔓 *Decoded Text:* \n${decodedText}`);
+    repondre(zk, dest, ms, `🔓 *Decoded Text:* \n${decodedText}`);
   } catch (e) {
     console.error("Error in .unbase64 command:", e);
-    repondre("❌ An error occurred while decoding the Base64 text.");
+    repondre(zk, dest, ms, "❌ An error occurred while decoding the Base64 text.");
   }
 });
 
+// URL Encode Command
 keith({
   nomCom: "urlencode",
   aliases: ["urlencode", "encodeurl"],
@@ -254,25 +250,23 @@ keith({
   categorie: "coding",
   reaction: '🔑',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
   if (!text) {
-    return repondre("❌ Please provide the text to encode into URL encoding.");
+    return repondre(zk, dest, ms, "❌ Please provide the text to encode into URL encoding.");
   }
 
   try {
-    // Encode the text into URL encoding
     const encodedText = encodeURIComponent(text);
-
-    // Send the encoded URL text
-    repondre(`🔑 *Encoded URL Text:* \n${encodedText}`);
+    repondre(zk, dest, ms, `🔑 *Encoded URL Text:* \n${encodedText}`);
   } catch (e) {
     console.error("Error in .urlencode command:", e);
-    repondre("❌ An error occurred while encoding the text.");
+    repondre(zk, dest, ms, "❌ An error occurred while encoding the text.");
   }
 });
 
+// URL Decode Command
 keith({
   nomCom: "urldecode",
   aliases: ["decodeurl", "urldecode"],
@@ -280,23 +274,23 @@ keith({
   categorie: "coding",
   reaction: '🔓',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
   if (!text) {
-    return repondre("❌ Please provide the URL encoded text to decode.");
+    return repondre(zk, dest, ms, "❌ Please provide the URL encoded text to decode.");
   }
 
   try {
     const decodedText = decodeURIComponent(text);
-
-    repondre(`🔓 *Decoded Text:* \n${decodedText}`);
+    repondre(zk, dest, ms, `🔓 *Decoded Text:* \n${decodedText}`);
   } catch (e) {
     console.error("Error in .urldecode command:", e);
-    repondre("❌ An error occurred while decoding the URL encoded text.");
+    repondre(zk, dest, ms, "❌ An error occurred while decoding the URL encoded text.");
   }
 });
 
+// Dice Command
 keith({
   nomCom: "dice",
   aliases: ["rolldice", "diceroll", "roll"],
@@ -304,20 +298,18 @@ keith({
   categorie: "fun",
   reaction: '🎲',
 }, async (dest, zk, context) => {
-  const { repondre } = context;
+  const { ms } = context;
   
   try {
-    // Roll a dice (generate a random number between 1 and 6)
     const result = Math.floor(Math.random() * 6) + 1;
-    
-    // Send the result
-    repondre(`🎲 You rolled: *${result}*`);
+    repondre(zk, dest, ms, `🎲 You rolled: *${result}*`);
   } catch (e) {
     console.error("Error in .roll command:", e);
-    repondre("❌ An error occurred while rolling the dice.");
+    repondre(zk, dest, ms, "❌ An error occurred while rolling the dice.");
   }
 });
 
+// Coinflip Command
 keith({
   nomCom: "coinflip",
   aliases: ["flipcoin", "coinflip"],
@@ -325,20 +317,18 @@ keith({
   categorie: "fun",
   reaction: '🪙',
 }, async (dest, zk, context) => {
-  const { repondre } = context;
+  const { ms } = context;
   
   try {
-    // Simulate coin flip (randomly choose Heads or Tails)
     const result = Math.random() < 0.5 ? "Heads" : "Tails";
-    
-    // Send the result
-    repondre(`🪙 Coin Flip Result: *${result}*`);
+    repondre(zk, dest, ms, `🪙 Coin Flip Result: *${result}*`);
   } catch (e) {
     console.error("Error in .coinflip command:", e);
-    repondre("❌ An error occurred while flipping the coin.");
+    repondre(zk, dest, ms, "❌ An error occurred while flipping the coin.");
   }
 });
 
+// Flip Text Command
 keith({
   nomCom: "flip",
   aliases: ["fliptext", "textflip"],
@@ -346,25 +336,23 @@ keith({
   categorie: "fun",
   reaction: '🔄',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
   if (!text) {
-    return repondre("❌ Please provide the text to flip.");
+    return repondre(zk, dest, ms, "❌ Please provide the text to flip.");
   }
 
   try {
-    // Flip the text
     const flippedText = text.split('').reverse().join('');
-    
-    // Send the flipped text
-    repondre(`🔄 Flipped Text: *${flippedText}*`);
+    repondre(zk, dest, ms, `🔄 Flipped Text: *${flippedText}*`);
   } catch (e) {
     console.error("Error in .flip command:", e);
-    repondre("❌ An error occurred while flipping the text.");
+    repondre(zk, dest, ms, "❌ An error occurred while flipping the text.");
   }
 });
 
+// Pick Command
 keith({
   nomCom: "pick",
   aliases: ["choose", "select"],
@@ -372,27 +360,24 @@ keith({
   categorie: "fun",
   reaction: '🎉',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
-  // Ensure two options are provided
   if (!text.includes(',')) {
-    return repondre("❌ Please provide two choices to pick from. Example: `.pick Ice Cream, Pizza`");
+    return repondre(zk, dest, ms, "❌ Please provide two choices to pick from. Example: `.pick Ice Cream, Pizza`");
   }
 
   try {
-    // Pick a random option
     const options = text.split(',').map(option => option.trim());
     const choice = options[Math.floor(Math.random() * options.length)];
-
-    // Send the result
-    repondre(`🎉 Bot picks: *${choice}*`);
+    repondre(zk, dest, ms, `🎉 Bot picks: *${choice}*`);
   } catch (e) {
     console.error("Error in .pick command:", e);
-    repondre("❌ An error occurred while processing your request.");
+    repondre(zk, dest, ms, "❌ An error occurred while processing your request.");
   }
 });
 
+// Timenow Command
 keith({
   nomCom: "timenow",
   aliases: ["currenttime", "time"],
@@ -400,30 +385,25 @@ keith({
   categorie: "tools",
   reaction: '🕒',
 }, async (dest, zk, context) => {
-  const { repondre } = context;
+  const { ms } = context;
   
   try {
-    // Get current date and time
     const now = new Date();
-    
-    // Get local time in the configured timezone
     const localTime = now.toLocaleTimeString("en-US", { 
       hour: "2-digit", 
       minute: "2-digit", 
       second: "2-digit", 
       hour12: true,
-      timeZone: conf.TIMEZONE, // Using the configured timezone from set.js
+      timeZone: conf.TIMEZONE,
     });
-    
-    // Send the local time as reply
-    repondre(`🕒 Current Local Time: ${localTime}`);
+    repondre(zk, dest, ms, `🕒 Current Local Time: ${localTime}`);
   } catch (e) {
     console.error("Error in .timenow command:", e);
-    repondre("❌ An error occurred. Please try again later.");
+    repondre(zk, dest, ms, "❌ An error occurred. Please try again later.");
   }
 });
 
-
+// Date Command
 keith({
   nomCom: "date",
   aliases: ["currentdate", "todaydate"],
@@ -431,29 +411,24 @@ keith({
   categorie: "tools",
   reaction: '📅',
 }, async (dest, zk, context) => {
-  const { repondre } = context;
+  const { ms } = context;
 
   try {
-    // Get current date
     const now = new Date();
-    
-    // Get the formatted date (e.g., "Monday, January 15, 2025")
     const currentDate = now.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric"
     });
-    
-    // Send the current date as reply
-    repondre(`📅 Current Date: ${currentDate}`);
+    repondre(zk, dest, ms, `📅 Current Date: ${currentDate}`);
   } catch (e) {
     console.error("Error in .date command:", e);
-    repondre("❌ An error occurred. Please try again later.");
+    repondre(zk, dest, ms, "❌ An error occurred. Please try again later.");
   }
 });
 
-
+// Calculate Command
 keith({
   nomCom: "calculate",
   aliases: ["calc", "maths", "math"],
@@ -461,31 +436,27 @@ keith({
   categorie: "tools",
   reaction: '✳️',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
-  // Ensure arguments are provided
   if (!text) {
-    return repondre("✳️ Use this command like:\n *Example:* .calculate 5+3*2");
+    return repondre(zk, dest, ms, "✳️ Use this command like:\n *Example:* .calculate 5+3*2");
   }
 
-  // Validate the input to prevent unsafe operations
   if (!/^[0-9+\-*/().\s]+$/.test(text)) {
-    return repondre("❎ Invalid expression. Only numbers and +, -, *, /, ( ) are allowed.");
+    return repondre(zk, dest, ms, "❎ Invalid expression. Only numbers and +, -, *, /, ( ) are allowed.");
   }
 
   try {
-    // Evaluate the mathematical expression
-    let result = eval(text);
-
-    // Reply with the result
-    repondre(`✅ Result of "${text}" is: ${result}`);
+    const result = eval(text);
+    repondre(zk, dest, ms, `✅ Result of "${text}" is: ${result}`);
   } catch (e) {
     console.error("Error in .calculate command:", e);
-    repondre("❎ Error in calculation. Please check your expression.");
+    repondre(zk, dest, ms, "❎ Error in calculation. Please check your expression.");
   }
 });
 
+// Emojify Command
 keith({
   nomCom: "emojify",
   aliases: ["emoji", "txtemoji"],
@@ -493,71 +464,30 @@ keith({
   categorie: "fun",
   reaction: '🙂',
 }, async (dest, zk, context) => {
-  const { repondre, arg } = context;
+  const { ms, arg } = context;
   const text = arg.join(" ");
 
-  // If no valid text is provided
   if (!text) {
-    return repondre("❌ Please provide some text to convert into emojis!");
+    return repondre(zk, dest, ms, "❌ Please provide some text to convert into emojis!");
   }
 
   try {
-    // Map text to corresponding emoji characters
     const emojiMapping = {
-      "a": "🅰️",
-      "b": "🅱️",
-      "c": "🇨️",
-      "d": "🇩️",
-      "e": "🇪️",
-      "f": "🇫️",
-      "g": "🇬️",
-      "h": "🇭️",
-      "i": "🇮️",
-      "j": "🇯️",
-      "k": "🇰️",
-      "l": "🇱️",
-      "m": "🇲️",
-      "n": "🇳️",
-      "o": "🅾️",
-      "p": "🇵️",
-      "q": "🇶️",
-      "r": "🇷️",
-      "s": "🇸️",
-      "t": "🇹️",
-      "u": "🇺️",
-      "v": "🇻️",
-      "w": "🇼️",
-      "x": "🇽️",
-      "y": "🇾️",
-      "z": "🇿️",
-      "0": "0️⃣",
-      "1": "1️⃣",
-      "2": "2️⃣",
-      "3": "3️⃣",
-      "4": "4️⃣",
-      "5": "5️⃣",
-      "6": "6️⃣",
-      "7": "7️⃣",
-      "8": "8️⃣",
-      "9": "9️⃣",
-      " ": "␣" // for space
+      "a": "🅰️", "b": "🅱️", "c": "🇨️", "d": "🇩️", "e": "🇪️", "f": "🇫️", "g": "🇬️", "h": "🇭️", "i": "🇮️", "j": "🇯️",
+      "k": "🇰️", "l": "🇱️", "m": "🇲️", "n": "🇳️", "o": "🅾️", "p": "🇵️", "q": "🇶️", "r": "🇷️", "s": "🇸️", "t": "🇹️",
+      "u": "🇺️", "v": "🇻️", "w": "🇼️", "x": "🇽️", "y": "🇾️", "z": "🇿️", "0": "0️⃣", "1": "1️⃣", "2": "2️⃣", "3": "3️⃣",
+      "4": "4️⃣", "5": "5️⃣", "6": "6️⃣", "7": "7️⃣", "8": "8️⃣", "9": "9️⃣", " ": "␣"
     };
 
-    // Convert the input text into emoji form
     const emojiText = text.toLowerCase().split("").map(char => emojiMapping[char] || char).join("");
-
-    await zk.sendMessage(dest, {
-      text: emojiText,
-    }, { quoted: context.ms });
-
+    await sendMessage(zk, dest, ms, { text: emojiText });
   } catch (e) {
     console.error("Error in .emoji command:", e);
-    repondre(`❌ Error: ${e.message}`);
+    repondre(zk, dest, ms, `❌ Error: ${e.message}`);
   }
 });
 
-
-
+// News Command
 keith({
   nomCom: "news",
   aliases: ["latestnews", "newsheadlines"],
@@ -565,7 +495,7 @@ keith({
   categorie: "AI",
   reaction: '📰',
 }, async (dest, zk, context) => {
-  const { repondre, from } = context;
+  const { ms } = context;
 
   try {
     const apiKey = "0f2c43ab11324578a7b1709651736382";
@@ -573,10 +503,9 @@ keith({
     const articles = response.data.articles;
 
     if (!articles.length) {
-      return repondre("No news articles found.");
+      return repondre(zk, dest, ms, "No news articles found.");
     }
 
-    // Send each article as a separate message with image and title
     for (let i = 0; i < Math.min(articles.length, 5); i++) {
       const article = articles[i];
       let message = `
@@ -587,21 +516,14 @@ keith({
 © Powered by ${conf.BOT}
       `;
 
-      console.log('Article URL:', article.urlToImage); // Log image URL for debugging
-
       if (article.urlToImage) {
-        // Send image with caption
-        await zk.sendMessage(dest, { image: { url: article.urlToImage }, caption: message });
+        await sendMessage(zk, dest, ms, { image: { url: article.urlToImage }, caption: message });
       } else {
-        // Send text message if no image is available
-        await zk.sendMessage(dest, { text: message });
+        await sendMessage(zk, dest, ms, { text: message });
       }
     }
   } catch (e) {
     console.error("Error fetching news:", e);
-    repondre("Could not fetch news. Please try again later.");
+    repondre(zk, dest, ms, "Could not fetch news. Please try again later.");
   }
 });
-
-
-
