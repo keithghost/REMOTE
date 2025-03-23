@@ -7,7 +7,7 @@ keith({
   nomCom: "google",
   categorie: "Search"
 }, async (dest, zk, commandeOptions) => {
-  const { arg, repondre, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
 
   if (!arg[0] || arg === "") {
     return repondre(zk, dest, ms, "Give me a query.\n*Example: .google What is a bot.*");
@@ -48,7 +48,7 @@ keith({
   nomCom: "movie",
   categorie: "Search"
 }, async (dest, zk, commandeOptions) => {
-  const { arg, repondre, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
 
   if (!arg[0] || arg === "") {
     return repondre(zk, dest, ms, "Give the name of a series or film.");
@@ -103,7 +103,7 @@ keith({
   nomCom: "emomix",
   categorie: "Conversion"
 }, async (dest, zk, commandeOptions) => {
-  const { arg, repondre, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
 
   if (!arg[0] || arg.length !== 1) {
     return repondre(zk, dest, ms, "Incorrect use. Example: .emojimix 😀;🥰");
@@ -133,7 +133,7 @@ keith({
         background: "transparent",
       });
       const stickerBuffer2 = await stickerMess.toBuffer();
-      await sendMessage(zk, dest, ms, { sticker: stickerBuffer2 });
+      await zk.sendMessage(dest, { sticker: stickerBuffer2 });
 
     } else {
       await repondre(zk, dest, ms, "Unable to create emoji mix.");
