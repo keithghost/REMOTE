@@ -1,5 +1,7 @@
 const { keith } = require("../keizzah/keith");
 const ai = require('unlimited-ai');
+const { repondre, sendMessage } = require('../keizzah/context');
+const { repondree, sendMessagee } = require('../keizzah/context2');
 const axios = require('axios');
 const wiki = require('wikipedia');
 const conf = require(__dirname + "/../set");
@@ -29,7 +31,7 @@ const fetchStandings = async (league, leagueName, zk, context) => {
     }
   } catch (error) {
     console.error(`Error fetching ${leagueName} standings:`, error);
-    await repondre('Something went wrong. Unable to fetch standings.');
+    await repondre(zk, dest, ms, 'Something went wrong. Unable to fetch standings.');
   }
 };
 
@@ -89,7 +91,7 @@ keith({
 
   // Check if the text is empty or invalid
   if (!text) {
-    return repondre('🚩 Please specify an endpoint or query!\n\n*Examples:*\ncompetitions/PL/standings\ncompetitions/SA/scorers\n\nCheck API documentation for more queries: https://www.football-data.org/documentation/quickstart');
+    return repondre(zk, dest, ms, '🚩 Please specify an endpoint or query!\n\n*Examples:*\ncompetitions/PL/standings\ncompetitions/SA/scorers\n\nCheck API documentation for more queries: https://www.football-data.org/documentation/quickstart');
   }
 
   try {
@@ -210,7 +212,7 @@ keith({
 
   } catch (error) {
     console.error("Error fetching tech news:", error);
-    await repondre("Sorry, there was an error retrieving the news. Please try again later.\n" + error);
+    await repondre(zk, dest, ms, "Sorry, there was an error retrieving the news. Please try again later.\n" + error);
   }
 });
 
@@ -224,7 +226,7 @@ keith({
   const reference = arg.join(" ");
   
   if (!reference) {
-    return repondre("Please specify the book, chapter, and verse you want to read. Example: bible john 3:16", {
+    return repondre(zk, dest, ms, "Please specify the book, chapter, and verse you want to read. Example: bible john 3:16", {
       contextInfo: {
         externalAdReply: {
           title: "Bible Reference Required",
@@ -242,7 +244,7 @@ keith({
     const response = await axios.get(`https://bible-api.com/${reference}`);
     
     if (!response.data) {
-      return repondre("Invalid reference. Example: bible john 3:16", {
+      return repondre(zk, dest, ms, "Invalid reference. Example: bible john 3:16", {
         contextInfo: {
           externalAdReply: {
             title: "Invalid Bible Reference",
@@ -312,7 +314,7 @@ keith({
   const term = arg.join(" ");
 
   if (!term) {
-    return repondre("Please provide a term to define.");
+    return repondre(zk, dest, ms, "Please provide a term to define.");
   }
 
   try {
@@ -341,11 +343,11 @@ keith({
       }, { quoted: ms });
 
     } else {
-      return repondre(`No result found for "${term}".`);
+      return repondre(zk, dest, ms, `No result found for "${term}".`);
     }
   } catch (error) {
     console.error(error);
-    return repondre("An error occurred while fetching the definition.");
+    return repondre(zk, dest, ms, "An error occurred while fetching the definition.");
   }
 });
 
@@ -359,13 +361,13 @@ keith({
 
   if (!arg || arg.length === 0) {
     const replyText = "Example Usage: .code 2541111xxxxx.";
-    return repondre(replyText);
+    return repondre(zk, dest, ms, replyText);
   }
 
   try {
     // Notify user that pairing is in progress
     const replyText = "*Wait Alpha Md is getting your pair code 💧✅...*";
-    await repondre(replyText);
+    await repondre(zk, dest, ms, replyText);
 
     // Prepare the API request
     const encodedNumber = encodeURIComponent(arg.join(" "));
@@ -399,7 +401,7 @@ keith({
   } catch (error) {
     console.error("Error getting API response:", error.message);
     const replyText = "Error getting response from API.";
-    repondre(replyText);
+    repondre(zk, dest, ms, replyText);
   }
 });
 
@@ -412,14 +414,14 @@ keith({
   const elementQuery = arg.join(" ").trim();
 
   if (!elementQuery) {
-    return repondre("Please provide an element symbol or name.");
+    return repondre(zk, dest, ms, "Please provide an element symbol or name.");
   }
 
   try {
     const response = await axios.get(`https://api.popcat.xyz/periodic-table?element=${elementQuery}`);
     
     if (!response.data) {
-      return repondre("Could not find information for the provided element. Please check the symbol or name.");
+      return repondre(zk, dest, ms, "Could not find information for the provided element. Please check the symbol or name.");
     }
 
     const data = response.data;
@@ -454,7 +456,7 @@ Regards ${conf.BOT} `;
 
   } catch (error) {
     console.error("Error fetching the element data:", error);
-    repondre("An error occurred while fetching the element data. Please try again later.");
+    repondre(zk, dest, ms, "An error occurred while fetching the element data. Please try again later.");
   }
 });
 
@@ -468,7 +470,7 @@ keith({
   const githubUsername = arg.join(" ");
 
   if (!githubUsername) {
-    return repondre("Give me a valid GitHub username like: github keithkeizzah");
+    return repondre(zk, dest, ms, "Give me a valid GitHub username like: github keithkeizzah");
   }
 
   try {
@@ -476,7 +478,7 @@ keith({
     const data = response.data;
 
     if (data.message === "Not Found") {
-      return repondre(`User ${githubUsername} not found.`);
+      return repondre(zk, dest, ms, `User ${githubUsername} not found.`);
     }
 
     const thumb = data.avatar_url; // Using the avatar_url as the thumbnail
@@ -513,7 +515,7 @@ keith({
 
   } catch (error) {
     console.error("Error fetching GitHub user data:", error);
-    await repondre("An error occurred while fetching GitHub user data.");
+    await repondre(zk, dest, ms, "An error occurred while fetching GitHub user data.");
   }
 });
 
@@ -627,7 +629,7 @@ keith({
   const text = arg.join(" ").trim(); 
 
   try {
-    if (!text) return repondre(`Provide the term to search,\nE.g What is JavaScript!`);
+    if (!text) return repondre(zk, dest, ms, `Provide the term to search,\nE.g What is JavaScript!`);
     
     // Fetch summary from Wikipedia
     const con = await wiki.summary(text);
@@ -658,11 +660,11 @@ keith({
   reaction: '⚔️',
   categorie: "search"
 }, async (dest, zk, params) => {
-  const { repondre: sendResponse, arg: commandArgs, ms } = params;
+  const { arg: commandArgs, ms } = params;
   const text = commandArgs.join(" ").trim();
 
   if (!text) {
-    return sendResponse("Please provide a song name.");
+    return repondre(zk, dest, ms, "Please provide a song name.");
   }
 
   // Function to get lyrics data from APIs
@@ -691,7 +693,7 @@ keith({
 
   // Check if lyrics data was found
   if (!lyricsData || !lyricsData.result || !lyricsData.result.lyrics) {
-    return sendResponse(`Failed to retrieve lyrics. Please try again.`);
+    return repondre(zk, dest, ms, `Failed to retrieve lyrics. Please try again.`);
   }
 
   const { title, artist, thumb, lyrics } = lyricsData.result;
@@ -717,7 +719,6 @@ keith({
   } catch (error) {
     console.error('Error fetching or sending image:', error);
     // Fallback to sending just the text if image fetch fails
-    await sendResponse(caption);
+    await repondre(zk, dest, ms, caption);
   }
 });
- 
