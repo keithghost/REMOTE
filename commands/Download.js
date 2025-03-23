@@ -35,7 +35,7 @@ keith({
     zk.sendMessage(origineMessage, infoMess, { quoted: ms });
 
     // Fetch the audio download URL from the API
-    const apiUrl = `https://apis-keith.vercel.app/download/dlmp3?url=${videoUrl}`;
+    const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${videoUrl}`;
     const response = await axios.get(apiUrl);
 
     if (!response.data.status || !response.data.result.downloadUrl) {
@@ -46,7 +46,7 @@ keith({
     const audioUrl = response.data.result.downloadUrl;
 
     // Send the audio file directly using the URL
-    zk.sendMessage(origineMessage, { audio: { url: audioUrl }, mimetype: 'audio/mp3' }, { quoted: ms, ptt: false });
+    zk.sendMessage(origineMessage, { video: { url: audioUrl }, mimetype: 'video/mp4' }, { quoted: ms });
 
   } catch (error) {
     console.error('Error during search or download:', error);
