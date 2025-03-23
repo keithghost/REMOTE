@@ -1010,18 +1010,16 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
                 
                 if ((conf.DP).toLowerCase() === 'yes') {
                     let cmsg = `╭════⊷
-║ *『ALPHA MD is CONNECTED』*
-║    Creator: *Keith huncho*
-║    Prefix : [ ${prefixe} ]
-║    Mode :${md}
-║    Total Commands : ${evt.cm.length}︎
+║ *『 ${conf.BOT} 𝐢𝐬 𝐎𝐧𝐥𝐢𝐧𝐞』*
+║    ᴏᴡɴᴇʀ: ${conf.OWNER_NAME}
+║    ᴘʀᴇꜰɪx : [ ${prefixe} ]
+║    ᴍᴏᴅᴇ :${md}︎
 ╰═════════════════⊷
 
 ╭───◇
-┃ 
 ┃
-┃ bot is active 
-
+┃ bot is active enjoy
+┃
 ╰═════════════════⊷`;
                     await zk.sendMessage(zk.user.id, { text: cmsg });
                 }
