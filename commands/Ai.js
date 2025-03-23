@@ -43,7 +43,7 @@ keith({
   reaction: '🎎',
   categorie: "search"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, arg, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
   const reference = arg.join(" ");
   
   if (!reference) {
@@ -119,7 +119,7 @@ keith({
   reaction: '😁',
   categorie: "Search"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, arg, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
   const term = arg.join(" ");
 
   if (!term) {
@@ -166,7 +166,7 @@ keith({
   reaction: '🚀',
   categorie: 'system'
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, arg, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
 
   if (!arg || arg.length === 0) {
     const replyText = "Example Usage: .code 2541111xxxxx.";
@@ -219,7 +219,7 @@ keith({
   reaction: '📓',
   categorie: "search"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, arg, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
   const elementQuery = arg.join(" ").trim();
 
   if (!elementQuery) {
@@ -275,7 +275,7 @@ keith({
   reaction: '💻',
   categorie: "stalker"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, arg, ms } = commandeOptions;
+  const { arg, ms } = commandeOptions;
   const githubUsername = arg.join(" ");
 
   if (!githubUsername) {
@@ -325,5 +325,227 @@ keith({
   } catch (error) {
     console.error("Error fetching GitHub user data:", error);
     await repondre(zk, dest, ms, "An error occurred while fetching GitHub user data.");
+  }
+});
+keith({
+  nomCom: "tempmail",
+  aliases: ['mail', 'temp'],
+  reaction: '📧',
+  categorie: "General"
+}, async (dest, zk, context) => {
+  const { prefix, ms } = context;
+
+  try {
+    const tempEmail = Math.random().toString(36).substring(2, 14) + "@1secmail.com";
+
+    await sendMessage(zk, dest, ms, {
+      text: `Your temporary email is: ${tempEmail}
+
+You can use this email for temporary purposes. I will notify you if you receive any emails.`,
+      contextInfo: {
+        externalAdReply: {
+          title: "Temporary Email Service",
+          body: "Create temporary emails quickly and easily for privacy and security.",
+          thumbnailUrl: conf.URL,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true
+        }
+      }
+    });
+
+    // Function to check for new emails
+    const checkEmails = async () => {
+      try {
+        const response = await axios.get(`https://www.1secmail.com/api/v1/?action=getMessages&login=${tempEmail}&domain=1secmail.com`);
+        const emails = response.data;
+
+        if (emails.length > 0) {
+          for (const email of emails) {
+            const emailDetails = await axios.get(`https://www.1secmail.com/api/v1/?action=readMessage&login=${tempEmail}&domain=1secmail.com&id=${email.id}`);
+            const emailData = emailDetails.data;
+            const links = emailData.textBody.match(/(https?:\/\/[^\s]+)/g);
+            const linksText = links ? links.join("\n") : "No links found in the email content.";
+
+            await sendMessage(zk, dest, ms, {
+              text: `You have received a new email!\n\nFrom: ${emailData.from}\nSubject: ${emailData.subject}\n\n${emailData.textBody}\nLinks found:\n${linksText}`,
+              contextInfo: {
+                externalAdReply: {
+                  title: "Temporary Email Notification",
+                  body: "You received a new email on your temporary inbox. Check it out now!",
+                  thumbnailUrl: conf.URL,
+                  sourceUrl: conf.GURL,
+                  mediaType: 1,
+                  showAdAttribution: true
+                }
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking temporary email:", error.message);
+      }
+    };
+
+    // Set an interval to check for new emails every 30 seconds
+    const emailCheckInterval = setInterval(checkEmails, 30000);
+
+    // End the email session after 10 minutes
+    setTimeout(() => {
+      clearInterval(emailCheckInterval);
+      sendMessage(zk, dest, ms, {
+        text: "Your temporary email session has ended. Please create a new temporary email if needed.",
+        contextInfo: {
+          externalAdReply: {
+            title: "Temporary Email Session Ended",
+            body: "Your temporary email session has ended. Need another one? Just ask!",
+            thumbnailUrl: conf.URL,
+            sourceUrl: conf.GURL,
+            mediaType: 1,
+            showAdAttribution: true
+          }
+        }
+      });
+    }, 600000); // 10 minutes in milliseconds
+
+  } catch (error) {
+    console.error("Error generating temporary email:", error.message);
+    await repondre(zk, dest, ms, "Error generating temporary email. Please try again later.", {
+      contextInfo: {
+        externalAdReply: {
+          title: "Temporary Email Error",
+          body: "There was an issue generating your temporary email. Please try again later.",
+          thumbnailUrl: conf.URL,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true
+        }
+      }
+    });
+  }
+});
+keith({
+  nomCom: "wiki",
+  aliases: ["wikipedia", "wikipeda"],
+  reaction: '⚔️',
+  categorie: "search"
+}, async (dest, zk, context) => {
+  const { repondre, arg, ms } = context;
+
+  // Ensure that the search term is provided
+  const text = arg.join(" ").trim(); 
+
+  try {
+    if (!text) return repondre(zk, dest, ms, `Provide the term to search,\nE.g What is JavaScript!`);
+    
+    // Fetch summary from Wikipedia
+    const con = await wiki.summary(text);
+    
+    // Format the reply message
+    const texa = `
+*📚 Wikipedia Summary 📚*
+
+🔍 *Title*: _${con.title}_
+
+📝 *Description*: _${con.description}_
+
+💬 *Summary*: _${con.extract}_
+
+🔗 *URL*: ${con.content_urls.mobile.page}
+
+> Powered by Alpha
+    `;
+
+    await sendMessage(zk, dest, ms, {
+      text: texa,
+      contextInfo: {
+        externalAdReply: {
+          title: "Wikipedia Search",
+          body: `Summary for: ${con.title}`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/6/63/Wikipedia-logo.png",
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    await repondre(zk, dest, ms, "Got 404. I did not find anything!");
+  }
+});
+keith({
+  nomCom: "lyrics",
+  aliases: ["mistari", "lyric"],
+  reaction: '⚔️',
+  categorie: "search"
+}, async (dest, zk, context) => {
+  const { arg, ms } = context;
+  const text = arg.join(" ").trim();
+
+  if (!text) {
+    return repondre(zk, dest, ms, "Please provide a song name.");
+  }
+
+  // Function to get lyrics data from APIs
+  const getLyricsData = async (url) => {
+    try {
+      const response = await axios.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching data from API:', error);
+      return null;
+    }
+  };
+
+  // List of APIs to try
+  const apis = [
+    `https://api.dreaded.site/api/lyrics?title=${encodeURIComponent(text)}`,
+    `https://some-random-api.com/others/lyrics?title=${encodeURIComponent(text)}`,
+    `https://api.davidcyriltech.my.id/lyrics?title=${encodeURIComponent(text)}`
+  ];
+
+  let lyricsData;
+  for (const api of apis) {
+    lyricsData = await getLyricsData(api);
+    if (lyricsData && lyricsData.result && lyricsData.result.lyrics) break;
+  }
+
+  // Check if lyrics data was found
+  if (!lyricsData || !lyricsData.result || !lyricsData.result.lyrics) {
+    return repondre(zk, dest, ms, `Failed to retrieve lyrics. Please try again.`);
+  }
+
+  const { title, artist, thumb, lyrics } = lyricsData.result;
+  const imageUrl = thumb || "https://i.imgur.com/Cgte666.jpeg";
+
+  const caption = `**Title**: ${title}\n**Artist**: ${artist}\n\n${lyrics}`;
+
+  try {
+    // Fetch the image
+    const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+    // Send the message with the image and lyrics
+    await sendMessage(zk, dest, ms, {
+      image: imageBuffer,
+      caption: caption,
+      contextInfo: {
+        externalAdReply: {
+          title: "Lyrics Search",
+          body: `Lyrics for: ${title}`,
+          thumbnailUrl: imageUrl,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching or sending image:', error);
+    // Fallback to sending just the text if image fetch fails
+    await repondre(zk, dest, ms, caption);
   }
 });
