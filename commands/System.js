@@ -1,4 +1,3 @@
-
 const { keith } = require('../keizzah/keith');
 const Heroku = require('heroku-client');
 const s = require("../set");
@@ -6,11 +5,14 @@ const axios = require("axios");
 const speed = require("performance-now");
 const { exec } = require("child_process");
 const conf = require(__dirname + "/../set");
+const { repondre, sendMessage } = require('../keizzah/context'); // Import repondre and sendMessage
+
 // Function for delay simulation
 function delay(ms) {
   console.log(`⏱️ delay for ${ms}ms`);
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 // Format the uptime into a human-readable string
 function runtime(seconds) {
   const hours = Math.floor(seconds / 3600);
@@ -92,25 +94,24 @@ keith({
   };
 
   // Send the audio message with the context of the original message
-  await zk.sendMessage(dest, audioMessage, { quoted: ms });
+  await sendMessage(zk, dest, ms, audioMessage);
 });
-
 
 keith({
   nomCom: 'restart',
   aliases: ['reboot'],
   categorie: "system"
-}, async (chatId, zk, context) => {
-  const { repondre, superUser } = context;
+}, async (dest, zk, context) => {
+  const { superUser } = context;
 
   // Check if the user is a super user
   if (!superUser) {
-    return repondre("You need owner privileges to execute this command!");
+    return repondre(zk, dest, ms, "You need owner privileges to execute this command!");
   }
 
   try {
     // Inform the user that the bot is restarting
-    await repondre("*Restarting...*");
+    await repondre(zk, dest, ms, "*Restarting...*");
 
     // Function to create a delay
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -124,19 +125,17 @@ keith({
     console.error("Error during restart:", error);
   }
 });
-// thanks  chatgpt
-
 
 // Command to retrieve Heroku config vars
 keith({
   nomCom: 'allvar',
   categorie: "system"
-}, async (chatId, zk, context) => {
-  const { repondre, superUser } = context;
+}, async (dest, zk, context) => {
+  const { superUser } = context;
 
   // Check if the command is issued by the owner
   if (!superUser) {
-    return repondre("*This command is restricted to the bot owner or Alpha owner 💀*");
+    return repondre(zk, dest, ms, "*This command is restricted to the bot owner or Alpha owner 💀*");
   }
 
   const appname = s.HEROKU_APP_NAME;
@@ -162,11 +161,11 @@ keith({
     }
 
     // Send the formatted response back to the user
-    repondre(str);
+    repondre(zk, dest, ms, str);
 
   } catch (error) {
     console.error('Error fetching Heroku config vars:', error);
-    repondre('Sorry, there was an error fetching the config vars.');
+    repondre(zk, dest, ms, 'Sorry, there was an error fetching the config vars.');
   }
 });
 
@@ -174,19 +173,19 @@ keith({
 keith({
   nomCom: 'setvar',
   categorie: "system"
-}, async (chatId, zk, context) => {
-  const { repondre, superUser, arg } = context;
+}, async (dest, zk, context) => {
+  const { superUser, arg } = context;
 
   // Check if the command is issued by the owner
   if (!superUser) {
-    return repondre("*This command is restricted to the bot owner or Alpha owner 💀*");
+    return repondre(zk, dest, ms, "*This command is restricted to the bot owner or Alpha owner 💀*");
   }
 
   const appname = s.HEROKU_APP_NAME;
   const herokuapi = s.HEROKU_API_KEY;
 
   if (!arg || arg.length !== 1 || !arg[0].includes('=')) {
-    return repondre('Incorrect Usage:\nProvide the key and value correctly.\nExample: setvar ANTICALL=yes');
+    return repondre(zk, dest, ms, 'Incorrect Usage:\nProvide the key and value correctly.\nExample: setvar ANTICALL=yes');
   }
 
   const [key, value] = arg[0].split('=');
@@ -206,10 +205,10 @@ keith({
     });
 
     // Notify success
-    await repondre(`*✅ The variable ${key} = ${value} has been set successfully. The bot is restarting...*`);
+    await repondre(zk, dest, ms, `*✅ The variable ${key} = ${value} has been set successfully. The bot is restarting...*`);
   } catch (error) {
     console.error('Error setting config variable:', error);
-    await repondre(`❌ There was an error setting the variable. Please try again later.\n${error.message}`);
+    await repondre(zk, dest, ms, `❌ There was an error setting the variable. Please try again later.\n${error.message}`);
   }
 });
 
@@ -218,37 +217,37 @@ keith({
   aliases: ["getcmd", "cmd"],
   reaction: '⚔️',
   categorie: "coding"
-}, async (context, message, params) => {
-  const { repondre: sendResponse, arg: commandArgs, superUser: Owner, auteurMessage } = params;
+}, async (dest, zk, context) => {
+  const { arg: commandArgs, superUser: Owner } = context;
 
   // Ensure that the sender is the superuser (Owner)
   if (!Owner) {
-    return sendResponse("You are not authorized to execute shell commands.");
+    return repondre(zk, dest, ms, "You are not authorized to execute shell commands.");
   }
 
   const command = commandArgs.join(" ").trim();
 
   // Ensure the command is not empty
   if (!command) {
-    return sendResponse("Please provide a valid shell command.");
+    return repondre(zk, dest, ms, "Please provide a valid shell command.");
   }
 
   // Execute the shell command
   exec(command, (err, stdout, stderr) => {
     if (err) {
-      return sendResponse(`Error: ${err.message}`);
+      return repondre(zk, dest, ms, `Error: ${err.message}`);
     }
 
     if (stderr) {
-      return sendResponse(`stderr: ${stderr}`);
+      return repondre(zk, dest, ms, `stderr: ${stderr}`);
     }
 
     if (stdout) {
-      return sendResponse(stdout);
+      return repondre(zk, dest, ms, stdout);
     }
 
     // If there's no output, let the user know
-    return sendResponse("Command executed successfully, but no output was returned.");
+    return repondre(zk, dest, ms, "Command executed successfully, but no output was returned.");
   });
 });
 
@@ -257,11 +256,13 @@ keith(
     nomCom: 'ping',
     aliases: ['speed', 'latency'],
     desc: 'To check bot response time',
-    categorie: 'system', // Fixed the typo here (Categorie -> categorie)
+    categorie: 'system',
     reaction: '⚡',
-    fromMe: true, // Removed quotes to make it a boolean
+    fromMe: true,
   },
-  async (dest, zk) => {
+  async (dest, zk, commandeOptions) => {
+    const { ms } = commandeOptions;
+
     // Call the new loading animation without delaying the rest of the bot
     const loadingPromise = loading(dest, zk);
 
@@ -272,16 +273,16 @@ keith(
     const formattedResults = pingResults.map(ping => `${conf.OWNER_NAME} 𝖘𝖕𝖊𝖊𝖉 ${ping} 𝐌/𝐒  `);
 
     // Send the ping results with the updated text and format
-    await zk.sendMessage(dest, {
+    await sendMessage(zk, dest, ms, {
       text: `${formattedResults.join(', ')}`,
       contextInfo: {
         externalAdReply: {
           title: conf.BOT,
           body: `${formattedResults.join(" | ")}`,
-          thumbnailUrl: conf.URL, // Replace with your bot profile photo URL
-          sourceUrl: conf.GURL, // Your channel URL
+          thumbnailUrl: conf.URL,
+          sourceUrl: conf.GURL,
           mediaType: 1,
-          showAdAttribution: true, // Verified badge
+          showAdAttribution: true,
         },
       },
     });
@@ -293,35 +294,30 @@ keith(
   }
 );
 
-// React function if needed for further interaction
-function react(dest, zk, msg, reaction) {
-  zk.sendMessage(dest, { react: { text: reaction, key: msg.key } });
-}
-
 keith({
   nomCom: 'uptime',
   aliases: ['runtime', 'running'],
   desc: 'To check runtime',
-  categorie: 'system', // Fixed the typo here (Categorie -> categorie)
+  categorie: 'system',
   reaction: '⚔️',
-  fromMe: true, // Removed quotes to make it a boolean
+  fromMe: true,
 }, async (dest, zk, commandeOptions) => {
-  const { ms, arg, repondre } = commandeOptions;
+  const { ms } = commandeOptions;
 
   // Get bot's runtime
   const botUptime = process.uptime(); // Get the bot uptime in seconds
 
   // Send uptime information to the user
-  await zk.sendMessage(dest, {
+  await sendMessage(zk, dest, ms, {
     text: `*${conf.OWNER_NAME} UPTIME IS ${runtime(botUptime)}*`,
     contextInfo: {
       externalAdReply: {
         title: `${conf.BOT} UPTIME`,
-        body: `Bot Uptime: ${runtime(botUptime)}`, // Format the uptime before sending
-        thumbnailUrl: conf.URL, // Replace with your bot profile photo URL
-        sourceUrl: conf.GURL, // Your channel URL
+        body: `Bot Uptime: ${runtime(botUptime)}`,
+        thumbnailUrl: conf.URL,
+        sourceUrl: conf.GURL,
         mediaType: 1,
-        showAdAttribution: true, // Verified badge
+        showAdAttribution: true,
       },
     },
   });
@@ -332,79 +328,18 @@ keith({
   await delay(ms); // Await the delay to simulate the loading animation
 });
 
-// React function to allow interaction after sending message
-function react(dest, zk, msg, reaction) {
-  zk.sendMessage(dest, { react: { text: reaction, key: msg.key } });
-}
-
-
-/*keith({
-  nomCom: 'update',
-  aliases: ['redeploy', 'sync'],
-  categorie: "system"
-}, async (chatId, zk, context) => {
-  const { repondre, superUser } = context;
-
-  // Check if the command is issued by the owner
-  if (!superUser) {
-    return repondre("*This command is restricted to the bot owner or Alpha owner 💀*");
-  }
-
-  // Ensure Heroku app name and API key are set
-  const herokuAppName = s.HEROKU_APP_NAME;
-  const herokuApiKey = s.HEROKU_API_KEY;
-
-  // Check if Heroku app name and API key are set in environment variables
-  if (!herokuAppName || !herokuApiKey) {
-    await repondre("It looks like the Heroku app name or API key is not set. Please make sure you have set the `HEROKU_APP_NAME` and `HEROKU_API_KEY` environment variables.");
-    return;
-  }
-
-  // Function to redeploy the app
-  async function redeployApp() {
-    try {
-      const response = await axios.post(
-        `https://api.heroku.com/apps/${herokuAppName}/builds`,
-        {
-          source_blob: {
-            url: "https://github.com/Keithkeizzah/ALPHA-MD/tarball/main",
-          },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${herokuApiKey}`,
-            Accept: "application/vnd.heroku+json; version=3",
-          },
-        }
-      );
-
-      // Notify the user about the update and redeployment
-      await repondre("*Your bot is getting updated, wait 2 minutes for the redeploy to finish! This will install the latest version of ALPHA-MD.*");
-      console.log("Build details:", response.data);
-    } catch (error) {
-      // Handle any errors during the redeployment process
-      const errorMessage = error.response?.data || error.message;
-      await repondre(`*Failed to update and redeploy. ${errorMessage} Please check if you have set the Heroku API key and Heroku app name correctly.*`);
-      console.error("Error triggering redeploy:", errorMessage);
-    }
-  }
-
-  // Trigger the redeployment function
-  redeployApp();
-});*/
-
 keith({
   nomCom: "fetch",
   aliases: ["get", "find"],
   categorie: "coding",
   reaction: '🛄',
-}, async (sender, zk, context) => {
-  const { repondre: sendResponse, arg: args } = context;
+}, async (dest, zk, context) => {
+  const { arg: args, ms } = context;
   const urlInput = args.join(" ");
 
   // Check if URL starts with http:// or https://
   if (!/^https?:\/\//.test(urlInput)) {
-    return sendResponse("Start the *URL* with http:// or https://");
+    return repondre(zk, dest, ms, "Start the *URL* with http:// or https://");
   }
 
   try {
@@ -416,12 +351,12 @@ keith({
 
     // Check if the response is okay
     if (response.status !== 200) {
-      return sendResponse(`Failed to fetch the URL. Status: ${response.status} ${response.statusText}`);
+      return repondre(zk, dest, ms, `Failed to fetch the URL. Status: ${response.status} ${response.statusText}`);
     }
 
     const contentLength = response.headers['content-length'];
     if (contentLength && parseInt(contentLength) > 104857600) {
-      return sendResponse(`Content-Length exceeds the limit: ${contentLength}`);
+      return repondre(zk, dest, ms, `Content-Length exceeds the limit: ${contentLength}`);
     }
 
     const contentType = response.headers['content-type'];
@@ -433,42 +368,41 @@ keith({
     // Handle different content types
     if (/image\/.*/.test(contentType)) {
       // Send image message
-      await zk.sendMessage(sender, {
+      await sendMessage(zk, dest, ms, {
         image: { url: fetchUrl },
         caption: `> > *${conf.BOT}*`
-      }, { quoted: context.ms });
+      });
     } else if (/video\/.*/.test(contentType)) {
       // Send video message
-      await zk.sendMessage(sender, {
+      await sendMessage(zk, dest, ms, {
         video: { url: fetchUrl },
         caption: `> > *${conf.BOT}*`
-      }, { quoted: context.ms });
+      });
     } else if (/audio\/.*/.test(contentType)) {
       // Send audio message
-      await zk.sendMessage(sender, {
+      await sendMessage(zk, dest, ms, {
         audio: { url: fetchUrl },
         caption: `> > *${conf.BOT}*`
-      }, { quoted: context.ms });
+      });
     } else if (/text|json/.test(contentType)) {
       try {
         // Try parsing the content as JSON
         const json = JSON.parse(buffer);
         console.log("Parsed JSON:", json);
-        sendResponse(JSON.stringify(json, null, 10000)); // Limit response size to 10000 characters
+        repondre(zk, dest, ms, JSON.stringify(json, null, 10000)); // Limit response size to 10000 characters
       } catch {
         // If parsing fails, send the raw text response
-        sendResponse(buffer.toString().slice(0, 10000)); // Limit response size to 10000 characters
+        repondre(zk, dest, ms, buffer.toString().slice(0, 10000)); // Limit response size to 10000 characters
       }
     } else {
       // Send other types of documents
-      await zk.sendMessage(sender, {
+      await sendMessage(zk, dest, ms, {
         document: { url: fetchUrl },
         caption: `> > *${conf.BOT}*`
-      }, { quoted: context.ms });
+      });
     }
   } catch (error) {
     console.error("Error fetching data:", error.message);
-    sendResponse(`Error fetching data: ${error.message}`);
+    repondre(zk, dest, ms, `Error fetching data: ${error.message}`);
   }
 });
-
