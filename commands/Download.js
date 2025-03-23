@@ -95,38 +95,41 @@ keith(
 );
 
 // Define the 'url' command to upload media
-keith({
-  nomCom: 'url',       // Command to trigger the function
-  categorie: "download", // Command category
-  reaction: '👨🏿‍💻'    // Reaction to use on command
-}, async (dest, zk, context) => {
-  const { msgRepondu, ms } = context;
+keith(
+  {
+    nomCom: 'url',       // Command to trigger the function
+    categorie: "download", // Command category
+    reaction: '👨🏿‍💻'    // Reaction to use on command
+  },
+  async (dest, zk, context) => {
+    const { msgRepondu, ms } = context;
 
-  // If no media (image, video, or audio) is mentioned, prompt user
-  if (!msgRepondu) {
-    return repondre(zk, dest, ms, "Please mention an image, video, or audio.");
+    // If no media (image, video, or audio) is mentioned, prompt user
+    if (!msgRepondu) {
+      return repondre(zk, dest, ms, "Please mention an image, video, or audio.");
+    }
+
+    let mediaPath;
+
+    // Check the type of media and save it locally
+    if (msgRepondu.videoMessage || msgRepondu.gifMessage || msgRepondu.stickerMessage || msgRepondu.documentMessage || msgRepondu.imageMessage || msgRepondu.audioMessage) {
+      mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu);
+    } else {
+      return repondre(zk, dest, ms, "Please mention a valid media type (image, video, or audio).");
+    }
+
+    try {
+      // Upload the media to Catbox and get the URL
+      const fileUrl = await uploadToCatbox(mediaPath);
+
+      // Delete the local media file after upload
+      fs.unlinkSync(mediaPath);
+
+      // Respond with the URL of the uploaded file
+      repondre(zk, dest, ms, fileUrl);
+    } catch (error) {
+      console.error("Error while creating your URL:", error);
+      repondre(zk, dest, ms, "Oops, there was an error.");
+    }
   }
-
-  let mediaPath;
-
-  // Check the type of media and save it locally
-  if (msgRepondu.videoMessage || msgRepondu.gifMessage || msgRepondu.stickerMessage || msgRepondu.documentMessage || msgRepondu.imageMessage || msgRepondu.audioMessage) {
-    mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu);
-  } else {
-    return repondre(zk, dest, ms, "Please mention a valid media type (image, video, or audio).");
-  }
-
-  try {
-    // Upload the media to Catbox and get the URL
-    const fileUrl = await uploadToCatbox(mediaPath);
-
-    // Delete the local media file after upload
-    fs.unlinkSync(mediaPath);
-
-    // Respond with the URL of the uploaded file
-    repondre(zk, dest, ms, fileUrl);
-  } catch (error) {
-    console.error("Error while creating your URL:", error);
-    repondre(zk, dest, ms, "Oops, there was an error.");
-  }
-});
+);
