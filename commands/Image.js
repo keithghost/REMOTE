@@ -13,7 +13,7 @@ keith({
   const { ms } = commandeOptions;
 
   try {
-    const imageUrl = "https://example.com/image.jpg"; // Replace with your image URL
+    const imageUrl = "https://files.catbox.moe/yev2u2.jpg"; // Replace with your image URL
     const caption = "This is a test image sent by Alpha Md";
 
     await sendMessage(zk, dest, ms, {
