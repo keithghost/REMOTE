@@ -4,6 +4,38 @@ const axios = require('axios');
 const conf = require(__dirname + '/../set');
 const { repondre, sendMessage } = require('../keizzah/context'); // Import repondre and sendMessage
 
+
+keith({
+  nomCom: "test-image",
+  categorie: "test",
+  reaction: "📷"
+}, async (dest, zk, commandeOptions) => {
+  const { ms } = commandeOptions;
+
+  try {
+    const imageUrl = "https://example.com/image.jpg"; // Replace with your image URL
+    const caption = "This is a test image sent by Alpha Md";
+
+    await sendMessage(zk, dest, ms, {
+      image: { url: imageUrl },
+      caption: caption,
+      contextInfo: {
+        externalAdReply: {
+          title: "Test Image",
+          body: "This is a test image",
+          thumbnailUrl: imageUrl,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error sending image:", error);
+    repondre(zk, dest, ms, `An error occurred while sending the image: ${error.message}`);
+  }
+});
 keith({
   nomCom: "sswidth",
   categorie: "screenshots",
