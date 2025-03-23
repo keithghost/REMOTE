@@ -4,6 +4,7 @@ const { format } = require(__dirname + "/../keizzah/mesfonctions");
 const os = require('os');
 const moment = require("moment-timezone");
 const settings = require(__dirname + "/../set");
+const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
 
 const readMore = String.fromCharCode(8206).repeat(4001);
 
@@ -104,7 +105,7 @@ const getRandomQuote = () => {
 };
 
 keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie: "SYSTEM" }, async (message, client, config) => {
-    const { ms, respond, prefix, nomAuteurMessage } = config;
+    const { ms, prefix, nomAuteurMessage } = config;
     const commands = require(__dirname + "/../keizzah/keith").cm;
     const categorizedCommands = {};
     const mode = settings.MODE.toLowerCase() !== "public" ? "Private" : "Public";
@@ -173,11 +174,10 @@ keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie
     commandsList += readMore + "\nin honor of Alpha\n";
 
     try {
-        const senderName = message.sender || message.from;
-        await client.sendMessage(message, {
+        await sendMessage(client, message, {
             text: responseMessage + commandsList,
             contextInfo: {
-                mentionedJid: [senderName],
+                mentionedJid: [message.sender || message.from],
                 externalAdReply: {
                     title: settings.BOT,
                     body: settings.OWNER_NAME,
@@ -190,6 +190,6 @@ keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie
         });
     } catch (error) {
         console.error("Menu error: ", error);
-        respond("🥵🥵 Menu error: " + error);
+        await repondre(client, message, ms, "🥵🥵 Menu error: " + error);
     }
 });
