@@ -47,7 +47,6 @@ keith({
 
     // Send the audio file directly using the URL
     zk.sendMessage(origineMessage, { audio: { url: audioUrl }, mimetype: 'audio/mp3' }, { quoted: ms, ptt: false });
-    repondre('Audio sent successfully!');
 
   } catch (error) {
     console.error('Error during search or download:', error);
