@@ -104,8 +104,8 @@ const getRandomQuote = () => {
     return quotes[randomIndex];
 };
 
-keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie: "SYSTEM" }, async (message, client, config) => {
-    const { ms, prefix, nomAuteurMessage } = config;
+keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie: "SYSTEM" }, async (dest, zk, commandeOptions) => {
+    const { ms, prefix, nomAuteurMessage } = commandeOptions;
     const commands = require(__dirname + "/../keizzah/keith").cm;
     const categorizedCommands = {};
     const mode = settings.MODE.toLowerCase() !== "public" ? "Private" : "Public";
@@ -174,10 +174,10 @@ keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie
     commandsList += readMore + "\nin honor of Alpha\n";
 
     try {
-        await sendMessage(client, message, {
+        await sendMessage(zk, dest, ms, {
             text: responseMessage + commandsList,
             contextInfo: {
-                mentionedJid: [message.sender || message.from],
+                mentionedJid: [dest],
                 externalAdReply: {
                     title: settings.BOT,
                     body: settings.OWNER_NAME,
@@ -190,6 +190,6 @@ keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie
         });
     } catch (error) {
         console.error("Menu error: ", error);
-        await repondre(client, message, ms, "🥵🥵 Menu error: " + error);
+        await repondre(zk, dest, ms, "🥵🥵 Menu error: " + error);
     }
 });
