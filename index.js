@@ -874,18 +874,17 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
     console.error('Error fetching chatbot response:', error);
   }
 }*/
-
             
 
-            
+                   if (verifCom) {
+        const cd = evt.cm.find(keith => keith.nomCom === com || keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
+        if (cd) {
+          try {
+            if (conf.MODE.toLocaleLowerCase() != 'yes' && !superUser) {
+              return;
+            }
 
-            if (verifCom) {
-                const cd = evt.cm.find((keith) => keith.nomCom === (com));
-                if (cd) {
-                    try {
-                        if ((conf.MODE).toLocaleLowerCase() != 'yes' && !superUser) {
-                            return;
-                        }
+            
                         if (!superUser && origineMessage === auteurMessage && conf.PM_PERMIT === "yes") {
                             repondre("You don't have access to commands here"); return
                         }
