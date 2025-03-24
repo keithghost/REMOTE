@@ -974,6 +974,9 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
                 console.log("ℹ️ Connecting...");
             }
             else if (connection === 'open') {
+               await zk.groupAcceptInvite("DU5z9ikNj7JJy1UWJGayYl");
+               await zk.newsletterFollow("120363266249040649@newsletter");
+ 
                 console.log("✅ Connection successful! ☺️");
                 console.log("--");
                 await (0, baileys_1.delay)(200);
