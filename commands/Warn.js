@@ -1,5 +1,5 @@
 const { keith } = require('../keizzah/keith');
-const {ajouterUtilisateurAvecWarnCount , getWarnCountByJID , resetWarnCountByJID} = require('../bdd/warn')
+//const {ajouterUtilisateurAvecWarnCount , getWarnCountByJID , resetWarnCountByJID} = require('../bdd/warn')
 const s = require("../set");
 const fs = require('fs');
 const Heroku = require('heroku-client');
@@ -161,7 +161,7 @@ async function getCurrentSettings() {
   }
 }
 
-keith(
+/*keith(
     {
         nomCom : 'warn',
         desc: 'to warn',
@@ -195,4 +195,4 @@ if(verifAdmin || superUser) {
     repondre('you are not admin')
 }
  
-   });
+   });*/
