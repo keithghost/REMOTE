@@ -761,8 +761,8 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
 
 
             
-            if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
-  try {
+            //if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+ /* try {
     const currentTime = Date.now();
     if (currentTime - lastTextTime < messageDelay) {
       console.log('Message skipped: Too many messages in a short time.');
@@ -873,7 +873,7 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
   } catch (error) {
     console.error('Error fetching chatbot response:', error);
   }
-}
+}*/
 
             
 
@@ -900,14 +900,14 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
                 }
             }
         });
-        /*zk.ev.on('group-participants.update', async (group) => {
+        zk.ev.on('group-participants.update', async (group) => {
   console.log("Group update event triggered:", group); // Log the group update event
 
   let ppgroup;
   try {
     ppgroup = await zk.profilePictureUrl(group.id, 'image'); // Fetch group profile picture
   } catch {
-    ppgroup = 'https://ibb.co/7SKY0tg'; // Fallback image URL
+    ppgroup = 'https://telegra.ph/file/967c663a5978c545f78d6.jpg'; // Fallback image URL
   }
 
   try {
@@ -948,7 +948,7 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
   } catch (e) {
     console.error("Error in group event handler:", e); // Log any errors
   }
-});*/
+});
         // Other imports and setup code...
 
 // Import the group events module
