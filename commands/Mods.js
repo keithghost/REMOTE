@@ -2,10 +2,10 @@ const { keith } = require('../keizzah/keith');
 const axios = require("axios");
 const fancy = require("../keizzah/style");
 let { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
-const { isUserBanned, addUserToBanList, removeUserFromBanList } = require("../bdd/banUser");
-const { addGroupToBanList, isGroupBanned, removeGroupFromBanList } = require("../bdd/banGroup");
-const { isGroupOnlyAdmin, addGroupToOnlyAdminList, removeGroupFromOnlyAdminList } = require("../bdd/onlyAdmin");
-const { removeSudoNumber, addSudoNumber, issudo } = require("../bdd/sudo");
+//const { isUserBanned, addUserToBanList, removeUserFromBanList } = require("../bdd/banUser");
+//const { addGroupToBanList, isGroupBanned, removeGroupFromBanList } = require("../bdd/banGroup");
+//const { isGroupOnlyAdmin, addGroupToOnlyAdminList, removeGroupFromOnlyAdminList } = require("../bdd/onlyAdmin");
+//const { removeSudoNumber, addSudoNumber, issudo } = require("../bdd/sudo");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 keith({ nomCom: "crew", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
@@ -103,7 +103,7 @@ keith({ nomCom: "kickall", categorie: 'Group', reaction: "📣" }, async (dest, 
   }
 });
 
-keith({ nomCom: 'ban', categorie: 'Mods' }, async (dest, zk, commandeOptions) => {
+/*keith({ nomCom: 'ban', categorie: 'Mods' }, async (dest, zk, commandeOptions) => {
   const { ms, arg, auteurMsgRepondu, msgRepondu, repondre, superUser, prefixe } = commandeOptions;
 
   if (!superUser) {
@@ -316,7 +316,7 @@ To stop the mention, use mention stop`;
   } else {
     repondre('Please make sure to follow the instructions');
   }
-});
+});*/
 
 keith({ nomCom: "save", aliases: ["send", "keep"], categorie: "Mods" }, async (dest, zk, commandeOptions) => {
   const { repondre, msgRepondu, superUser } = commandeOptions;
@@ -574,7 +574,7 @@ keith({ nomCom: "vv2", aliases: ["send2", "keep2"], categorie: "Mods" }, async (
 ;
 
 
-keith({ nomCom: "fancy", categorie: "Fun", reaction: "☑️" }, async (dest, zk, commandeOptions) => {
+/*keith({ nomCom: "fancy", categorie: "Fun", reaction: "☑️" }, async (dest, zk, commandeOptions) => {
     const { arg, repondre, prefixe } = commandeOptions;
     const id = arg[0]?.match(/\d+/)?.join('');
     const text = arg.slice(1).join(" ");
@@ -594,4 +594,4 @@ keith({ nomCom: "fancy", categorie: "Fun", reaction: "☑️" }, async (dest, zk
         console.error(error);
         return await repondre('_Une erreur s\'est produite :(_');
     }
-});
+});*/
