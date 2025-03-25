@@ -4,6 +4,7 @@ const Heroku = require('heroku-client');
 const s = require("../set");
 const axios = require("axios");
 const speed = require("performance-now");
+const { repondre, sendMessage } = require('../keizzah/context');
 const { exec } = require("child_process");
 const conf = require(__dirname + "/../set");
 // Function for delay simulation
@@ -101,16 +102,16 @@ keith({
   aliases: ['reboot'],
   categorie: "system"
 }, async (chatId, zk, context) => {
-  const { repondre, superUser } = context;
+  const { superUser } = context;
 
   // Check if the user is a super user
   if (!superUser) {
-    return repondre("You need owner privileges to execute this command!");
+    return repondre(zk, dest, ms, "You need owner privileges to execute this command!");
   }
 
   try {
     // Inform the user that the bot is restarting
-    await repondre("*Restarting...*");
+    await repondre(zk, dest, ms, "*Restarting...*");
 
     // Function to create a delay
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -132,11 +133,11 @@ keith({
   nomCom: 'allvar',
   categorie: "system"
 }, async (chatId, zk, context) => {
-  const { repondre, superUser } = context;
+  const { superUser } = context;
 
   // Check if the command is issued by the owner
   if (!superUser) {
-    return repondre("*This command is restricted to the bot owner or Alpha owner 💀*");
+    return repondre(zk, dest, ms, "*This command is restricted to the bot owner or Alpha owner 💀*");
   }
 
   const appname = s.HEROKU_APP_NAME;
@@ -162,11 +163,11 @@ keith({
     }
 
     // Send the formatted response back to the user
-    repondre(str);
+    repondre(zk, dest, ms, str);
 
   } catch (error) {
     console.error('Error fetching Heroku config vars:', error);
-    repondre('Sorry, there was an error fetching the config vars.');
+    repondre(zk, dest, ms, 'Sorry, there was an error fetching the config vars.');
   }
 });
 
@@ -175,18 +176,18 @@ keith({
   nomCom: 'setvar',
   categorie: "system"
 }, async (chatId, zk, context) => {
-  const { repondre, superUser, arg } = context;
+  const { superUser, arg } = context;
 
   // Check if the command is issued by the owner
   if (!superUser) {
-    return repondre("*This command is restricted to the bot owner or Alpha owner 💀*");
+    return repondre(zk, dest, ms, "*This command is restricted to the bot owner or Alpha owner 💀*");
   }
 
   const appname = s.HEROKU_APP_NAME;
   const herokuapi = s.HEROKU_API_KEY;
 
   if (!arg || arg.length !== 1 || !arg[0].includes('=')) {
-    return repondre('Incorrect Usage:\nProvide the key and value correctly.\nExample: setvar ANTICALL=yes');
+    return repondre(zk, dest, ms, 'Incorrect Usage:\nProvide the key and value correctly.\nExample: setvar ANTICALL=yes');
   }
 
   const [key, value] = arg[0].split('=');
@@ -206,10 +207,10 @@ keith({
     });
 
     // Notify success
-    await repondre(`*✅ The variable ${key} = ${value} has been set successfully. The bot is restarting...*`);
+    await repondre(zk, dest, ms, `*✅ The variable ${key} = ${value} has been set successfully. The bot is restarting...*`);
   } catch (error) {
     console.error('Error setting config variable:', error);
-    await repondre(`❌ There was an error setting the variable. Please try again later.\n${error.message}`);
+    await repondre(zk, dest, ms, `❌ There was an error setting the variable. Please try again later.\n${error.message}`);
   }
 });
 
@@ -272,7 +273,7 @@ keith(
     const formattedResults = pingResults.map(ping => `${conf.OWNER_NAME} 𝖘𝖕𝖊𝖊𝖉 ${ping} 𝐌/𝐒  `);
 
     // Send the ping results with the updated text and format
-    await zk.sendMessage(dest, {
+    await sendMessage(zk, dest, ms, {
       text: `${formattedResults.join(', ')}`,
       contextInfo: {
         externalAdReply: {
@@ -312,7 +313,7 @@ keith({
   const botUptime = process.uptime(); // Get the bot uptime in seconds
 
   // Send uptime information to the user
-  await zk.sendMessage(dest, {
+  await sendMessage(zk, dest, ms, {
     text: `*${conf.OWNER_NAME} UPTIME IS ${runtime(botUptime)}*`,
     contextInfo: {
       externalAdReply: {
@@ -338,16 +339,16 @@ function react(dest, zk, msg, reaction) {
 }
 
 
-/*keith({
+keith({
   nomCom: 'update',
   aliases: ['redeploy', 'sync'],
   categorie: "system"
 }, async (chatId, zk, context) => {
-  const { repondre, superUser } = context;
+  const { superUser } = context;
 
   // Check if the command is issued by the owner
   if (!superUser) {
-    return repondre("*This command is restricted to the bot owner or Alpha owner 💀*");
+    return repondre(zk, dest, ms, "*This command is restricted to the bot owner or Alpha owner 💀*");
   }
 
   // Ensure Heroku app name and API key are set
@@ -356,7 +357,7 @@ function react(dest, zk, msg, reaction) {
 
   // Check if Heroku app name and API key are set in environment variables
   if (!herokuAppName || !herokuApiKey) {
-    await repondre("It looks like the Heroku app name or API key is not set. Please make sure you have set the `HEROKU_APP_NAME` and `HEROKU_API_KEY` environment variables.");
+    await repondre(zk, dest, ms, "It looks like the Heroku app name or API key is not set. Please make sure you have set the `HEROKU_APP_NAME` and `HEROKU_API_KEY` environment variables.");
     return;
   }
 
@@ -379,19 +380,19 @@ function react(dest, zk, msg, reaction) {
       );
 
       // Notify the user about the update and redeployment
-      await repondre("*Your bot is getting updated, wait 2 minutes for the redeploy to finish! This will install the latest version of ALPHA-MD.*");
+      await repondre(zk, dest, ms, "*Your bot is getting updated, wait 2 minutes for the redeploy to finish! This will install the latest version of ALPHA-MD.*");
       console.log("Build details:", response.data);
     } catch (error) {
       // Handle any errors during the redeployment process
       const errorMessage = error.response?.data || error.message;
-      await repondre(`*Failed to update and redeploy. ${errorMessage} Please check if you have set the Heroku API key and Heroku app name correctly.*`);
+      await repondre(zk, dest, ms, `*Failed to update and redeploy. ${errorMessage} Please check if you have set the Heroku API key and Heroku app name correctly.*`);
       console.error("Error triggering redeploy:", errorMessage);
     }
   }
 
   // Trigger the redeployment function
   redeployApp();
-});*/
+});
 
 keith({
   nomCom: "fetch",
