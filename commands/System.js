@@ -3,6 +3,7 @@ const Heroku = require('heroku-client');
 const s = require("../set");
 const axios = require("axios");
 const speed = require("performance-now");
+const googleTTS = require('google-tts-api');
 const { repondre, sendMessage } = require('../keizzah/context');
 const { exec } = require("child_process");
 const conf = require(__dirname + "/../set");
@@ -193,6 +194,52 @@ keith({
   });
 });
 
+keith(
+  {
+    nomCom: 'ping2',
+    aliases: ['speed', 'latency'],
+    desc: 'To check bot response time',
+    categorie: 'system',
+    reaction: '⚡',
+    fromMe: true,
+  },
+  async (dest, zk, msg) => {
+    // Call loading animation
+    const loadingPromise = loading(dest, zk);
+
+    // Generate 3 ping results
+    const pingResults = Array.from({ length: 3 }, () => Math.floor(Math.random() * 10000 + 1000));
+    
+    // Create spoken ping message
+    const spokenMessage = pingResults.map(ping => 
+      `${conf.BOT} speed ${ping} meters per second`
+    ).join(', ');
+
+    // Generate Google TTS audio URL
+    const url = googleTTS.getAudioUrl(spokenMessage, {
+      lang: 'en',
+      slow: false,
+      host: 'https://translate.google.com',
+    });
+
+    // Send as audio message
+    await zk.sendMessage(dest, { 
+      audio: { url: url }, 
+      mimetype: 'audio/mp4',
+      ptt: true 
+    }, { quoted: msg });
+
+    console.log("Ping results sent as audio successfully!");
+    
+    // Ensure loading animation completes
+    await loadingPromise;
+  }
+);
+
+// React function if needed
+function react(dest, zk, msg, reaction) {
+  zk.sendMessage(dest, { react: { text: reaction, key: msg.key } });
+}
 keith({
   nomCom: 'ping',
   aliases: ['speed', 'latency'],
