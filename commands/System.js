@@ -18,6 +18,7 @@ function formatUptime(seconds) {
   return uptimeString;
 }
 
+// Uptime Command
 keith({
   nomCom: 'uptime',
   aliases: ['runtime', 'running'],
@@ -26,7 +27,7 @@ keith({
   reaction: '⚔️'
 }, async (dest, zk, commandeOptions) => {
   try {
-    const { ms } = commandeOptions; // Changed from msg to ms
+    const { ms } = commandeOptions;
     const botUptime = process.uptime();
     const formattedUptime = formatUptime(botUptime);
     
@@ -40,23 +41,34 @@ keith({
       host: 'https://translate.google.com',
     });
 
-    // Send as audio message
+    // Send as audio message with context info
     await zk.sendMessage(dest, { 
       audio: { url: audioUrl }, 
       mimetype: 'audio/mpeg',
-      ptt: true 
-    }, { quoted: ms }); // Changed from msg to ms
+      ptt: true,
+      contextInfo: {
+        externalAdReply: {
+          title: `${conf.BOT} UPTIME`,
+          body: `Running for ${formattedUptime}`,
+          thumbnailUrl: conf.URL,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true,
+        }
+      }
+    }, { quoted: ms });
 
-    console.log("Uptime results sent as audio successfully!");
+    console.log("Uptime results sent successfully!");
 
   } catch (error) {
     console.error('Error in uptime command:', error);
     await zk.sendMessage(dest, { 
       text: '❌ Failed to check uptime. Please try again later.' 
-    }, { quoted: commandeOptions.ms }); // Changed from msg to ms
+    }, { quoted: commandeOptions.ms });
   }
 });
 
+// Ping Command
 keith({
   nomCom: 'ping',
   aliases: ['speed', 'latency'],
@@ -87,14 +99,24 @@ keith({
       host: 'https://translate.google.com',
     });
 
-    // Send as audio message
+    // Send as audio message with context info
     await zk.sendMessage(dest, { 
       audio: { url: audioUrl }, 
       mimetype: 'audio/mpeg',
-      ptt: true 
+      ptt: true,
+      contextInfo: {
+        externalAdReply: {
+          title: `${conf.BOT} SPEED TEST`,
+          body: `Average: ${averagePing} ms`,
+          thumbnailUrl: conf.URL,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true,
+        }
+      }
     }, { quoted: ms });
 
-    console.log("Ping results sent as audio successfully!");
+    console.log("Ping results sent successfully!");
 
   } catch (error) {
     console.error('Error in ping command:', error);
