@@ -27,7 +27,7 @@ keith({
   reaction: '⚔️'
 }, async (dest, zk, commandeOptions) => {
   try {
-    const { ms, userJid } = commandeOptions;
+    const { ms } = commandeOptions;
     const botUptime = process.uptime();
     const formattedUptime = formatUptime(botUptime);
     
@@ -41,20 +41,12 @@ keith({
       host: 'https://translate.google.com',
     });
 
-    // Send as audio message with enhanced context info
+    // Send as audio message with context info
     await zk.sendMessage(dest, { 
       audio: { url: audioUrl }, 
       mimetype: 'audio/mpeg',
       ptt: true,
       contextInfo: {
-        mentionedJid: [userJid],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: "120363266249040649@newsletter",
-          newsletterName: conf.BOT,
-          serverMessageId: Math.floor(100000 + Math.random() * 900000)
-        },
         externalAdReply: {
           title: `${conf.BOT} UPTIME`,
           body: `Running for ${formattedUptime}`,
@@ -85,7 +77,7 @@ keith({
   reaction: '⚡'
 }, async (dest, zk, commandeOptions) => {
   try {
-    const { ms, userJid } = commandeOptions;
+    const { ms } = commandeOptions;
     
     // Generate 3 ping results
     const pingResults = Array.from({ length: 3 }, () => 
@@ -107,20 +99,12 @@ keith({
       host: 'https://translate.google.com',
     });
 
-    // Send as audio message with enhanced context info
+    // Send as audio message with context info
     await zk.sendMessage(dest, { 
       audio: { url: audioUrl }, 
       mimetype: 'audio/mpeg',
       ptt: true,
       contextInfo: {
-        mentionedJid: [userJid],
-        forwardingScore: 999,
-        isForwarded: true,
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: "120363266249040649@newsletter",
-          newsletterName: conf.BOT,
-          serverMessageId: Math.floor(100000 + Math.random() * 900000)
-        },
         externalAdReply: {
           title: `${conf.BOT} SPEED TEST`,
           body: `Average: ${averagePing} ms`,
