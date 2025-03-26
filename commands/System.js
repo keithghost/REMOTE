@@ -1,58 +1,58 @@
 const { keith } = require('../keizzah/keith');
 const googleTTS = require('google-tts-api');
+const conf = require(__dirname + "/../set");
 
-keith(
-  {
-    nomCom: 'ping',
-    aliases: ['speed', 'latency'],
-    desc: 'To check bot response time',
-    category: 'system', // Correct spelling
-    reaction: '⚡',
-  },
-  async (dest, zk, msg) => {
-    try {
-      // Generate 3 random ping results
-      const pingResults = Array.from({ length: 3 }, () =>
-        Math.floor(Math.random() * 9000 + 1000) // Generates values between 1000 and 10000
-      );
+// Format the uptime into a human-readable string
+function formatUptime(seconds) {
+  const days = Math.floor(seconds / (3600 * 24));
+  const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
 
-      // Prepare spoken message
-      const spokenMessage = `Speed test results: ${
-        pingResults.map((ping, index) =>
-          `Test ${index + 1}: ${ping} meters per second`
-        ).join(', ')
-      }. Average speed: ${
-        Math.round(
-          pingResults.reduce((total, current) => total + current, 0) / pingResults.length
-        )
-      } meters per second.`;
+  let uptimeString = '';
+  if (days > 0) uptimeString += `${days} day${days > 1 ? 's' : ''}, `;
+  if (hours > 0) uptimeString += `${hours} hour${hours > 1 ? 's' : ''}, `;
+  if (minutes > 0) uptimeString += `${minutes} minute${minutes > 1 ? 's' : ''}, `;
+  uptimeString += `${secs} second${secs !== 1 ? 's' : ''}`;
 
-      // Generate Google TTS audio URL
-      const audioUrl = googleTTS.getAudioUrl(spokenMessage, {
-        lang: 'en',
-        slow: false,
-        host: 'https://translate.google.com',
-      });
+  return uptimeString;
+}
 
-      // Send audio message
-      await zk.sendMessage(
-        dest,
-        {
-          audio: { url: audioUrl },
-          mimetype: 'audio/mpeg',
-          ptt: true, // Send as push-to-talk audio
-        },
-        { quoted: msg }
-      );
+keith({
+  nomCom: 'uptime',
+  aliases: ['runtime', 'running'],
+  desc: 'To check bot runtime',
+  categorie: 'system',
+  reaction: '⚔️'
+}, async (dest, zk, commandeOptions) => {
+  try {
+    const { ms } = commandeOptions; // Changed from msg to ms
+    const botUptime = process.uptime();
+    const formattedUptime = formatUptime(botUptime);
+    
+    // Create natural-sounding spoken message
+    const spokenMessage = `${conf.BOT} has been running for ${formattedUptime}`;
 
-      console.log('Ping results sent as audio successfully!');
-    } catch (error) {
-      console.error('Error in ping command:', error);
-      await zk.sendMessage(
-        dest,
-        { text: '❌ Failed to check speed. Please try again later.' },
-        { quoted: msg }
-      );
-    }
+    // Generate Google TTS audio URL
+    const audioUrl = googleTTS.getAudioUrl(spokenMessage, {
+      lang: 'en',
+      slow: false,
+      host: 'https://translate.google.com',
+    });
+
+    // Send as audio message
+    await zk.sendMessage(dest, { 
+      audio: { url: audioUrl }, 
+      mimetype: 'audio/mpeg',
+      ptt: true 
+    }, { quoted: ms }); // Changed from msg to ms
+
+    console.log("Uptime results sent as audio successfully!");
+
+  } catch (error) {
+    console.error('Error in uptime command:', error);
+    await zk.sendMessage(dest, { 
+      text: '❌ Failed to check uptime. Please try again later.' 
+    }, { quoted: commandeOptions.ms }); // Changed from msg to ms
   }
-);
+});
