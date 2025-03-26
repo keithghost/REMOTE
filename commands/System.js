@@ -1,28 +1,24 @@
 const { keith } = require('../keizzah/keith');
 const googleTTS = require('google-tts-api');
 
-// Ensure 'conf' is required only if used later in the code
-const conf = require(__dirname + "/../set");
-
 keith(
   {
     nomCom: 'ping',
     aliases: ['speed', 'latency'],
     desc: 'To check bot response time',
-    categorie: 'system', // Fixed spelling: 'categorie' -> 'category'
+    category: 'system', // Correct spelling
     reaction: '⚡',
-    fromMe: true,
   },
   async (dest, zk, msg) => {
     try {
-      // Generate 3 ping results
-      const pingResults = Array.from({ length: 3 }, () => 
-        Math.floor(Math.random() * 9000 + 1000) // Adjusted range for clarity
+      // Generate 3 random ping results
+      const pingResults = Array.from({ length: 3 }, () =>
+        Math.floor(Math.random() * 9000 + 1000) // Generates values between 1000 and 10000
       );
 
-      // Create natural-sounding spoken message
+      // Prepare spoken message
       const spokenMessage = `Speed test results: ${
-        pingResults.map((ping, index) => 
+        pingResults.map((ping, index) =>
           `Test ${index + 1}: ${ping} meters per second`
         ).join(', ')
       }. Average speed: ${
@@ -38,23 +34,23 @@ keith(
         host: 'https://translate.google.com',
       });
 
-      // Send as audio message
+      // Send audio message
       await zk.sendMessage(
-        dest, 
-        { 
-          audio: { url: audioUrl }, 
+        dest,
+        {
+          audio: { url: audioUrl },
           mimetype: 'audio/mpeg',
-          ptt: true, // Ensures it's sent as push-to-talk audio
-        }, 
+          ptt: true, // Send as push-to-talk audio
+        },
         { quoted: msg }
       );
 
-      console.log("Ping results sent as audio successfully!");
+      console.log('Ping results sent as audio successfully!');
     } catch (error) {
       console.error('Error in ping command:', error);
       await zk.sendMessage(
-        dest, 
-        { text: '❌ Failed to check speed. Please try again later.' }, 
+        dest,
+        { text: '❌ Failed to check speed. Please try again later.' },
         { quoted: msg }
       );
     }
