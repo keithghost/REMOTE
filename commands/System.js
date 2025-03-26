@@ -88,7 +88,7 @@ keith({
     const averagePing = Math.round(pingResults.reduce((a, b) => a + b, 0) / pingResults.length);
     
     // Create natural-sounding spoken message
-    const spokenMessage = `Ping test results: ${pingResults.map((ping, i) => 
+    const spokenMessage = `${conf.OWNER_NAME} test results: ${pingResults.map((ping, i) => 
       `Test ${i+1}: ${ping} milliseconds`
     ).join(', ')}. Average ping: ${averagePing} milliseconds`;
 
