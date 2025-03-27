@@ -527,4 +527,169 @@ keith({
     console.error("Instagram download error:", error);
     repondre(`Failed to download Instagram media. Error: ${error.message}\nYou can try with another link or check if the post is public.`);
   }
-});            
+}); 
+
+
+keith({
+  nomCom: "tiktok",
+  aliases: ["ttdl", "tiktokdl", "tt"],
+  categorie: "Download",
+  reaction: "🎵"
+}, async (dest, zk, commandeOptions) => {
+  const { repondre, ms, arg } = commandeOptions;
+
+  // Validate input
+  if (!arg || !arg[0]) {
+    return repondre('Please provide a TikTok URL!');
+  }
+
+  const tiktokUrl = arg[0].trim();
+  if (!tiktokUrl.includes('https://') || !(tiktokUrl.includes('tiktok.com') || tiktokUrl.includes('vt.tiktok.com'))) {
+    return repondre("Please provide a valid TikTok URL.");
+  }
+
+  try {
+    // API endpoint
+    const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl?url=${encodeURIComponent(tiktokUrl)}`;
+    
+    // Fetch TikTok video data
+    const response = await axios.get(apiUrl);
+    const data = response.data;
+
+    if (!data.status || !data.result) {
+      return repondre("Could not retrieve video. The TikTok may be private or unavailable.");
+    }
+
+    const videoInfo = data.result;
+
+    // Prepare common contextInfo
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'TikTok Downloader'}`,
+        body: videoInfo.caption || 'TikTok Video',
+        thumbnailUrl: videoInfo.thumbnail || conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: true
+      }
+    };
+
+    // Prepare caption with options
+    const caption = `
+     *${conf.BOT || 'TikTok Downloader'}*
+    |__________________________|
+    | *Title*: ${videoInfo.title || 'No title'}
+    | *Caption*: ${videoInfo.caption || 'No caption'}
+    |_________________________|
+    | REPLY WITH BELOW NUMBERS
+    |_________________________|
+    |-᳆  1. Video (No Watermark)
+    |-᳆  2. Video as Document
+    |-᳆  3. Audio Only
+    |-᳆  4. Audio as Document
+    |__________________________|
+    `;
+
+    // Send the initial message with options
+    const message = await zk.sendMessage(dest, {
+      image: { url: videoInfo.thumbnail || conf.URL || '' },
+      caption: caption,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+    const messageId = message.key.id;
+
+    // Set up reply handler
+    const replyHandler = async (update) => {
+      try {
+        const messageContent = update.messages[0];
+        if (!messageContent.message) return;
+
+        // Check if this is a reply to our initial message
+        const isReply = messageContent.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+        if (!isReply) return;
+
+        const responseText = messageContent.message.conversation || 
+                           messageContent.message.extendedTextMessage?.text;
+
+        // Validate response
+        if (!['1', '2', '3', '4'].includes(responseText)) {
+          return await zk.sendMessage(dest, {
+            text: "Invalid option. Please reply with a number between 1-4.",
+            quoted: messageContent
+          });
+        }
+
+        // Send loading reaction
+        await zk.sendMessage(dest, {
+          react: { text: '⬇️', key: messageContent.key },
+        });
+
+        // Handle different download options
+        switch(responseText) {
+          case '1': // Video (No Watermark)
+            await zk.sendMessage(dest, {
+              video: { url: videoInfo.nowm },
+              caption: `*${conf.BOT || 'TikTok Downloader'}* - Video (No Watermark)\n${videoInfo.caption || ''}`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
+            break;
+            
+          case '2': // Video as Document
+            await zk.sendMessage(dest, {
+              document: { url: videoInfo.nowm },
+              mimetype: "video/mp4",
+              fileName: `${conf.BOT || 'TikTok'}_${Date.now()}.mp4`,
+              caption: `*${conf.BOT || 'TikTok Downloader'}* - Video Document\n${videoInfo.caption || ''}`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
+            break;
+            
+          case '3': // Audio Only
+            await zk.sendMessage(dest, {
+              audio: { url: videoInfo.mp3 },
+              mimetype: "audio/mpeg",
+              caption: `*${conf.BOT || 'TikTok Downloader'}* - Audio\n${videoInfo.caption || ''}`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
+            break;
+            
+          case '4': // Audio as Document
+            await zk.sendMessage(dest, {
+              document: { url: videoInfo.mp3 },
+              mimetype: "audio/mpeg",
+              fileName: `${conf.BOT || 'TikTok'}_${Date.now()}.mp3`,
+              caption: `*${conf.BOT || 'TikTok Downloader'}* - Audio Document\n${videoInfo.caption || ''}`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
+            break;
+        }
+
+        // Send completion reaction
+        await zk.sendMessage(dest, {
+          react: { text: '✅', key: messageContent.key },
+        });
+
+      } catch (error) {
+        console.error("Error handling reply:", error);
+        await zk.sendMessage(dest, {
+          text: "An error occurred while processing your request. Please try again.",
+          quoted: messageContent
+        });
+      }
+    };
+
+    // Add event listener for replies
+    zk.ev.on("messages.upsert", replyHandler);
+
+    // Remove listener after 5 minutes to prevent memory leaks
+    setTimeout(() => {
+      zk.ev.off("messages.upsert", replyHandler);
+    }, 300000);
+
+  } catch (error) {
+    console.error("TikTok download error:", error);
+    repondre(`Failed to download TikTok. Error: ${error.message}\nYou can try with another link or check if the video is public.`);
+  }
+});
