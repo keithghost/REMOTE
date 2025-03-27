@@ -571,7 +571,7 @@ keith({
         thumbnailUrl: videoInfo.thumbnail || conf.URL || '',
         sourceUrl: conf.GURL || '',
         mediaType: 1,
-        renderLargerThumbnail: true
+        renderLargerThumbnail: false
       }
     };
 
