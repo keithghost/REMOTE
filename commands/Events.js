@@ -3,12 +3,12 @@ const axios = require('axios');
 const conf = require(__dirname + "/../set");
 
 keith({
-  nomCom: "youtub",
+  nomCom: "yout",
   aliases: ["yt", "ytdl", "youtubedl"],
   categorie: "Download",
   reaction: "🎬"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const { repondre, ms, arg, userJid } = commandeOptions;
 
   // Validate input
   if (!arg || arg.length < 1) {
@@ -16,6 +16,27 @@ keith({
   }
 
   const query = arg.join(' ').trim();
+
+  // Common contextInfo configuration
+  const getContextInfo = (title = '') => ({
+    mentionedJid: [userJid],
+    forwardingScore: 999,
+    isForwarded: true,
+    forwardedNewsletterMessageInfo: {
+      newsletterJid: "120363266249040649@newsletter",
+      newsletterName: "Keith Support 🔥",
+      serverMessageId: Math.floor(100000 + Math.random() * 900000),
+    },
+    externalAdReply: {
+      showAdAttribution: true,
+      title: `${conf.BOT || 'YouTube Downloader'}`,
+      body: title || "YouTube Downloader",
+      thumbnailUrl: conf.URL || '',
+      sourceUrl: conf.GURL || '',
+      mediaType: 1,
+      renderLargerThumbnail: true
+    }
+  });
 
   try {
     if (query.includes('youtube.com') || query.includes('youtu.be')) {
@@ -31,17 +52,7 @@ keith({
 
       const message = await zk.sendMessage(dest, {
         text: typeSelectionMsg,
-        contextInfo: {
-          externalAdReply: {
-            showAdAttribution: true,
-            title: `${conf.BOT || 'YouTube Downloader'}`,
-            body: "Select download type",
-            thumbnailUrl: conf.URL || '',
-            sourceUrl: conf.GURL || '',
-            mediaType: 1,
-            renderLargerThumbnail: true
-          }
-        }
+        contextInfo: getContextInfo("Select download type")
       }, { quoted: ms });
 
       const messageId = message.key.id;
@@ -63,6 +74,7 @@ keith({
           if (!['1', '2'].includes(responseText)) {
             return await zk.sendMessage(dest, {
               text: "Please reply with 1 for Video or 2 for Audio.",
+              contextInfo: getContextInfo(),
               quoted: messageContent
             });
           }
@@ -83,6 +95,7 @@ keith({
           if (!data.status || !data.result) {
             return await zk.sendMessage(dest, {
               text: `Could not download ${type}. The video may be unavailable.`,
+              contextInfo: getContextInfo(),
               quoted: messageContent
             });
           }
@@ -96,17 +109,7 @@ keith({
             mimetype: fileType,
             fileName: fileName,
             caption: `*${conf.BOT || 'YouTube Downloader'}*\nTitle: ${mediaInfo.title}\nQuality: ${mediaInfo.quality || 'N/A'}`,
-            contextInfo: {
-              externalAdReply: {
-                showAdAttribution: true,
-                title: `${conf.BOT || 'YouTube Downloader'}`,
-                body: mediaInfo.title,
-                thumbnailUrl: conf.URL || '',
-                sourceUrl: conf.GURL || '',
-                mediaType: 1,
-                renderLargerThumbnail: true
-              }
-            }
+            contextInfo: getContextInfo(mediaInfo.title)
           }, { quoted: messageContent });
 
           // Remove listener after successful download
@@ -116,6 +119,7 @@ keith({
           console.error("Error handling YouTube download:", error);
           await zk.sendMessage(dest, {
             text: "An error occurred while processing your request. Please try again.",
+            contextInfo: getContextInfo(),
             quoted: messageContent
           });
         }
@@ -152,17 +156,7 @@ keith({
       // Send search results
       const message = await zk.sendMessage(dest, {
         text: resultsList,
-        contextInfo: {
-          externalAdReply: {
-            showAdAttribution: true,
-            title: `${conf.BOT || 'YouTube Search'}`,
-            body: `Results for: ${query}`,
-            thumbnailUrl: videos[0].thumbnail || conf.URL || '',
-            sourceUrl: conf.GURL || '',
-            mediaType: 1,
-            renderLargerThumbnail: true
-          }
-        }
+        contextInfo: getContextInfo(`Results for: ${query}`)
       }, { quoted: ms });
 
       const messageId = message.key.id;
@@ -185,6 +179,7 @@ keith({
           if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= videos.length) {
             return await zk.sendMessage(dest, {
               text: `Please reply with a number between 1-${videos.length}.`,
+              contextInfo: getContextInfo(),
               quoted: messageContent
             });
           }
@@ -204,17 +199,7 @@ keith({
 
           const typeMessage = await zk.sendMessage(dest, {
             text: typeSelectionMsg,
-            contextInfo: {
-              externalAdReply: {
-                showAdAttribution: true,
-                title: `${conf.BOT || 'YouTube Downloader'}`,
-                body: selectedVideo.title,
-                thumbnailUrl: selectedVideo.thumbnail || conf.URL || '',
-                sourceUrl: conf.GURL || '',
-                mediaType: 1,
-                renderLargerThumbnail: true
-              }
-            }
+            contextInfo: getContextInfo(selectedVideo.title)
           }, { quoted: messageContent });
 
           const typeMessageId = typeMessage.key.id;
@@ -236,6 +221,7 @@ keith({
               if (!['1', '2'].includes(typeResponse)) {
                 return await zk.sendMessage(dest, {
                   text: "Please reply with 1 for Video or 2 for Audio.",
+                  contextInfo: getContextInfo(),
                   quoted: typeContent
                 });
               }
@@ -256,6 +242,7 @@ keith({
               if (!downloadData.status || !downloadData.result) {
                 return await zk.sendMessage(dest, {
                   text: `Failed to download ${type} for this video. Please try another one.`,
+                  contextInfo: getContextInfo(),
                   quoted: typeContent
                 });
               }
@@ -269,17 +256,7 @@ keith({
                 mimetype: fileType,
                 fileName: fileName,
                 caption: `*${conf.BOT || 'YouTube Downloader'}*\nTitle: ${mediaInfo.title}\nQuality: ${mediaInfo.quality || 'N/A'}`,
-                contextInfo: {
-                  externalAdReply: {
-                    showAdAttribution: true,
-                    title: `${conf.BOT || 'YouTube Downloader'}`,
-                    body: mediaInfo.title,
-                    thumbnailUrl: selectedVideo.thumbnail || conf.URL || '',
-                    sourceUrl: conf.GURL || '',
-                    mediaType: 1,
-                    renderLargerThumbnail: true
-                  }
-                }
+                contextInfo: getContextInfo(mediaInfo.title)
               }, { quoted: typeContent });
 
               // Remove both handlers after successful download
@@ -290,6 +267,7 @@ keith({
               console.error("Error handling YouTube download:", error);
               await zk.sendMessage(dest, {
                 text: "An error occurred while processing your request. Please try again.",
+                contextInfo: getContextInfo(),
                 quoted: typeContent
               });
             }
@@ -308,6 +286,7 @@ keith({
           console.error("Error handling YouTube selection:", error);
           await zk.sendMessage(dest, {
             text: "An error occurred while processing your request. Please try again.",
+            contextInfo: getContextInfo(),
             quoted: messageContent
           });
         }
