@@ -4,10 +4,30 @@ const ytSearch = require('yt-search');
 const conf = require(__dirname + '/../set');
 const { Catbox } = require("node-catbox");
 const fs = require('fs-extra');
-const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
 
 // Initialize Catbox
 const catbox = new Catbox();
+
+// Common contextInfo configuration
+const getContextInfo = (title = '', userJid = '', thumbnailUrl = '') => ({
+  mentionedJid: [userJid],
+  forwardingScore: 999,
+  isForwarded: true,
+  forwardedNewsletterMessageInfo: {
+    newsletterJid: "120363266249040649@newsletter",
+    newsletterName: "Keith Support 🔥",
+    serverMessageId: Math.floor(100000 + Math.random() * 900000),
+  },
+  externalAdReply: {
+    showAdAttribution: true,
+    title: `${conf.BOT || 'YouTube Downloader'}`,
+    body: title || "Media Downloader",
+    thumbnailUrl: thumbnailUrl || conf.URL || '',
+    sourceUrl: conf.GURL || '',
+    mediaType: 1,
+    renderLargerThumbnail: true
+  }
+});
 
 // Function to upload a file to Catbox and return the URL
 async function uploadToCatbox(filePath) {
@@ -16,57 +36,50 @@ async function uploadToCatbox(filePath) {
   }
   try {
     const uploadResult = await catbox.uploadFile({ path: filePath });
-    if (uploadResult) {
-      return uploadResult;
-    } else {
-      throw new Error("Error retrieving file link");
-    }
+    return uploadResult || null;
   } catch (error) {
     throw new Error(String(error));
   }
 }
-// Define the command with aliases for play
+
+// Define the command with aliases for play (audio)
 keith({
   nomCom: "play",
   aliases: ["song", "playdoc", "audio", "mp3"],
   categorie: "download",
-  reaction: "🎥"
+  reaction: "🎵"
 }, async (dest, zk, commandOptions) => {
-  const { arg, ms, repondre } = commandOptions;
+  const { arg, ms, repondre, userJid } = commandOptions;
 
-  // Check if a query is provided
-  if (!arg[0]) {
-    return repondre("Please provide a video name.");
-  }
+  if (!arg[0]) return repondre("Please provide a video name.");
 
   const query = arg.join(" ");
 
   try {
-    // Perform a YouTube search based on the query
-    const searchResults = await ytSearch(query);
+    // Notify user that download is starting
+    await zk.sendMessage(dest, {
+      text: "🔍 Searching for audio... Please wait...",
+      contextInfo: getContextInfo("Searching", userJid)
+    }, { quoted: ms });
 
-    // Check if any videos were found
-    if (!searchResults || !searchResults.videos.length) {
+    // Perform YouTube search
+    const searchResults = await ytSearch(query);
+    if (!searchResults?.videos?.length) {
       return repondre('No video found for the specified query.');
     }
 
     const firstVideo = searchResults.videos[0];
     const videoUrl = firstVideo.url;
+    const thumbnail = firstVideo.thumbnail;
 
-    // Function to get download data from APIs
-    const getDownloadData = async (url) => {
-      try {
-        const response = await axios.get(url);
-        return response.data;
-      } catch (error) {
-        console.error('Error fetching data from API:', error);
-        return { success: false };
-      }
-    };
+    // Notify user that download is in progress
+    await zk.sendMessage(dest, {
+      text: "⬇️ Downloading audio... This may take a moment...",
+      contextInfo: getContextInfo("Downloading", userJid, thumbnail)
+    }, { quoted: ms });
 
-    // List of APIs to try
+    // Try multiple audio download APIs
     const apis = [
-      `https://api-rin-tohsaka.vercel.app/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
       `https://api.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(videoUrl)}`,
       `https://www.dark-yasiya-api.site/download/ytmp3?url=${encodeURIComponent(videoUrl)}`,
       `https://api.giftedtech.web.id/api/download/dlmp3?url=${encodeURIComponent(videoUrl)}&apikey=gifted-md`,
@@ -75,75 +88,47 @@ keith({
 
     let downloadData;
     for (const api of apis) {
-      downloadData = await getDownloadData(api);
-      if (downloadData && downloadData.success) break;
+      try {
+        const response = await axios.get(api);
+        if (response.data?.success) {
+          downloadData = response.data;
+          break;
+        }
+      } catch (e) { continue; }
     }
 
-    // Check if a valid download URL was found
-    if (!downloadData || !downloadData.success) {
-      return repondre('Failed to retrieve download URL from all sources. Please try again later.');
+    if (!downloadData?.success) {
+      return repondre('Failed to retrieve download URL from all sources.');
     }
 
     const downloadUrl = downloadData.result.download_url;
     const videoDetails = downloadData.result;
 
-    // Prepare the message payload with external ad details
+    // Prepare message payloads with video thumbnail
     const messagePayloads = [
       {
         audio: { url: downloadUrl },
         mimetype: 'audio/mp4',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
+        caption: `🎵 *${videoDetails.title}*`,
+        contextInfo: getContextInfo(videoDetails.title, userJid, thumbnail)
       },
       {
         document: { url: downloadUrl },
         mimetype: 'audio/mpeg',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
-      },
-      {
-        document: { url: downloadUrl },
-        mimetype: 'audio/mp4',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
+        fileName: `${videoDetails.title}.mp3`.replace(/[^\w\s.-]/gi, ''),
+        caption: `📁 *${videoDetails.title}* (Document)`,
+        contextInfo: getContextInfo(videoDetails.title, userJid, thumbnail)
       }
     ];
 
-    // Send the download link to the user for each payload
-    for (const messagePayload of messagePayloads) {
-      await zk.sendMessage(dest, messagePayload, { quoted: ms });
+    // Send downloads
+    for (const payload of messagePayloads) {
+      await zk.sendMessage(dest, payload, { quoted: ms });
     }
 
   } catch (error) {
-    console.error('Error during download process:', error);
-    return repondre(`Download failed due to an error: ${error.message || error}`);
+    console.error('Audio download error:', error);
+    repondre(`Download failed: ${error.message}`);
   }
 });
 
@@ -154,41 +139,37 @@ keith({
   categorie: "download",
   reaction: "🎥"
 }, async (dest, zk, commandOptions) => {
-  const { arg, ms, repondre } = commandOptions;
+  const { arg, ms, repondre, userJid } = commandOptions;
 
-  // Check if a query is provided
-  if (!arg[0]) {
-    return repondre("Please provide a video name.");
-  }
+  if (!arg[0]) return repondre("Please provide a video name.");
 
   const query = arg.join(" ");
 
   try {
-    // Perform a YouTube search based on the query
-    const searchResults = await ytSearch(query);
+    // Notify user that download is starting
+    await zk.sendMessage(dest, {
+      text: "🔍 Searching for video... Please wait...",
+      contextInfo: getContextInfo("Searching", userJid)
+    }, { quoted: ms });
 
-    // Check if any videos were found
-    if (!searchResults || !searchResults.videos.length) {
+    // Perform YouTube search
+    const searchResults = await ytSearch(query);
+    if (!searchResults?.videos?.length) {
       return repondre('No video found for the specified query.');
     }
 
     const firstVideo = searchResults.videos[0];
     const videoUrl = firstVideo.url;
+    const thumbnail = firstVideo.thumbnail;
 
-    // Function to get download data from APIs
-    const getDownloadData = async (url) => {
-      try {
-        const response = await axios.get(url);
-        return response.data;
-      } catch (error) {
-        console.error('Error fetching data from API:', error);
-        return { success: false };
-      }
-    };
+    // Notify user that download is in progress
+    await zk.sendMessage(dest, {
+      text: "⬇️ Downloading video... This may take a moment...",
+      contextInfo: getContextInfo("Downloading", userJid, thumbnail)
+    }, { quoted: ms });
 
-    // List of APIs to try
+    // Try multiple video download APIs
     const apis = [
-      `https://api-rin-tohsaka.vercel.app/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
       `https://api.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
       `https://www.dark-yasiya-api.site/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
       `https://api.giftedtech.web.id/api/download/dlmp4?url=${encodeURIComponent(videoUrl)}&apikey=gifted-md`,
@@ -197,115 +178,97 @@ keith({
 
     let downloadData;
     for (const api of apis) {
-      downloadData = await getDownloadData(api);
-      if (downloadData && downloadData.success) break;
+      try {
+        const response = await axios.get(api);
+        if (response.data?.success) {
+          downloadData = response.data;
+          break;
+        }
+      } catch (e) { continue; }
     }
 
-    // Check if a valid download URL was found
-    if (!downloadData || !downloadData.success) {
-      return repondre('Failed to retrieve download URL from all sources. Please try again later.');
+    if (!downloadData?.success) {
+      return repondre('Failed to retrieve download URL from all sources.');
     }
 
     const downloadUrl = downloadData.result.download_url;
     const videoDetails = downloadData.result;
 
-    // Prepare the message payload with external ad details
+    // Prepare message payloads with video thumbnail
     const messagePayloads = [
       {
         video: { url: downloadUrl },
         mimetype: 'video/mp4',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
+        caption: `🎥 *${videoDetails.title}*`,
+        contextInfo: getContextInfo(videoDetails.title, userJid, thumbnail)
       },
       {
         document: { url: downloadUrl },
         mimetype: 'video/mp4',
-        contextInfo: {
-          externalAdReply: {
-            title: videoDetails.title,
-            body: videoDetails.title,
-            mediaType: 1,
-            sourceUrl: conf.GURL,
-            thumbnailUrl: firstVideo.thumbnail,
-            renderLargerThumbnail: false,
-            showAdAttribution: true,
-          },
-        },
+        fileName: `${videoDetails.title}.mp4`.replace(/[^\w\s.-]/gi, ''),
+        caption: `📁 *${videoDetails.title}* (Document)`,
+        contextInfo: getContextInfo(videoDetails.title, userJid, thumbnail)
       }
     ];
 
-    // Send the download link to the user
-    for (const messagePayload of messagePayloads) {
-      await zk.sendMessage(dest, messagePayload, { quoted: ms });
+    // Send downloads
+    for (const payload of messagePayloads) {
+      await zk.sendMessage(dest, payload, { quoted: ms });
     }
 
   } catch (error) {
-    console.error('Error during download process:', error);
-    return repondre(`Download failed due to an error: ${error.message || error}`);
+    console.error('Video download error:', error);
+    repondre(`Download failed: ${error.message}`);
   }
 });
 
-
-// Command to upload image, video, or audio file
+// Command to upload media and get URL
 keith({
-  'nomCom': 'url',       // Command to trigger the function
-  'categorie': "download", // Command category
-  'reaction': '👨🏿‍💻'    // Reaction to use on command
-}, async (groupId, client, context) => {
-  const { msgRepondu, repondre } = context;
+  nomCom: 'url',
+  categorie: "download",
+  reaction: '👨🏿‍💻'
+}, async (dest, zk, commandOptions) => {
+  const { msgRepondu, repondre, userJid } = commandOptions;
 
-  // If no message (image/video/audio) is mentioned, prompt user
-  if (!msgRepondu) {
-    return repondre("Please mention an image, video, or audio.");
-  }
+  if (!msgRepondu) return repondre("Please mention an image, video, or audio.");
 
   let mediaPath;
+  const mediaTypes = [
+    'videoMessage', 'gifMessage', 'stickerMessage', 
+    'documentMessage', 'imageMessage', 'audioMessage'
+  ];
 
-  // Check if the message contains a video
-  if (msgRepondu.videoMessage) {
-    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
+  for (const type of mediaTypes) {
+    if (msgRepondu[type]) {
+      mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu[type]);
+      break;
+    }
   }
- else if (msgRepondu.gifMessage) {
-    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.gifMessage);
-  }
- else if (msgRepondu.stickerMessage) {
-    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage);
-  }
-else if (msgRepondu.documentMessage) {
-    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.documentMessage);
-  }
-  // Check if the message contains an image
-  else if (msgRepondu.imageMessage) {
-    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
-  }
-  // Check if the message contains an audio file
-  else if (msgRepondu.audioMessage) {
-    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
-  } else {
-    // If no media (image, video, or audio) is found, prompt user
-    return repondre("Please mention an image, video, or audio.");
-  }
+
+  if (!mediaPath) return repondre("Unsupported media type.");
 
   try {
-    // Upload the media to Catbox and get the URL
-    const fileUrl = await uploadToCatbox(mediaPath);
+    // Notify user that upload is in progress
+    await zk.sendMessage(dest, {
+      text: "⬆️ Uploading your file... Please wait...",
+      contextInfo: getContextInfo("Uploading", userJid)
+    });
 
-    // Delete the local media file after upload
+    // Upload and send URL
+    const fileUrl = await uploadToCatbox(mediaPath);
     fs.unlinkSync(mediaPath);
 
-    // Respond with the URL of the uploaded file
-    repondre(fileUrl);
+    await zk.sendMessage(dest, {
+      text: `✅ Here's your file URL:\n${fileUrl}`,
+      contextInfo: getContextInfo("Upload Complete", userJid)
+    });
+
   } catch (error) {
-    console.error("Error while creating your URL:", error);
-    repondre("Oops, there was an error.");
+    console.error("Upload error:", error);
+    await zk.sendMessage(dest, {
+      text: "❌ Upload failed. Please try again.",
+      contextInfo: getContextInfo("Upload Failed", userJid)
+    });
+    if (fs.existsSync(mediaPath)) fs.unlinkSync(mediaPath);
   }
 });
