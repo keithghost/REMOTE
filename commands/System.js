@@ -1,11 +1,10 @@
 const { keith } = require('../keizzah/keith');
 const Heroku = require('heroku-client');
-const s = require("../set");
 const axios = require("axios");
+const { exec } = require("child_process");
 const speed = require("performance-now");
 const googleTTS = require('google-tts-api');
-const { repondre, sendMessage } = require('../keizzah/context');
-const { exec } = require("child_process");
+const { repondre } = require('../keizzah/context');
 const conf = require(__dirname + "/../set");
 
 // Utility function to delay execution
@@ -13,23 +12,43 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Formats uptime in seconds into a human-readable string
- * @param {number} seconds - Uptime in seconds
- * @returns {string} Formatted uptime string
  */
 function formatUptime(seconds) {
-  const days = Math.floor(seconds / (3600 * 24));
-  const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
 
-  let uptimeString = '';
-  if (days > 0) uptimeString += `${days} day${days > 1 ? 's' : ''}, `;
-  if (hours > 0) uptimeString += `${hours} hour${hours > 1 ? 's' : ''}, `;
-  if (minutes > 0) uptimeString += `${minutes} minute${minutes > 1 ? 's' : ''}, `;
-  uptimeString += `${secs} second${secs !== 1 ? 's' : ''}`;
-
-  return uptimeString;
+  return [
+    days && `${days} day${days > 1 ? 's' : ''}`,
+    hours && `${hours} hour${hours > 1 ? 's' : ''}`,
+    minutes && `${minutes} minute${minutes > 1 ? 's' : ''}`,
+    `${secs} second${secs !== 1 ? 's' : ''}`
+  ].filter(Boolean).join(' ');
 }
+
+/**
+ * Standardized context info generator
+ */
+const getContextInfo = (title = '', userJid = '') => ({
+  mentionedJid: [userJid],
+  forwardingScore: 999,
+  isForwarded: true,
+  forwardedNewsletterMessageInfo: {
+    newsletterJid: "120363266249040649@newsletter",
+    newsletterName: "Keith Support 🔥",
+    serverMessageId: Math.floor(100000 + Math.random() * 900000),
+  },
+  externalAdReply: {
+    showAdAttribution: true,
+    title: conf.BOT || 'System Command',
+    body: title || "Bot Functionality",
+    thumbnailUrl: conf.URL || '',
+    sourceUrl: conf.GURL || '',
+    mediaType: 1,
+    renderLargerThumbnail: false
+  }
+});
 
 // Test command
 keith({
@@ -37,85 +56,46 @@ keith({
   aliases: ["alive", "testing"],
   categorie: "system",
   reaction: "⚔️"
-}, async (dest, zk, commandeOptions) => {
-  const { ms } = commandeOptions;
-
-  // Array of sound file URLs
-  const audioFiles = [
-    'https://files.catbox.moe/hpwsi2.mp3',
-    // ... other audio files can be added here
-  ];
-
+}, async (dest, zk, { ms, userJid }) => {
+  const audioFiles = ['https://files.catbox.moe/hpwsi2.mp3'];
   const selectedAudio = audioFiles[Math.floor(Math.random() * audioFiles.length)];
 
-  const audioMessage = {
+  await zk.sendMessage(dest, {
     audio: { url: selectedAudio },
     mimetype: 'audio/mpeg',
     ptt: true,
     waveform: [100, 0, 100, 0, 100, 0, 100],
-    fileName: 'shizo',
-    contextInfo: {
-      externalAdReply: {
-        title: '𝗜 𝗔𝗠 𝗔𝗟𝗜𝗩𝗘 𝗠𝗢𝗧𝗛𝗘𝗥𝗙𝗨𝗖𝗞𝗘𝗥',
-        body: conf.OWNER_NAME,
-        thumbnailUrl: conf.URL,
-        sourceUrl: conf.GURL,
-        mediaType: 1,
-        renderLargerThumbnail: true,
-      },
-    },
-  };
-
-  await zk.sendMessage(dest, audioMessage, { quoted: ms });
+    contextInfo: getContextInfo('𝗜 𝗔𝗠 𝗔𝗟𝗜𝗩𝗘 𝗠𝗢𝗧𝗛𝗘𝗥𝗙𝗨𝗖𝗞𝗘𝗥', userJid)
+  }, { quoted: ms });
 });
 
 // Uptime command
 keith({
   nomCom: 'uptime',
   aliases: ['runtime', 'running'],
-  desc: 'To check bot runtime',
   categorie: 'system',
   reaction: '⚔️'
-}, async (dest, zk, commandeOptions) => {
+}, async (dest, zk, { ms, userJid }) => {
   try {
-    const { ms } = commandeOptions;
-    const botUptime = process.uptime();
-    const formattedUptime = formatUptime(botUptime);
-    
-    // Create natural-sounding spoken message
-    const spokenMessage = `${conf.BOT} has been running for ${formattedUptime}`;
+    const uptime = formatUptime(process.uptime());
+    const audioUrl = googleTTS.getAudioUrl(
+      `${conf.BOT} has been running for ${uptime}`,
+      { lang: 'en', slow: false }
+    );
 
-    // Generate Google TTS audio URL
-    const audioUrl = googleTTS.getAudioUrl(spokenMessage, {
-      lang: 'en',
-      slow: false,
-      host: 'https://translate.google.com',
-    });
-
-    // Send as audio message with context info
     await zk.sendMessage(dest, { 
-      audio: { url: audioUrl }, 
+      audio: { url: audioUrl },
       mimetype: 'audio/mpeg',
       ptt: true,
-      contextInfo: {
-        externalAdReply: {
-          title: `${conf.BOT} UPTIME`,
-          body: `Running for ${formattedUptime}`,
-          thumbnailUrl: conf.URL,
-          sourceUrl: conf.GURL,
-          mediaType: 1,
-          showAdAttribution: true,
-        }
-      }
+      contextInfo: getContextInfo(
+        `Running for ${uptime}`,
+        userJid
+      )
     }, { quoted: ms });
 
-    console.log("Uptime results sent successfully!");
-
   } catch (error) {
-    console.error('Error in uptime command:', error);
-    await zk.sendMessage(dest, { 
-      text: '❌ Failed to check uptime. Please try again later.' 
-    }, { quoted: commandeOptions.ms });
+    console.error('Uptime error:', error);
+    repondre(zk, dest, ms, '❌ Failed to check uptime');
   }
 });
 
@@ -123,67 +103,39 @@ keith({
 keith({
   nomCom: 'ping',
   aliases: ['speed', 'latency'],
-  desc: 'To check bot response time',
   categorie: 'system',
   reaction: '⚡'
-}, async (dest, zk, commandeOptions) => {
+}, async (dest, zk, { ms, userJid }) => {
   try {
-    const { ms } = commandeOptions;
-    
-    // Start performance measurement
-    const start = speed();
-    
-    // Generate 3 ping results with actual measurements
-    const pingResults = [];
+    const pings = [];
     for (let i = 0; i < 3; i++) {
-      const startTime = speed();
-      // Simulate some work
+      const start = speed();
       await delay(100);
-      const endTime = speed();
-      pingResults.push(Math.floor((endTime - startTime) * 1000));
+      pings.push(Math.floor((speed() - start) * 1000));
     }
-    
-    // Calculate average ping
-    const averagePing = Math.round(pingResults.reduce((a, b) => a + b, 0) / pingResults.length);
-    
-    // Create natural-sounding spoken message
-    const spokenMessage = `${conf.OWNER_NAME} test results: ${pingResults.map((ping, i) => 
-      `Test ${i+1}: ${ping} milliseconds`
-    ).join(', ')}. Average ping: ${averagePing} milliseconds`;
+    const avgPing = Math.round(pings.reduce((a,b) => a + b) / pings.length);
 
-    // Generate Google TTS audio URL
-    const audioUrl = googleTTS.getAudioUrl(spokenMessage, {
-      lang: 'en',
-      slow: false,
-      host: 'https://translate.google.com',
-    });
-
-    // Send as audio message with context info
     await zk.sendMessage(dest, { 
-      audio: { url: audioUrl }, 
+      audio: { 
+        url: googleTTS.getAudioUrl(
+          `Ping results: ${pings.join('ms, ')}ms. Average: ${avgPing}ms`,
+          { lang: 'en', slow: false }
+        )
+      },
       mimetype: 'audio/mpeg',
       ptt: true,
-      contextInfo: {
-        externalAdReply: {
-          title: `${conf.BOT} SPEED TEST`,
-          body: `Average: ${averagePing} ms`,
-          thumbnailUrl: conf.URL,
-          sourceUrl: conf.GURL,
-          mediaType: 1,
-          showAdAttribution: true,
-        }
-      }
+      contextInfo: getContextInfo(
+        `Average ping: ${avgPing}ms`,
+        userJid
+      )
     }, { quoted: ms });
 
-    console.log("Ping results sent successfully!");
-
   } catch (error) {
-    console.error('Error in ping command:', error);
-    await zk.sendMessage(dest, { 
-      text: '❌ Failed to check ping. Please try again later.' 
-    }, { quoted: commandeOptions.ms });
+    console.error('Ping error:', error);
+    repondre(zk, dest, ms, '❌ Ping test failed');
   }
 });
+
 
 // Restart command
 keith({
