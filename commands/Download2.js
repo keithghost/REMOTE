@@ -773,3 +773,125 @@ keith({
     repondre(`Failed to download file. Error: ${error.message}\nPlease check the link and try again.`);
   }
 });
+
+
+keith({
+  nomCom: "hentaivid",
+  aliases: ["hvid", "hentaidl", "hv"],
+  categorie: "download",
+  reaction: "🔞"
+}, async (dest, zk, commandeOptions) => {
+  const { repondre, ms, arg } = commandeOptions;
+
+  try {
+    // API endpoint
+    const apiUrl = 'https://apis-keith.vercel.app/dl/hentaivid';
+    
+    // Fetch hentai videos data
+    const response = await axios.get(apiUrl);
+    const data = response.data;
+
+    if (!data.status || !data.result || data.result.length === 0) {
+      return repondre("Could not retrieve videos. Please try again later.");
+    }
+
+    const videos = data.result.slice(0, 8); // Ensure max 8 videos
+
+    // Prepare common contextInfo
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Hentai Downloader'}`,
+        body: "Select a video (1-8)",
+        thumbnailUrl: conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: true
+      }
+    };
+
+    // Prepare selection menu
+    let caption = `*${conf.BOT || 'Hentai Downloader'}*\n`;
+    caption += `Available videos (1-8):\n`;
+    caption += `|__________________________|\n`;
+
+    videos.forEach((video, index) => {
+      caption += `| ${index + 1}. ${video.title}\n`;
+      caption += `| 👉 ${video.category}\n`;
+      caption += `| 👁️ ${video.views_count} views | 🔗 ${video.share_count} shares\n`;
+      caption += `|__________________________|\n`;
+    });
+
+    caption += `\nReply with a number (1-8) to download that video.`;
+
+    // Send the selection menu
+    const message = await zk.sendMessage(dest, {
+      text: caption,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+    const messageId = message.key.id;
+
+    // Set up reply handler
+    const replyHandler = async (update) => {
+      try {
+        const messageContent = update.messages[0];
+        if (!messageContent.message) return;
+
+        // Check if this is a reply to our initial message
+        const isReply = messageContent.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+        if (!isReply) return;
+
+        const responseText = messageContent.message.conversation || 
+                           messageContent.message.extendedTextMessage?.text;
+
+        // Validate response
+        const selectedNum = parseInt(responseText);
+        if (isNaN(selectedNum) || selectedNum < 1 || selectedNum > videos.length) {
+          return await zk.sendMessage(dest, {
+            text: `Invalid selection. Please reply with a number between 1-${videos.length}.`,
+            quoted: messageContent
+          });
+        }
+
+        const selectedVideo = videos[selectedNum - 1];
+
+        // Send loading reaction
+        await zk.sendMessage(dest, {
+          react: { text: '⬇️', key: messageContent.key },
+        });
+
+        // Send the selected video
+        await zk.sendMessage(dest, {
+          video: { url: selectedVideo.media.video_url },
+          caption: `*${selectedVideo.title}*\nCategory: ${selectedVideo.category}\nViews: ${selectedVideo.views_count} | Shares: ${selectedVideo.share_count}`,
+          contextInfo: commonContextInfo
+        }, { quoted: messageContent });
+
+        // Send completion reaction
+        await zk.sendMessage(dest, {
+          react: { text: '✅', key: messageContent.key },
+        });
+
+      } catch (error) {
+        console.error("Error handling reply:", error);
+        await zk.sendMessage(dest, {
+          text: "An error occurred while processing your request. Please try again.",
+          quoted: messageContent
+        });
+      }
+    };
+
+    // Add event listener for replies
+    zk.ev.on("messages.upsert", replyHandler);
+
+    // Remove listener after 5 minutes to prevent memory leaks
+    setTimeout(() => {
+      zk.ev.off("messages.upsert", replyHandler);
+    }, 300000);
+
+  } catch (error) {
+    console.error("Hentai video download error:", error);
+    repondre(`Failed to fetch videos. Error: ${error.message}`);
+  }
+});
