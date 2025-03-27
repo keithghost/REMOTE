@@ -45,7 +45,7 @@ keith({
 
     // Prepare caption with video options
     const caption = `
-     *${conf.BOT || 'Facebook Downloader'}*
+     *${conf.BOT || 'Facebook Downloader'} Facebook Downloader*
     |__________________________|
     |       *ᴛɪᴛʟᴇ*  
            ${videoData.title || 'No title available'}
@@ -227,13 +227,13 @@ keith({
         thumbnailUrl: videoInfo.thumb || '',
         sourceUrl: conf.GURL || '',
         mediaType: 1,
-        renderLargerThumbnail: true
+        renderLargerThumbnail: false
       }
     };
 
     // Prepare caption with video options
     const caption = `
-     *${conf.BOT || 'Twitter Downloader'}*
+     *${conf.BOT || 'Twitter Downloader'} twitter Downloader*
     |__________________________|
     |       *ᴅᴇsᴄʀɪᴘᴛɪᴏɴ*  
     ${videoInfo.desc || 'No description available'}
