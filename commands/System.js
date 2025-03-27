@@ -26,6 +26,8 @@ function formatUptime(seconds) {
     `${secs} second${secs !== 1 ? 's' : ''}`
   ].filter(Boolean).join(' ');
 }
+const GITHUB_RAW_BASE = "https://raw.githubusercontent.com/ibrahimaitech/bwm-xmd-music/master/tiktokmusic";
+const AUDIO_COUNT = 100; // Total number of audio files available
 
 /**
  * Standardized context info generator
@@ -50,8 +52,38 @@ const getContextInfo = (title = '', userJid = '') => ({
   }
 });
 
-// Test command
 keith({
+  nomCom: "test",
+  aliases: ["alive", "testing"],
+  categorie: "system",
+  reaction: "⚔️"
+}, async (dest, zk, { ms, userJid }) => {
+  try {
+    // Select random audio from GitHub repository
+    const randomIndex = Math.floor(Math.random() * AUDIO_COUNT) + 1;
+    const audioUrl = `${GITHUB_RAW_BASE}/sound${randomIndex}.mp3`;
+    
+    // Generate random waveform for visual effect
+    const waveform = Array.from({length: 7}, () => Math.floor(Math.random() * 100));
+
+    await zk.sendMessage(dest, {
+      audio: { url: audioUrl },
+      mimetype: 'audio/mpeg',
+      ptt: true,
+      waveform: waveform,
+      contextInfo: getContextInfo('𝗜 𝗔𝗠 𝗔𝗟𝗜𝗩𝗘 𝗠𝗢𝗧𝗛𝗘𝗥𝗙𝗨𝗖𝗞𝗘𝗥', userJid)
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Test command error:", error);
+    await zk.sendMessage(dest, {
+      text: "❌ Failed to fetch audio from repository",
+      contextInfo: getContextInfo('𝗔𝗨𝗗𝗜𝗢 𝗙𝗔𝗜𝗟𝗘𝗗', userJid)
+    }, { quoted: ms });
+  }
+});
+// Test command
+/*keith({
   nomCom: "test",
   aliases: ["alive", "testing"],
   categorie: "system",
@@ -67,7 +99,7 @@ keith({
     waveform: [100, 0, 100, 0, 100, 0, 100],
     contextInfo: getContextInfo('𝗜 𝗔𝗠 𝗔𝗟𝗜𝗩𝗘 𝗠𝗢𝗧𝗛𝗘𝗥𝗙𝗨𝗖𝗞𝗘𝗥', userJid)
   }, { quoted: ms });
-});
+});*/
 
 // Uptime command
 keith({
