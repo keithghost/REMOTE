@@ -384,13 +384,19 @@ keith({
   }
 
   try {
+    // API endpoint
+    const apiUrl = `https://apis-keith.vercel.app/download/instagramdl?url=${encodeURIComponent(igUrl)}`;
+    
     // Fetch Instagram media data
-    const response = await igdl(igUrl);
-    const mediaItems = response.data;
+    const response = await axios.get(apiUrl);
+    const data = response.data;
 
-    if (!mediaItems || mediaItems.length === 0) {
-      return repondre("No media found. The post may be private or unavailable.");
+    if (!data.status || !data.result || !data.result.downloadUrl) {
+      return repondre("Could not retrieve video. The post may be private or unavailable.");
     }
+
+    const downloadUrl = data.result.downloadUrl;
+    const isVideo = data.result.type === 'mp4';
 
     // Prepare common contextInfo
     const commonContextInfo = {
@@ -398,31 +404,31 @@ keith({
         showAdAttribution: true,
         title: `${conf.BOT || 'Instagram Downloader'}`,
         body: "Instagram Media Download",
-        thumbnailUrl: mediaItems[0].url, // Use first media as thumbnail
+        thumbnailUrl: conf.URL || '', // Use config URL for image
         sourceUrl: conf.GURL || '',
         mediaType: 1,
-        renderLargerThumbnail: true
+        renderLargerThumbnail: false
       }
     };
 
     // Prepare caption with options
     const caption = `
-     *${conf.BOT || 'Instagram Downloader'}Instagram Downloader*
+     *${conf.BOT || 'Instagram Downloader'} Instagram Downloader*
     |__________________________|
-    | Found ${mediaItems.length} media item(s)
+    | Media Type: ${isVideo ? 'Video' : 'Unknown'}
     |_________________________|
     | REPLY WITH BELOW NUMBERS
     |_________________________|
-    |-᳆  1. Download All Media
-    |-᳆  2. Download First Video
-    |-᳆  3. Download First Image
-    |-᳆  4. Audio Only (if available)
+    |-᳆  1. Video
+    |-᳆  2. Video as Document
+    |-᳆  3. Audio Only
+    |-᳆  4. Audio as Document
     |__________________________|
     `;
 
     // Send the initial message with options
     const message = await zk.sendMessage(dest, {
-      image: { url: mediaItems[0].url }, // Show first media as preview
+      image: { url: conf.URL || '' }, // Use config URL for image
       caption: caption,
       contextInfo: commonContextInfo
     }, { quoted: ms });
@@ -457,65 +463,41 @@ keith({
 
         // Handle different download options
         switch(responseText) {
-          case '1': // Download All Media
-            for (let media of mediaItems) {
-              const isVideo = media.url.includes('.mp4') || media.url.includes('.mov');
-              await zk.sendMessage(dest, {
-                [isVideo ? 'video' : 'image']: { url: media.url },
-                caption: `*${conf.BOT || 'Instagram Downloader'}* - ${isVideo ? 'Video' : 'Image'}`,
-                contextInfo: commonContextInfo
-              }, { quoted: messageContent });
-              await new Promise(resolve => setTimeout(resolve, 2000)); // Delay between sends
-            }
+          case '1': // Video
+            await zk.sendMessage(dest, {
+              video: { url: downloadUrl },
+              caption: `*${conf.BOT || 'Instagram Downloader'}* - Video`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
             break;
             
-          case '2': // Download First Video
-            const firstVideo = mediaItems.find(item => item.url.includes('.mp4') || item.url.includes('.mov'));
-            if (firstVideo) {
-              await zk.sendMessage(dest, {
-                video: { url: firstVideo.url },
-                caption: `*${conf.BOT || 'Instagram Downloader'}* - Video`,
-                contextInfo: commonContextInfo
-              }, { quoted: messageContent });
-            } else {
-              await zk.sendMessage(dest, {
-                text: "No video found in this post.",
-                quoted: messageContent
-              });
-            }
+          case '2': // Video as Document
+            await zk.sendMessage(dest, {
+              document: { url: downloadUrl },
+              mimetype: "video/mp4",
+              fileName: `${conf.BOT || 'Instagram'}_${Date.now()}.mp4`,
+              caption: `*${conf.BOT || 'Instagram Downloader'}* - Video Document`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
             break;
             
-          case '3': // Download First Image
-            const firstImage = mediaItems.find(item => !item.url.includes('.mp4') && !item.url.includes('.mov'));
-            if (firstImage) {
-              await zk.sendMessage(dest, {
-                image: { url: firstImage.url },
-                caption: `*${conf.BOT || 'Instagram Downloader'}* - Image`,
-                contextInfo: commonContextInfo
-              }, { quoted: messageContent });
-            } else {
-              await zk.sendMessage(dest, {
-                text: "No image found in this post.",
-                quoted: messageContent
-              });
-            }
+          case '3': // Audio Only
+            await zk.sendMessage(dest, {
+              audio: { url: downloadUrl },
+              mimetype: "audio/mpeg",
+              caption: `*${conf.BOT || 'Instagram Downloader'}* - Audio`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
             break;
             
-          case '4': // Audio Only
-            const firstVideoForAudio = mediaItems.find(item => item.url.includes('.mp4') || item.url.includes('.mov'));
-            if (firstVideoForAudio) {
-              await zk.sendMessage(dest, {
-                audio: { url: firstVideoForAudio.url },
-                mimetype: "audio/mpeg",
-                caption: `*${conf.BOT || 'Instagram Downloader'}* - Audio`,
-                contextInfo: commonContextInfo
-              }, { quoted: messageContent });
-            } else {
-              await zk.sendMessage(dest, {
-                text: "No video available to extract audio from.",
-                quoted: messageContent
-              });
-            }
+          case '4': // Audio as Document
+            await zk.sendMessage(dest, {
+              document: { url: downloadUrl },
+              mimetype: "audio/mpeg",
+              fileName: `${conf.BOT || 'Instagram'}_${Date.now()}.mp3`,
+              caption: `*${conf.BOT || 'Instagram Downloader'}* - Audio Document`,
+              contextInfo: commonContextInfo
+            }, { quoted: messageContent });
             break;
         }
 
@@ -545,4 +527,4 @@ keith({
     console.error("Instagram download error:", error);
     repondre(`Failed to download Instagram media. Error: ${error.message}\nYou can try with another link or check if the post is public.`);
   }
-});
+});            
