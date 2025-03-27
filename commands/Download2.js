@@ -895,3 +895,190 @@ keith({
     repondre(`Failed to fetch videos. Error: ${error.message}`);
   }
 });
+
+
+keith({
+  nomCom: "youtube",
+  aliases: ["ytsearch", "ytdl", "youtube"],
+  categorie: "Download",
+  reaction: "🎵"
+}, async (dest, zk, commandeOptions) => {
+  const { repondre, ms, arg } = commandeOptions;
+
+  // Validate input
+  if (!arg || !arg[0]) {
+    return repondre('Please provide a search query or YouTube URL!\nExample: .youtube Alan Walker Faded');
+  }
+
+  const query = arg.join(' ').trim();
+
+  try {
+    // Check if it's a URL or search query
+    if (query.includes('youtube.com') || query.includes('youtu.be')) {
+      // Direct URL download
+      const apiUrl = `https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(query)}`;
+      const response = await axios.get(apiUrl);
+      const data = response.data;
+
+      if (!data.status || !data.result) {
+        return repondre("Could not download audio. The video may be unavailable.");
+      }
+
+      const audioInfo = data.result;
+
+      await zk.sendMessage(dest, {
+        audio: { url: audioInfo.downloadUrl },
+        mimetype: "audio/mpeg",
+        fileName: `${audioInfo.title}.mp3`.replace(/[^\w\s.-]/gi, ''),
+        caption: `*${conf.BOT || 'YouTube Downloader'}*\nTitle: ${audioInfo.title}\nQuality: ${audioInfo.quality}`,
+        contextInfo: {
+          externalAdReply: {
+            showAdAttribution: true,
+            title: `${conf.BOT || 'YouTube Downloader'}`,
+            body: audioInfo.title,
+            thumbnailUrl: conf.URL || '',
+            sourceUrl: conf.GURL || '',
+            mediaType: 1,
+            renderLargerThumbnail: true
+          }
+        }
+      }, { quoted: ms });
+
+    } else {
+      // Search YouTube
+      const searchUrl = `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`;
+      const response = await axios.get(searchUrl);
+      const searchData = response.data;
+
+      if (!searchData.status || !searchData.results || searchData.results.length === 0) {
+        return repondre("No search results found. Try a different query.");
+      }
+
+      const videos = searchData.results.slice(0, 10); // Get top 10 results
+
+      // Prepare search results list
+      let resultsList = `*${conf.BOT || 'YouTube Search Results'}*\n`;
+      resultsList += `Query: "${query}"\n\n`;
+      resultsList += videos.map((video, index) => 
+        `${index+1}. ${video.title}\n   ⏱️ ${video.duration} | 👀 ${formatViews(video.views)} | 📅 ${video.published}`
+      ).join('\n\n');
+      resultsList += '\n\nReply with the number of the video you want to download';
+
+      // Send search results
+      const message = await zk.sendMessage(dest, {
+        text: resultsList,
+        contextInfo: {
+          externalAdReply: {
+            showAdAttribution: true,
+            title: `${conf.BOT || 'YouTube Search'}`,
+            body: `Results for: ${query}`,
+            thumbnailUrl: videos[0].thumbnail || conf.URL || '',
+            sourceUrl: conf.GURL || '',
+            mediaType: 1,
+            renderLargerThumbnail: true
+          }
+        }
+      }, { quoted: ms });
+
+      const messageId = message.key.id;
+
+      // Set up reply handler
+      const replyHandler = async (update) => {
+        try {
+          const messageContent = update.messages[0];
+          if (!messageContent.message) return;
+
+          // Check if this is a reply to our search results
+          const isReply = messageContent.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+          if (!isReply) return;
+
+          const responseText = messageContent.message.conversation || 
+                             messageContent.message.extendedTextMessage?.text;
+
+          // Validate response
+          const selectedIndex = parseInt(responseText) - 1;
+          if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= videos.length) {
+            return await zk.sendMessage(dest, {
+              text: `Please reply with a number between 1-${videos.length}.`,
+              quoted: messageContent
+            });
+          }
+
+          const selectedVideo = videos[selectedIndex];
+
+          // Send loading reaction
+          await zk.sendMessage(dest, {
+            react: { text: '⬇️', key: messageContent.key },
+          });
+
+          // Download the selected video's audio
+          const downloadUrl = `https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(selectedVideo.url)}`;
+          const downloadResponse = await axios.get(downloadUrl);
+          const downloadData = downloadResponse.data;
+
+          if (!downloadData.status || !downloadData.result) {
+            return await zk.sendMessage(dest, {
+              text: "Failed to download this video. Please try another one.",
+              quoted: messageContent
+            });
+          }
+
+          const audioInfo = downloadData.result;
+
+          await zk.sendMessage(dest, {
+            audio: { url: audioInfo.downloadUrl },
+            mimetype: "audio/mpeg",
+            fileName: `${audioInfo.title}.mp3`.replace(/[^\w\s.-]/gi, ''),
+            caption: `*${conf.BOT || 'YouTube Downloader'}*\nTitle: ${audioInfo.title}\nQuality: ${audioInfo.quality}`,
+            contextInfo: {
+              externalAdReply: {
+                showAdAttribution: true,
+                title: `${conf.BOT || 'YouTube Downloader'}`,
+                body: audioInfo.title,
+                thumbnailUrl: selectedVideo.thumbnail || conf.URL || '',
+                sourceUrl: conf.GURL || '',
+                mediaType: 1,
+                renderLargerThumbnail: true
+              }
+            }
+          }, { quoted: messageContent });
+
+          // Remove listener after successful download
+          zk.ev.off("messages.upsert", replyHandler);
+
+        } catch (error) {
+          console.error("Error handling YouTube download:", error);
+          await zk.sendMessage(dest, {
+            text: "An error occurred while processing your request. Please try again.",
+            quoted: messageContent
+          });
+        }
+      };
+
+      // Add event listener for replies
+      zk.ev.on("messages.upsert", replyHandler);
+
+      // Remove listener after 5 minutes to prevent memory leaks
+      setTimeout(() => {
+        zk.ev.off("messages.upsert", replyHandler);
+      }, 300000);
+    }
+
+  } catch (error) {
+    console.error("YouTube error:", error);
+    repondre(`Failed to process YouTube request. Error: ${error.message}`);
+  }
+});
+
+// Helper function to format view counts
+function formatViews(views) {
+  if (typeof views === 'number') {
+    if (views >= 1000000) {
+      return (views / 1000000).toFixed(1) + 'M';
+    } else if (views >= 1000) {
+      return (views / 1000).toFixed(1) + 'K';
+    }
+    return views.toString();
+  }
+  return views;
+}
