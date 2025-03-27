@@ -30,9 +30,22 @@ keith({
       return repondre("Could not retrieve video information. The link may be invalid or private.");
     }
 
+    // Prepare common contextInfo
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Facebook Downloader'}`,
+        body: videoData.title || 'Facebook Video',
+        thumbnailUrl: videoData.thumbnail || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: true
+      }
+    };
+
     // Prepare caption with video options
     const caption = `
-     *𝐀𝐋𝐏𝐇𝐀 𝐌𝐃 𝐅𝐁 𝐃𝐋*
+     *${conf.BOT || 'Facebook Downloader'}*
     |__________________________|
     |       *ᴛɪᴛʟᴇ*  
            ${videoData.title || 'No title available'}
@@ -43,7 +56,7 @@ keith({
     |-᳆  1. SD Quality
     |-᳆  2. HD Quality
     |_________________________|
-    |____  *ᴀᴜᴅɪᴏ ᴅᴏᴡɴʟᴏᴀᴅ*  ____
+    |____  *ᴀᴜᴅɪᴏ �ᴅᴏᴡɴʟᴏᴀᴅ*  ____
     |-᳆  3. Audio Only
     |-᳆  4. As Document
     |-᳆  5. As Voice Message
@@ -54,17 +67,7 @@ keith({
     const message = await zk.sendMessage(dest, {
       image: { url: videoData.thumbnail || '' },
       caption: caption,
-      contextInfo: {
-        externalAdReply: {
-          showAdAttribution: true,
-          title: `${conf.BOT || 'ALPHA MD'} FB Downloader`,
-          body: videoData.title || 'Facebook Video',
-          thumbnailUrl: videoData.thumbnail || '',
-          sourceUrl: conf.GURL || '',
-          mediaType: 1,
-          renderLargerThumbnail: true
-        }
-      }
+      contextInfo: commonContextInfo
     }, { quoted: ms });
 
     const messageId = message.key.id;
@@ -95,12 +98,13 @@ keith({
           react: { text: '⬇️', key: messageContent.key },
         });
 
-        // Handle different download options
+        // Handle different download options with consistent contextInfo
         switch(responseText) {
           case '1': // SD Quality
             await zk.sendMessage(dest, {
               video: { url: videoData.sd },
-              caption: "*𝐀𝐋𝐏𝐇𝐀 𝐌𝐃* - SD Quality",
+              caption: `*${conf.BOT || 'Facebook Downloader'}* - SD Quality`,
+              contextInfo: commonContextInfo
             }, { quoted: messageContent });
             break;
             
@@ -108,7 +112,8 @@ keith({
             if (videoData.hd) {
               await zk.sendMessage(dest, {
                 video: { url: videoData.hd },
-                caption: "*𝐀𝐋𝐏𝐇𝐀 𝐌𝐃* - HD Quality",
+                caption: `*${conf.BOT || 'Facebook Downloader'}* - HD Quality`,
+                contextInfo: commonContextInfo
               }, { quoted: messageContent });
             } else {
               await zk.sendMessage(dest, {
@@ -117,7 +122,8 @@ keith({
               });
               await zk.sendMessage(dest, {
                 video: { url: videoData.sd },
-                caption: "*𝐀𝐋𝐏𝐇𝐀 𝐌𝐃* - SD Quality",
+                caption: `*${conf.BOT || 'Facebook Downloader'}* - SD Quality`,
+                contextInfo: commonContextInfo
               }, { quoted: messageContent });
             }
             break;
@@ -126,7 +132,8 @@ keith({
             await zk.sendMessage(dest, {
               audio: { url: videoData.sd },
               mimetype: "audio/mpeg",
-              caption: "*𝐀𝐋𝐏𝐇𝐀 𝐌𝐃* - Audio"
+              caption: `*${conf.BOT || 'Facebook Downloader'}* - Audio`,
+              contextInfo: commonContextInfo
             }, { quoted: messageContent });
             break;
             
@@ -134,8 +141,9 @@ keith({
             await zk.sendMessage(dest, {
               document: { url: videoData.sd },
               mimetype: "video/mp4",
-              fileName: `AlphaMD_${Date.now()}.mp4`,
-              caption: "*𝐀𝐋𝐏𝐇𝐀 𝐌𝐃* - Video Document"
+              fileName: `${conf.BOT || 'Facebook'}_${Date.now()}.mp4`,
+              caption: `*${conf.BOT || 'Facebook Downloader'}* - Video Document`,
+              contextInfo: commonContextInfo
             }, { quoted: messageContent });
             break;
             
@@ -144,7 +152,8 @@ keith({
               audio: { url: videoData.sd },
               mimetype: "audio/ogg; codecs=opus",
               ptt: true,
-              caption: "*𝐀𝐋𝐏𝐇𝐀 𝐌𝐃* - Voice Message"
+              caption: `*${conf.BOT || 'Facebook Downloader'}* - Voice Message`,
+              contextInfo: commonContextInfo
             }, { quoted: messageContent });
             break;
         }
