@@ -577,7 +577,7 @@ keith({
 
     // Prepare caption with options
     const caption = `
-     *${conf.BOT || 'TikTok Downloader'}*
+     *${conf.BOT || 'TikTok Downloader'} TikTok Downloader*
     |__________________________|
     | *Title*: ${videoInfo.title || 'No title'}
     | *Caption*: ${videoInfo.caption || 'No caption'}
@@ -691,5 +691,85 @@ keith({
   } catch (error) {
     console.error("TikTok download error:", error);
     repondre(`Failed to download TikTok. Error: ${error.message}\nYou can try with another link or check if the video is public.`);
+  }
+});
+
+keith({
+  nomCom: "mediafire",
+  aliases: ["mfire", "mfdl", "mediafiredl"],
+  categorie: "Download",
+  reaction: "📦"
+}, async (dest, zk, commandeOptions) => {
+  const { repondre, ms, arg } = commandeOptions;
+
+  // Validate input
+  if (!arg || !arg[0]) {
+    return repondre('Please provide a MediaFire URL!');
+  }
+
+  const mediafireUrl = arg[0].trim();
+  if (!mediafireUrl.includes('https://') || !mediafireUrl.includes('mediafire.com')) {
+    return repondre("Please provide a valid MediaFire URL.");
+  }
+
+  try {
+    // API endpoint
+    const apiUrl = `https://apis-keith.vercel.app/download/mfire?url=${encodeURIComponent(mediafireUrl)}`;
+    
+    // Fetch MediaFire file data
+    const response = await axios.get(apiUrl);
+    const data = response.data;
+
+    if (!data.status || !data.result || !data.result.dl_link) {
+      return repondre("Could not retrieve file. The link may be invalid or the file unavailable.");
+    }
+
+    const fileInfo = data.result;
+
+    // Prepare contextInfo
+    const contextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'MediaFire Downloader'}`,
+        body: `Downloading: ${fileInfo.fileName}`,
+        thumbnailUrl: conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: true
+      }
+    };
+
+    // Prepare file info message
+    const fileInfoMessage = `
+     *${conf.BOT || 'MediaFire Downloader'} MediaFire Downloader*
+    |__________________________|
+    | *File Name*: ${fileInfo.fileName}
+    | *File Type*: ${fileInfo.fileType}
+    | *File Size*: ${fileInfo.size}
+    | *Upload Date*: ${fileInfo.date}
+    |__________________________|
+    Downloading file...
+    `;
+
+    // Send file info first
+    await zk.sendMessage(dest, {
+      text: fileInfoMessage,
+      contextInfo: contextInfo
+    }, { quoted: ms });
+
+    // Send the file directly without reply options
+    await zk.sendMessage(dest, {
+      document: {
+        url: fileInfo.dl_link
+      },
+      mimetype: fileInfo.fileType,
+      fileName: fileInfo.fileName,
+      caption: `*${conf.BOT || 'MediaFire Downloader'}*\nHere's your requested file: ${fileInfo.fileName}`,
+      contextInfo: contextInfo
+    });
+
+  } catch (error) {
+    console.error("MediaFire download error:", error);
+    repondre(`Failed to download file. Error: ${error.message}\nPlease check the link and try again.`);
   }
 });
