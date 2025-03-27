@@ -39,7 +39,7 @@ keith({
         thumbnailUrl: videoData.thumbnail || '',
         sourceUrl: conf.GURL || '',
         mediaType: 1,
-        renderLargerThumbnail: true
+        renderLargerThumbnail: false
       }
     };
 
