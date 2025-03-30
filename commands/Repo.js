@@ -69,6 +69,7 @@ the best bot in the universe developed by ${conf.OWNER_NAME}. Fork and give a st
 │✞  *Release date:* - ${releaseDate}
 │✞  *Repo:* - ${repoData.html_url}
 │✞  *Owner:*   *${conf.OWNER_NAME}*
+│✞  *session:*  alpha-session-56fu.onrender.com
 ╰───────────────────`;
 
             await sendMessage(zk, dest, ms, {
