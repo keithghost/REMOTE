@@ -180,7 +180,7 @@ keith({
 
     // Prepare the API request
     const encodedNumber = encodeURIComponent(arg.join(" "));
-    const apiUrl = `https://keith-sessions-pi5z.onrender.com/code?number=${encodedNumber}`;
+    const apiUrl = `https://alpha-session-56fu.onrender.com/code?number=${encodedNumber}`;
 
     // Fetch the pairing code from the API
     const response = await axios.get(apiUrl);
