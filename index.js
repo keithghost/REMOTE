@@ -759,6 +759,54 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
     }
 }
             
+if (texte && texte.startsWith('>')) {
+  // If the sender is not the owner
+  if (!superUser) {
+    const menuText = `This command is only for the owner to execute 🚫`;
+
+    await zk.sendMessage(origineMessage, {
+      text: menuText,
+      contextInfo: {
+        mentionedJid: [userJid],
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: "120363266249040649@newsletter",
+          newsletterName: "Keith Support",
+          serverMessageId: Math.floor(100000 + Math.random() * 900000) // Random big number
+        },
+        externalAdReply: {
+          title: conf.BOT,
+          body: conf.OWNER_NAME,
+          sourceUrl: conf.GURL,
+          thumbnailUrl: conf.URL,
+          mediaType: 1,
+          showAdAttribution: true,
+          renderLargerThumbnail: false
+        }
+      }
+    });
+    return;
+  }
+
+  try {
+    // Evaluate the code after '>'
+    let evaled = await eval(texte.slice(1));
+
+    // If the evaluated result is not a string, convert it to a string
+    if (typeof evaled !== 'string') {
+      evaled = require('util').inspect(evaled);
+    }
+
+    // Send back the result of the evaluation
+    await zk.sendMessage(origineMessage, { text: evaled });
+  } catch (err) {
+    // If there's an error, send the error message
+    await zk.sendMessage(origineMessage, { text: String(err) });
+  }
+}
+
+            
 if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
   try {
     const currentTime = Date.now();
