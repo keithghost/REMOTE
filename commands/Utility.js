@@ -2,7 +2,7 @@ const { keith } = require('../keizzah/keith');
 const fs = require("fs");
 const { exec } = require("child_process");
 const path = require("path");
-
+const axios = require("axios");
 const filename = `${Math.random().toString(36).substring(2, 9)}`;
 
 keith({
@@ -340,5 +340,80 @@ keith({
     } catch (error) {
         console.error('Processing error:', error);
         repondre('Error processing video');
+    }
+});
+
+keith({
+    nomCom: 'amplify',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+
+    // Validation checks
+    if (!msgRepondu) return repondre('Please reply to a video message');
+    if (!msgRepondu.videoMessage) return repondre('The command only works with video messages');
+    if (!arg[0]) return repondre('Please provide an audio URL\nExample: .amplify https://example.com/audio.mp3');
+
+    const audioUrl = arg[0];
+    if (!audioUrl.match(/^https?:\/\/.+\..+$/)) {
+        return repondre('Invalid URL format. Please provide a valid audio URL');
+    }
+
+    try {
+        repondre('Downloading resources... ⏳');
+
+        // Download the video message
+        const videoPath = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
+        const audioPath = `${filename}_audio.mp3`;
+        const outputPath = `${filename}.mp4`;
+
+        // Download the audio file
+        const response = await axios({
+            method: 'GET',
+            url: audioUrl,
+            responseType: 'stream'
+        });
+
+        const writer = fs.createWriteStream(audioPath);
+        response.data.pipe(writer);
+
+        await new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+
+        // FFmpeg command to replace audio
+        const ffmpegCommand = `ffmpeg -i "${videoPath}" -i "${audioPath}" -c:v copy -map 0:v:0 -map 1:a:0 -shortest "${outputPath}"`;
+
+        repondre('Processing video... 🔄');
+
+        exec(ffmpegCommand, async (error) => {
+            // Cleanup files
+            fs.unlinkSync(videoPath);
+            fs.unlinkSync(audioPath);
+
+            if (error) {
+                console.error('FFmpeg error:', error);
+                return repondre('Error processing video');
+            }
+
+            try {
+                const videoBuffer = fs.readFileSync(outputPath);
+                await zk.sendMessage(dest, {
+                    video: videoBuffer,
+                    mimetype: "video/mp4",
+                    caption: "Video with replaced audio"
+                }, { quoted: ms });
+
+                fs.unlinkSync(outputPath);
+            } catch (sendError) {
+                console.error('Send error:', sendError);
+                repondre('Error sending the processed video');
+            }
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+        repondre('Error processing your request');
     }
 });
