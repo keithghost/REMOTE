@@ -29,11 +29,9 @@ const getContextInfo = (title = '', userJid = '', thumbnailUrl = '') => ({
 async function searchSpotify(query) {
   try {
     const response = await axios.get(`https://apis-keith.vercel.app/search/spotify?q=${encodeURIComponent(query)}`);
-    if (!response.data.status || !response.data.result.length) return null;
-    return {
-      platform: 'spotify',
-      ...response.data.result[0]
-    };
+    return response.data?.status && response.data.result?.length 
+      ? { platform: 'spotify', ...response.data.result[0] }
+      : null;
   } catch {
     return null;
   }
@@ -42,13 +40,10 @@ async function searchSpotify(query) {
 async function searchSoundCloud(query) {
   try {
     const response = await axios.get(`https://apis-keith.vercel.app/search/soundcloud?q=${encodeURIComponent(query)}`);
-    if (!response.data.status || !response.data.result.result.length) return null;
-    const tracks = response.data.result.result.filter(track => track.timestamp);
-    if (!tracks.length) return null;
-    return {
-      platform: 'soundcloud',
-      ...tracks[0]
-    };
+    const tracks = response.data?.result?.result?.filter(track => track.timestamp) || [];
+    return tracks.length 
+      ? { platform: 'soundcloud', ...tracks[0] }
+      : null;
   } catch {
     return null;
   }
@@ -57,13 +52,9 @@ async function searchSoundCloud(query) {
 async function searchYouTube(query) {
   try {
     const { videos } = await ytSearch(query);
-    if (!videos || !videos.length) return null;
-    return {
-      platform: 'youtube',
-      title: videos[0].title,
-      url: videos[0].url,
-      thumbnail: videos[0].thumbnail
-    };
+    return videos?.length 
+      ? { platform: 'youtube', title: videos[0].title, url: videos[0].url, thumbnail: videos[0].thumbnail }
+      : null;
   } catch {
     return null;
   }
@@ -73,13 +64,14 @@ async function searchYouTube(query) {
 async function downloadSpotify(url) {
   try {
     const response = await axios.get(`https://api.siputzx.my.id/api/d/spotify?url=${encodeURIComponent(url)}`);
-    if (!response.data.status || !response.data.data.download) return null;
-    return {
-      downloadUrl: response.data.data.download,
-      format: 'mp3',
-      artist: response.data.data.artis,
-      thumbnail: response.data.data.image
-    };
+    return response.data?.status && response.data.data?.download
+      ? {
+          downloadUrl: response.data.data.download,
+          format: 'mp3',
+          artist: response.data.data.artis,
+          thumbnail: response.data.data.image
+        }
+      : null;
   } catch {
     return null;
   }
@@ -88,11 +80,12 @@ async function downloadSpotify(url) {
 async function downloadSoundCloud(url) {
   try {
     const response = await axios.get(`https://apis-keith.vercel.app/download/soundcloud?url=${encodeURIComponent(url)}`);
-    if (!response.data.status || !response.data.result.track.downloadUrl) return null;
-    return {
-      downloadUrl: response.data.result.track.downloadUrl,
-      format: 'mp3'
-    };
+    return response.data?.status && response.data.result?.track?.downloadUrl
+      ? {
+          downloadUrl: response.data.result.track.downloadUrl,
+          format: 'mp3'
+        }
+      : null;
   } catch {
     return null;
   }
@@ -101,11 +94,12 @@ async function downloadSoundCloud(url) {
 async function downloadYouTube(url) {
   try {
     const response = await axios.get(`https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(url)}`);
-    if (!response.data.status || !response.data.result.downloadUrl) return null;
-    return {
-      downloadUrl: response.data.result.downloadUrl,
-      format: 'mp3'
-    };
+    return response.data?.status && response.data.result?.downloadUrl
+      ? {
+          downloadUrl: response.data.result.downloadUrl,
+          format: 'mp3'
+        }
+      : null;
   } catch {
     return null;
   }
@@ -113,7 +107,7 @@ async function downloadYouTube(url) {
 
 // Main Command
 keith({
-  nomCom: "pl",
+  nomCom: "playy",
   aliases: ["song", "playdoc", "audio", "mp3"],
   categorie: "download",
   reaction: "🎵"
@@ -123,49 +117,40 @@ keith({
   if (!arg[0]) return repondre(zk, dest, ms, "Please provide a song name or URL.");
 
   const query = arg.join(" ");
-  let track, downloadData, platformAttempted = [];
+  let track, downloadData;
 
-  // Determine platform from URL or try all
+  // Determine platform priority (SoundCloud → Spotify → YouTube)
   const platforms = [];
-  if (query.includes('spotify.com')) platforms.push('spotify');
   if (query.includes('soundcloud.com')) platforms.push('soundcloud');
+  if (query.includes('spotify.com')) platforms.push('spotify');
   if (query.includes('youtube.com') || query.includes('youtu.be')) platforms.push('youtube');
   
+  // If no specific platform detected, try all in order
   if (platforms.length === 0) {
-    platforms.push('spotify', 'soundcloud', 'youtube');
+    platforms.push('soundcloud', 'spotify', 'youtube');
   }
 
   // Try each platform until success
   for (const platform of platforms) {
-    if (platformAttempted.includes(platform)) continue;
-    
-    platformAttempted.push(platform);
-    
     try {
-      await zk.sendMessage(dest, {
-        text: `🔍 Searching ${platform}...`,
-        contextInfo: getContextInfo("Searching", userJid)
-      }, { quoted: ms });
-
-      track = await {
+      // Search
+      const searchFn = {
         'spotify': searchSpotify,
         'soundcloud': searchSoundCloud,
         'youtube': searchYouTube
-      }[platform](query);
-
+      }[platform];
+      
+      track = await searchFn(query);
       if (!track) continue;
 
-      await zk.sendMessage(dest, {
-        text: `⬇️ Downloading from ${platform}...`,
-        contextInfo: getContextInfo(track.title, userJid, track.thumbnail || track.thumb)
-      }, { quoted: ms });
-
-      downloadData = await {
+      // Download
+      const downloadFn = {
         'spotify': downloadSpotify,
         'soundcloud': downloadSoundCloud,
         'youtube': downloadYouTube
-      }[platform](track.url);
-
+      }[platform];
+      
+      downloadData = await downloadFn(track.url);
       if (downloadData) break;
     } catch (error) {
       console.error(`${platform} error:`, error);
@@ -183,6 +168,7 @@ keith({
   const fileName = `${track.title} - ${artist}.${downloadData.format}`.replace(/[^\w\s.-]/gi, '');
 
   try {
+    // Try sending as audio first
     await zk.sendMessage(dest, {
       audio: { url: downloadData.downloadUrl },
       mimetype: `audio/${downloadData.format}`,
@@ -190,6 +176,7 @@ keith({
       contextInfo: getContextInfo(track.title, userJid, thumbnail)
     }, { quoted: ms });
 
+    // Then try sending as document
     await zk.sendMessage(dest, {
       document: { url: downloadData.downloadUrl },
       mimetype: `audio/${downloadData.format}`,
