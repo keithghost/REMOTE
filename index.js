@@ -758,6 +758,56 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
         }, { quoted: ms });
     }
 }
+            
+if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+  try {
+    const currentTime = Date.now();
+    if (currentTime - lastTextTime < messageDelay) {
+      console.log('Message skipped: Too many messages in a short time.');
+      return;
+    }
+
+    // Fetch chatbot response using axios
+    const response = await axios.get('https://xploader-api.vercel.app/llama', {
+      params: {
+        prompt: texte,
+        userId: 'keith' // Specify the userId as 'keith'
+      }
+    });
+
+    const keith = response.data;
+
+    if (keith && keith.status === "success" && keith.result) {
+      await zk.sendMessage(origineMessage, {
+        text: keith.result,
+        contextInfo: {
+          mentionedJid: [userJid],
+          forwardingScore: 999,
+          isForwarded: true,
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: "120363266249040649@newsletter",
+            newsletterName: "keith Support",
+            serverMessageId: Math.floor(100000 + Math.random() * 900000), // Random big number
+          },
+          externalAdReply: {
+            title: "ChatGPT Response Inbox",
+            body: "Keep learning",
+            thumbnailUrl: conf.URL,
+            mediaType: 1,
+            showAdAttribution: true,
+            renderLargerThumbnail: false,
+          },
+        },
+      });
+      lastTextTime = Date.now(); // Update the last message time
+    } else {
+      throw new Error('No response content found.');
+    }
+  } catch (error) {
+    console.error('Error fetching chatbot response:', error);
+  }
+}
+
 
 
             
