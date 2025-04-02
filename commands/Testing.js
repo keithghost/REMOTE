@@ -682,3 +682,93 @@ keith({
         repondre('Error processing the audio message');
     }
 });
+
+
+keith({
+    nomCom: 'slowmotion',
+    categorie: 'Video-Edit'
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+
+    // Check if message is a reply
+    if (!msgRepondu) {
+        return repondre('Please reply to a video message to convert to slow motion');
+    }
+
+    // Check if replied message is a video
+    if (!msgRepondu.videoMessage) {
+        return repondre('The command only works with video messages');
+    }
+
+    // Parse speed factor (default to 2x slower if not specified)
+    const speedFactor = arg[0] ? parseFloat(arg[0]) : 2;
+    
+    if (isNaN(speedFactor) {
+        return repondre('Please provide a valid number for speed factor (e.g., .slowmotion 2)');
+    }
+
+    try {
+        // Generate unique filenames
+        const tempFilename = `temp_video_${Date.now()}`;
+        const inputPath = `${tempFilename}_input.mp4`;
+        const outputPath = `${tempFilename}_slowmo.mp4`;
+
+        // Download the video message
+        const videoPath = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage, inputPath);
+
+        // FFmpeg command to create slow motion effect
+        const ffmpegCommand = `ffmpeg -i "${inputPath}" ` +
+                             `-filter_complex "[0:v]setpts=${speedFactor}*PTS[v];[0:a]atempo=${1/speedFactor}[a]" ` +
+                             `-map "[v]" -map "[a]" ` +
+                             `-c:v libx264 -preset fast -crf 22 ` +
+                             `-c:a aac -b:a 128k ` +
+                             `"${outputPath}"`;
+
+        repondre(`Creating ${speedFactor}x slow motion... Please wait ⏳`);
+
+        exec(ffmpegCommand, async (error, stdout, stderr) => {
+            // Clean up the original video file
+            fs.unlinkSync(inputPath);
+
+            if (error) {
+                console.error('FFmpeg error:', error);
+                console.error('FFmpeg stderr:', stderr);
+                return repondre('Error creating slow motion video');
+            }
+
+            try {
+                // Read the converted file
+                const videoBuffer = fs.readFileSync(outputPath);
+
+                // Get quoted message details
+                const quotedMsg = {
+                    key: msgRepondu.key,
+                    message: msgRepondu.message
+                };
+
+                // Send the slow motion video with quoted message
+                await zk.sendMessage(
+                    dest,
+                    { 
+                        video: videoBuffer,
+                        mimetype: "video/mp4",
+                        caption: `Slow motion (${speedFactor}x)`,
+                        contextInfo: {
+                            quotedMessage: quotedMsg
+                        }
+                    },
+                    { quoted: ms }
+                );
+
+                // Clean up the converted file
+                fs.unlinkSync(outputPath);
+            } catch (sendError) {
+                console.error('Error sending video:', sendError);
+                repondre('Error sending the slow motion video');
+            }
+        });
+    } catch (downloadError) {
+        console.error('Download error:', downloadError);
+        repondre('Error processing the video message');
+    }
+});
