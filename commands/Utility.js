@@ -118,3 +118,66 @@ keith({
         repondre('Error processing the audio message');
     }
 });
+
+keith({
+    nomCom: 'volaudio',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+    const volume = parseFloat(arg[0]); // Get volume level from command
+
+    // Validation checks
+    if (!msgRepondu) {
+        return repondre('Please reply to an audio message to adjust volume');
+    }
+
+    if (!msgRepondu.audioMessage) {
+        return repondre('The command only works with audio messages');
+    }
+
+    if (!volume || isNaN(volume)) {
+        return repondre('Please specify a valid volume level (e.g., .volaudio 20)');
+    }
+
+    try {
+        // Download the audio message
+        const audioPath = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
+        const outputPath = `${filename}.mp3`;
+        
+        // FFmpeg command to adjust volume
+        // Using 'volume' filter with specified dB level
+        const ffmpegCommand = `ffmpeg -i "${audioPath}" -af "volume=${volume}dB" "${outputPath}"`;
+        
+        exec(ffmpegCommand, (error) => {
+            // Clean up the original audio file
+            fs.unlinkSync(audioPath);
+            
+            if (error) {
+                console.error('FFmpeg error:', error);
+                return repondre('Error adjusting audio volume');
+            }
+            
+            try {
+                const audioBuffer = fs.readFileSync(outputPath);
+                zk.sendMessage(
+                    dest,
+                    { 
+                        audio: audioBuffer,
+                        mimetype: "audio/mpeg",
+                        ptt: false
+                    },
+                    { quoted: ms }
+                );
+                
+                // Clean up the generated audio file
+                fs.unlinkSync(outputPath);
+            } catch (sendError) {
+                console.error('Error sending audio:', sendError);
+                repondre('Error sending the volume-adjusted audio');
+            }
+        });
+    } catch (downloadError) {
+        console.error('Download error:', downloadError);
+        repondre('Error processing the audio message');
+    }
+});
