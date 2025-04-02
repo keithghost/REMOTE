@@ -137,7 +137,7 @@ keith({
   try {
     await zk.sendMessage(dest, {
       audio: { url: downloadData.downloadUrl },
-      mimetype: `audio/${downloadData.format}`,
+      mimetype: `audio/mp4`,
       contextInfo: getContextInfo(track.title, userJid, thumbnail, track.url)
     }, { quoted: ms });
 
