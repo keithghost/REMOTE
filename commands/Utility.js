@@ -801,3 +801,215 @@ keith({
         });
     }
 });
+
+keith({
+    nomCom: 'subtitle2',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+    
+    if (!msgRepondu?.videoMessage) {
+        return repondre('Please reply to a video message');
+    }
+
+    // Enhanced argument parsing with multiple text support
+    const textBlocks = [];
+    let currentArgs = [...arg];
+    let options = {
+        color: 'white',
+        font: 'Arial',
+        size: 24,
+        position: 'bottom',
+        border: 2,
+        bgcolor: 'black@0.5',
+        shadow: '2:2:3',
+        effect: 'none',
+        duration: 'full'
+    };
+
+    // Parse text blocks and options
+    while (currentArgs.length > 0) {
+        const textMatch = currentArgs.join(' ').match(/^(["'“])(.+?)\1/);
+        if (textMatch) {
+            textBlocks.push({
+                text: textMatch[2],
+                options: {...options} // Clone current options
+            });
+            currentArgs = currentArgs.join(' ').substring(textMatch[0].length).trim().split(' ');
+        } else {
+            const optionMatch = currentArgs[0].match(/^(\w+)=(.+)$/);
+            if (optionMatch) {
+                options[optionMatch[1]] = optionMatch[2];
+                currentArgs.shift();
+            } else {
+                currentArgs.shift(); // Skip invalid
+            }
+        }
+    }
+
+    if (textBlocks.length === 0) {
+        return repondre([
+            'Format: .subtitle "text1" [options] "text2" [options]',
+            'Options (per text):',
+            'color: red/blue/#FFFFFF (default: white)',
+            'font: Arial/Helvetica/etc (default: Arial)',
+            'size: font size (default: 24)',
+            'position: top/middle/bottom (default: bottom)',
+            'border: border width (default: 2)',
+            'bgcolor: color@opacity (default: black@0.5)',
+            'shadow: x:y:blur (default: 2:2:3)',
+            'effect: fade/typewriter (default: none)',
+            'duration: full/5s/10-15s (default: full)'
+        ].join('\n'));
+    }
+
+    try {
+        repondre('Processing subtitles...');
+
+        // Setup temp directory
+        const tempDir = fs.mkdtempSync(`./subtitle_${Date.now()}_`);
+        const inputPath = path.join(tempDir, 'input.mp4');
+        const outputPath = path.join(tempDir, 'output.mp4');
+
+        // Download video
+        await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage, inputPath);
+
+        // Generate complex filter
+        const videoInfo = await getVideoInfo(inputPath);
+        const filters = generateFilters(textBlocks, videoInfo);
+
+        // Build FFmpeg command
+        const ffmpegCommand = [
+            'ffmpeg -y',
+            `-i "${inputPath}"`,
+            '-vf', `"${filters.join(',')}"`,
+            '-c:v libx264 -preset fast -crf 18',
+            '-c:a copy',
+            `"${outputPath}"`
+        ].join(' ');
+
+        await executeCommand(ffmpegCommand);
+
+        // Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, { video: videoBuffer }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Subtitle error:', error);
+        repondre(`Error: ${error.message}`);
+    } finally {
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true });
+        }
+    }
+
+    // Helper Functions
+    async function getVideoInfo(filePath) {
+        return new Promise((resolve) => {
+            exec(`ffprobe -v error -show_format -show_streams -of json "${filePath}"`,
+                (err, stdout) => {
+                    const info = JSON.parse(stdout.toString());
+                    resolve({
+                        duration: parseFloat(info.format.duration),
+                        width: info.streams[0].width,
+                        height: info.streams[0].height
+                    });
+                });
+        });
+    }
+
+    function generateFilters(textBlocks, videoInfo) {
+        const baseFilters = [];
+        const overlayFilters = [];
+        
+        textBlocks.forEach((block, index) => {
+            const { text, options } = block;
+            const fontPath = getFontPath(options.font);
+            
+            // Calculate timing
+            const [start, end] = parseDuration(options.duration, videoInfo.duration);
+            
+            // Background box
+            if (options.bgcolor) {
+                const [bgColor, opacity] = options.bgcolor.split('@');
+                baseFilters.push(
+                    `color=${bgColor}@${opacity || '0.5'}:` +
+                    `${videoInfo.width}x${options.size * 2}[bg${index}]`
+                );
+            }
+            
+            // Text with effects
+            let textFilter = `drawtext=` +
+                `text='${escapeText(text)}':` +
+                `fontfile='${fontPath}':` +
+                `fontcolor=${options.color}:` +
+                `fontsize=${options.size}:` +
+                `box=1:boxcolor=black@0.5:boxborderw=5:` +
+                `shadowcolor=black:shadowx=${options.shadow?.split(':')[0] || 2}:` +
+                `shadowy=${options.shadow?.split(':')[1] || 2}:` +
+                `shadowt=${options.shadow?.split(':')[2] || 3}:` +
+                `x=(w-text_w)/2:` +
+                `y=${getYPosition(options.position, videoInfo.height, options.size)}:` +
+                `enable='between(t,${start},${end})'`;
+                
+            if (options.effect === 'fade') {
+                textFilter += `:alpha='if(lt(t,${start}+1),(t-${start})/1,` +
+                    `if(lt(t,${end}-1),1,(${end}-t)/1))'`;
+            } else if (options.effect === 'typewriter') {
+                textFilter += `:text='${typewriterEffect(text, start, end)}'`;
+            }
+            
+            overlayFilters.push(textFilter);
+        });
+        
+        return [...baseFilters, ...overlayFilters];
+    }
+
+    function escapeText(text) {
+        return text.replace(/'/g, "'\\\\''")
+                  .replace(/%/g, '%%')
+                  .replace(/\\n/g, '\n');
+    }
+
+    function getYPosition(position, videoHeight, fontSize) {
+        const padding = fontSize;
+        switch (position) {
+            case 'top': return padding;
+            case 'middle': return `(h-text_h)/2`;
+            default: return `h-text_h-${padding}`; // bottom
+        }
+    }
+
+    function parseDuration(duration, videoDuration) {
+        if (duration === 'full') return [0, videoDuration];
+        if (duration.includes('-')) {
+            const [start, end] = duration.split('-').map(parseFloat);
+            return [start, end];
+        }
+        const seconds = parseFloat(duration);
+        return [0, seconds];
+    }
+
+    function typewriterEffect(text, start, end) {
+        const duration = end - start;
+        return `substring(0,ceil((t-${start})/${duration/text.length}*${text.length}))`;
+    }
+
+    function getFontPath(fontName) {
+        const customPath = path.join(__dirname, 'fonts', `${fontName}.ttf`);
+        return fs.existsSync(customPath) ? customPath : '';
+    }
+
+    async function executeCommand(command) {
+        return new Promise((resolve, reject) => {
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('FFmpeg stderr:', stderr);
+                    reject(error);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+});
