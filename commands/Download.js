@@ -75,7 +75,7 @@ async function downloadFromApis(apis) {
 }
 
 // Audio download command
-keith({
+/*keith({
   nomCom: "play",
   aliases: ["song", "playdoc", "audio", "mp3"],
   categorie: "download",
@@ -130,7 +130,7 @@ keith({
     console.error('Audio download error:', error);
     repondre(zk, dest, ms, `Download failed: ${error.message}`);
   }
-});
+});*/
 
 // Video download command
 keith({
