@@ -1,3 +1,4 @@
+
 const { keith } = require("../keizzah/keith");
 const axios = require('axios');
 const ytSearch = require('yt-search');
@@ -88,9 +89,9 @@ const downloadYouTube = async (url) => {
   }
 };
 
-// Main Command
+//Main Command
 keith({
-  nomCom: "pll",
+  nomCom: "play",
   aliases: ["song", "playdoc", "audio", "mp3"],
   categorie: "download",
   reaction: "🎵"
@@ -102,21 +103,21 @@ keith({
   const query = arg.join(" ");
   let track, downloadData;
 
-  // Determine platform priority (SoundCloud → Spotify → YouTube)
+  // Determine platform priority (YouTube → SoundCloud → Spotify)
   const platforms = [];
+  if (query.includes('youtube.com') || query.includes('youtu.be')) platforms.push('youtube');
   if (query.includes('soundcloud.com')) platforms.push('soundcloud');
   if (query.includes('spotify.com')) platforms.push('spotify');
-  if (query.includes('youtube.com') || query.includes('youtu.be')) platforms.push('youtube');
   
-  if (platforms.length === 0) platforms.push('soundcloud', 'spotify', 'youtube');
+  if (platforms.length === 0) platforms.push('youtube', 'soundcloud', 'spotify');
 
   for (const platform of platforms) {
     try {
-      const searchFn = { 'spotify': searchSpotify, 'soundcloud': searchSoundCloud, 'youtube': searchYouTube }[platform];
+      const searchFn = { 'youtube': searchYouTube, 'soundcloud': searchSoundCloud, 'spotify': searchSpotify }[platform];
       track = await searchFn(query);
       if (!track) continue;
 
-      const downloadFn = { 'spotify': downloadSpotify, 'soundcloud': downloadSoundCloud, 'youtube': downloadYouTube }[platform];
+      const downloadFn = { 'youtube': downloadYouTube, 'soundcloud': downloadSoundCloud, 'spotify': downloadSpotify }[platform];
       downloadData = await downloadFn(track.url);
       if (downloadData) break;
     } catch (error) {
@@ -137,7 +138,6 @@ keith({
     await zk.sendMessage(dest, {
       audio: { url: downloadData.downloadUrl },
       mimetype: `audio/${downloadData.format}`,
-      caption: `🎵 *${track.title}* by ${artist}`,
       contextInfo: getContextInfo(track.title, userJid, thumbnail, track.url)
     }, { quoted: ms });
 
