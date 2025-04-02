@@ -417,3 +417,115 @@ keith({
         repondre('Error processing your request');
     }
 });
+
+keith({
+    nomCom: 'slideshow',
+   aliases: ['imgvid', 'imagevideo'],
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+    const text = arg.join(" ");
+
+    // Validate input format
+    if (!text.includes('|')) {
+        return repondre('Please provide URLs in format: audioURL | imageURL1, imageURL2,...');
+    }
+
+    const [audioUrl, imageUrlsPart] = text.split('|').map(s => s.trim());
+    const imageUrls = imageUrlsPart.split(',').map(url => url.trim()).filter(url => url);
+
+    // Validate URLs
+    if (!audioUrl || !imageUrls.length) {
+        return repondre('Please provide both audio and at least one image URL');
+    }
+
+    const tempDir = `./temp_${Date.now()}`;
+    fs.mkdirSync(tempDir);
+
+    try {
+        repondre('Downloading resources... 📥');
+
+        // Download audio
+        const audioPath = path.join(tempDir, 'audio.mp3');
+        await downloadFile(audioUrl, audioPath);
+
+        // Download images
+        const imagePaths = [];
+        for (const [index, imageUrl] of imageUrls.entries()) {
+            const imagePath = path.join(tempDir, `image_${index}.jpg`);
+            await downloadFile(imageUrl, imagePath);
+            imagePaths.push(imagePath);
+        }
+
+        repondre('Creating slideshow... 🎬');
+
+        // Generate slideshow
+        const outputPath = path.join(tempDir, 'output.mp4');
+        await createSlideshow(imagePaths, audioPath, outputPath);
+
+        // Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, {
+            video: videoBuffer,
+            mimetype: "video/mp4",
+            caption: "Your custom slideshow"
+        }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Error:', error);
+        repondre('Failed to create slideshow: ' + error.message);
+    } finally {
+        // Cleanup
+        fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+
+    // Helper functions
+    async function downloadFile(url, filePath) {
+        const response = await axios({
+            method: 'GET',
+            url,
+            responseType: 'stream'
+        });
+        
+        const writer = fs.createWriteStream(filePath);
+        response.data.pipe(writer);
+        
+        return new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+    }
+
+    async function createSlideshow(images, audio, output) {
+        // Calculate duration per image based on audio length
+        const audioDuration = await getAudioDuration(audio);
+        const durationPerImage = (audioDuration / images.length).toFixed(2);
+        
+        // Create FFmpeg command
+        const ffmpegCommand = `
+            ffmpeg -y \
+            ${images.map((img, i) => `-loop 1 -t ${durationPerImage} -i "${img}"`).join(' ')} \
+            -i "${audio}" \
+            -filter_complex "concat=n=${images.length}:v=1:a=0,format=yuv420p" \
+            -c:v libx264 -preset fast -movflags +faststart \
+            -c:a aac -b:a 192k \
+            "${output}"
+        `.replace(/\s+/g, ' ').trim();
+
+        return new Promise((resolve, reject) => {
+            exec(ffmpegCommand, (error) => {
+                if (error) reject(error);
+                else resolve();
+            });
+        });
+    }
+
+    async function getAudioDuration(audioPath) {
+        return new Promise((resolve) => {
+            exec(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${audioPath}"`, 
+                (error, stdout) => {
+                    resolve(parseFloat(stdout) || 30); // Default to 30s if cannot determine
+                });
+        });
+    }
+});
