@@ -7,7 +7,7 @@ const filename = `${Math.random().toString(36).substring(2, 9)}`;
 
 keith({
     nomCom: 'toaudio',
-    categorie: 'Audio-Edit',
+    categorie: 'Utility',
 }, async (dest, zk, commandeOptions) => {
     const { ms, repondre, msgRepondu } = commandeOptions;
 
@@ -58,7 +58,7 @@ keith({
 
 keith({
     nomCom: 'tovideo',
-    categorie: 'Audio-Edit',
+    categorie: 'Utility',
 }, async (dest, zk, commandeOptions) => {
     const { ms, repondre, msgRepondu } = commandeOptions;
 
@@ -527,5 +527,154 @@ keith({
                     resolve(parseFloat(stdout) || 30); // Default to 30s if cannot determine
                 });
         });
+    }
+});
+
+keith({
+    nomCom: 'collage',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg } = commandeOptions;
+    const input = arg.join(" ");
+
+    // Validate input format
+    if (!input.includes('|')) {
+        return repondre([
+            'Invalid format! Use:',
+            '.collage [layout] | [media URLs]',
+            'Examples:',
+            '.collage 2x2 | url1, url2, url3, url4',
+            '.collage 1x3 | url1, url2, url3'
+        ].join('\n'));
+    }
+
+    const [layout, mediaPart] = input.split('|').map(s => s.trim());
+    const [rows, cols] = layout.split('x').map(Number);
+    const mediaUrls = mediaPart.split(',').map(url => url.trim()).filter(url => url);
+
+    // Validate layout
+    if (!rows || !cols || rows > 4 || cols > 4) {
+        return repondre('Invalid layout! Use formats like 2x2, 1x3, 3x1 (max 4x4)');
+    }
+
+    const requiredSlots = rows * cols;
+    if (mediaUrls.length !== requiredSlots) {
+        return repondre(`Need exactly ${requiredSlots} media items for ${layout} layout`);
+    }
+
+    const tempDir = `./temp_collage_${Date.now()}`;
+    fs.mkdirSync(tempDir);
+
+    try {
+        repondre(`Downloading ${mediaUrls.length} media items...`);
+
+        // Download all media files
+        const mediaPaths = await Promise.all(
+            mediaUrls.map(async (url, index) => {
+                const ext = url.match(/\.(jpg|png|mp4|gif)$/i)?.[1] || 'mp4';
+                const mediaPath = path.join(tempDir, `media_${index}.${ext}`);
+                await downloadFile(url, mediaPath);
+                return mediaPath;
+            })
+        );
+
+        // Generate collage
+        repondre(`Creating ${layout} collage...`);
+        const outputPath = path.join(tempDir, 'collage.mp4');
+        await createCollage(mediaPaths, rows, cols, outputPath);
+
+        // Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, {
+            video: videoBuffer,
+            mimetype: "video/mp4",
+            caption: `📺 ${layout} Media Collage`
+        }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Collage error:', error);
+        repondre(`Failed: ${error.message}`);
+    } finally {
+        // Cleanup
+        fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+
+    // Helper Functions
+    async function downloadFile(url, filePath) {
+        const response = await axios({
+            method: 'GET',
+            url,
+            responseType: 'stream',
+            timeout: 30000
+        });
+        
+        const writer = fs.createWriteStream(filePath);
+        response.data.pipe(writer);
+        
+        return new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
+        });
+    }
+
+    async function createCollage(inputs, rows, cols, output) {
+        const isVideo = inputs.some(f => f.endsWith('.mp4'));
+        const filterComplex = generateFilterComplex(inputs, rows, cols, isVideo);
+        
+        const ffmpegCommand = [
+            'ffmpeg -y',
+            inputs.map(i => `-i "${i}"`).join(' '),
+            '-filter_complex', `"${filterComplex}"`,
+            '-map', '[out]',
+            '-c:v libx264 -preset fast -crf 23',
+            '-pix_fmt yuv420p -movflags +faststart',
+            `"${output}"`
+        ].join(' ');
+
+        return new Promise((resolve, reject) => {
+            exec(ffmpegCommand, (err) => err ? reject(err) : resolve());
+        });
+    }
+
+    function generateFilterComplex(inputs, rows, cols, hasVideo) {
+        const width = 640;
+        const height = 360;
+        const cellWidth = width / cols;
+        const cellHeight = height / rows;
+        
+        let filters = [];
+        let inputsCount = inputs.length;
+        
+        // Prepare each input
+        inputs.forEach((_, i) => {
+            if (hasVideo) {
+                filters.push(`[${i}:v]scale=${cellWidth}:${cellHeight}:force_original_aspect_ratio=decrease,pad=${cellWidth}:${cellHeight}:(ow-iw)/2:(oh-ih)/2[v${i}]`);
+            } else {
+                filters.push(`[${i}:v]scale=${cellWidth}:${cellHeight},loop=-1:1[v${i}]`);
+            }
+        });
+        
+        // Grid layout
+        let grid = [];
+        for (let r = 0; r < rows; r++) {
+            let row = [];
+            for (let c = 0; c < cols; c++) {
+                const index = r * cols + c;
+                if (index < inputsCount) {
+                    row.push(`[v${index}]`);
+                }
+            }
+            if (row.length > 0) {
+                grid.push(`${row.join('')}hstack=inputs=${row.length}[row${r}]`);
+            }
+        }
+        
+        filters = filters.concat(grid);
+        const vstackInputs = grid.map((_, i) => `[row${i}]`).join('');
+        
+        return [
+            ...filters,
+            `${vstackInputs}vstack=inputs=${rows}[out]`
+        ].join(';');
     }
 });
