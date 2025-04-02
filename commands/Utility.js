@@ -1175,3 +1175,271 @@ keith({
         });
     }
 });
+
+
+keith({
+    nomCom: 'reactvid2',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+
+    // Enhanced Argument Parser
+    const options = {
+        template: 'sidebyside',
+        ratio: '1:1',
+        camSize: '30%',
+        border: '3px',
+        muteOriginal: false,
+        style: 'normal', // normal/circle/rounded
+        transition: 'none', // fade/slide/zoom
+        bgColor: 'black',
+        highlight: 'auto' // auto/manual/off
+    };
+
+    // Parse advanced arguments
+    arg.forEach(option => {
+        const [key, value] = option.split('=');
+        if (options.hasOwnProperty(key)) {
+            options[key] = value === 'true' ? true : 
+                         value === 'false' ? false : value;
+        }
+    });
+
+    // Validation
+    if (!msgRepondu?.videoMessage) {
+        return repondre('❌ Please reply to the main video');
+    }
+
+    if (!commandeOptions.mentionedJidList?.length) {
+        return repondre('🔍 Mention a user with video message');
+    }
+
+    try {
+        repondre('🚀 Creating reaction video...');
+
+        // Setup workspace
+        const tempDir = fs.mkdtempSync(`./react_${Date.now()}_`);
+        const mainVideoPath = path.join(tempDir, 'main.mp4');
+        const reactionVideoPath = path.join(tempDir, 'react.mp4');
+        const outputPath = path.join(tempDir, 'output.mp4');
+
+        // Download videos with progress
+        await Promise.all([
+            downloadWithProgress(msgRepondu.videoMessage, mainVideoPath, 'Main Video'),
+            downloadReactionVideo(commandeOptions.mentionedJidList[0], reactionVideoPath)
+        ]);
+
+        // Get video metadata
+        const mainInfo = await getVideoInfo(mainVideoPath);
+        const reactInfo = await getVideoInfo(reactionVideoPath);
+        const duration = Math.min(mainInfo.duration, reactInfo.duration);
+
+        // Build advanced FFmpeg command
+        const ffmpegCommand = buildAdvancedCommand(mainVideoPath, reactionVideoPath, outputPath, options, {
+            mainInfo, reactInfo, duration
+        });
+
+        // Execute with progress tracking
+        await executeWithProgress(ffmpegCommand, duration);
+
+        // Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, {
+            video: videoBuffer,
+            mimetype: "video/mp4",
+            caption: "🎬 Professional Reaction Video"
+        }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Reaction Error:', error);
+        repondre(`❌ Error: ${error.message}`);
+    } finally {
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true });
+        }
+    }
+
+    // Enhanced Helper Functions
+    async function downloadReactionVideo(userId, savePath) {
+        const userMsg = await zk.loadMessage(dest, userId);
+        if (!userMsg?.videoMessage) throw new Error("Mentioned user has no video");
+        return downloadWithProgress(userMsg.videoMessage, savePath, 'Reaction Video');
+    }
+
+    async function downloadWithProgress(message, savePath, label) {
+        return new Promise((resolve, reject) => {
+            const stream = zk.downloadMedia(message);
+            const writer = fs.createWriteStream(savePath);
+            let bytes = 0;
+            
+            stream.on('data', (chunk) => {
+                bytes += chunk.length;
+                console.log(`${label} Download: ${(bytes / (1024 * 1024)).toFixed(2)}MB`);
+            });
+            
+            stream.pipe(writer)
+                .on('finish', resolve)
+                .on('error', reject);
+        });
+    }
+
+    async function getVideoInfo(videoPath) {
+        return new Promise((resolve) => {
+            exec(`ffprobe -v error -show_format -show_streams -of json "${videoPath}"`,
+                (err, stdout) => {
+                    const data = JSON.parse(stdout);
+                    resolve({
+                        width: data.streams[0].width,
+                        height: data.streams[0].height,
+                        duration: parseFloat(data.format.duration),
+                        fps: eval(data.streams[0].avg_frame_rate)
+                    });
+                });
+        });
+    }
+
+    function buildAdvancedCommand(mainPath, reactPath, outputPath, options, { mainInfo, reactInfo, duration }) {
+        const base = ['ffmpeg -y', `-i "${mainPath}"`, `-i "${reactPath}"`];
+        const filters = [];
+        const outputs = ['-map', '[v]'];
+
+        // Audio Processing
+        if (options.muteOriginal) {
+            filters.push(`[1:a]volume=1.5[a]`);
+            outputs.push('-map', '[a]');
+        } else {
+            filters.push(`[0:a][1:a]amix=inputs=2:duration=longest,volume=2[a]`);
+            outputs.push('-map', '[a]');
+        }
+
+        // Video Processing
+        const mainScale = `scale=${mainInfo.width}:${mainInfo.height}:force_original_aspect_ratio=decrease`;
+        const reactScale = `scale=${reactInfo.width}:${reactInfo.height}:force_original_aspect_ratio=decrease`;
+
+        // Template-Specific Processing
+        switch (options.template) {
+            case 'pictureinpicture':
+                const pipSize = parseFloat(options.camSize) / 100;
+                const pipWidth = Math.floor(mainInfo.width * pipSize);
+                const pipHeight = Math.floor(pipWidth * (reactInfo.height/reactInfo.width));
+                
+                filters.push(
+                    `[0:v]${mainScale}[main]`,
+                    `[1:v]${reactScale},scale=${pipWidth}:${pipHeight}[react]`,
+                    applyStyle('[react]', options.style),
+                    `[main][styled]overlay=W-w-20:H-h-20:enable='between(t,1,${duration-1})'`,
+                    applyTransition(options.transition, duration)
+                );
+                break;
+
+            case 'topbottom':
+                const [topRatio, bottomRatio] = options.ratio.split(':').map(Number);
+                const totalRatio = topRatio + bottomRatio;
+                
+                filters.push(
+                    `[0:v]${mainScale},scale=${mainInfo.width}:${mainInfo.height*topRatio/totalRatio}[top]`,
+                    `[1:v]${reactScale},scale=${mainInfo.width}:${mainInfo.height*bottomRatio/totalRatio}[bottom]`,
+                    `[top][bottom]vstack=inputs=2`,
+                    `pad=${mainInfo.width}:${mainInfo.height}:(ow-iw)/2:(oh-ih)/2`,
+                    applyTransition(options.transition, duration)
+                );
+                break;
+
+            default: // sidebyside
+                const [leftRatio, rightRatio] = options.ratio.split(':').map(Number);
+                const borderEffect = options.border ? 
+                    `pad=iw+${options.border}:ih:${options.border}/2:0:${options.bgColor}` : '';
+                
+                filters.push(
+                    `[0:v]${mainScale},scale=${mainInfo.width*leftRatio/(leftRatio+rightRatio)}:${mainInfo.height}[left]`,
+                    `[1:v]${reactScale},scale=${mainInfo.width*rightRatio/(leftRatio+rightRatio)}:${mainInfo.height}[right]`,
+                    `[left][right]hstack=inputs=2${borderEffect ? `,${borderEffect}` : ''}`,
+                    applyTransition(options.transition, duration)
+                );
+        }
+
+        // Highlight Detection (Auto)
+        if (options.highlight === 'auto') {
+            filters.push(`sendcmd=f=./highlight.txt,zoompan=z='if(lte(on,1),1,if(between(on,2,20),1+0.02*on,1.4)'`);
+            await generateHighlightFile(duration, mainInfo.fps);
+        }
+
+        // Final Output Settings
+        outputs.push(
+            '-c:v libx264 -preset fast -crf 18',
+            '-profile:v high -level 4.0',
+            '-pix_fmt yuv420p -movflags +faststart',
+            `"${outputPath}"`
+        );
+
+        return [...base, '-filter_complex', `"${filters.join(';')}"`, ...outputs].join(' ');
+    }
+
+    function applyStyle(input, style) {
+        switch (style) {
+            case 'circle':
+                return `${input}format=rgba,geq=r='r(X,Y)':a='0.5*st(1,sqrt((X-W/2)^2+(Y-H/2)^2)/hypot(W/2,H/2)';` +
+                       `colorkey=color=black@0:similarity=0.01:blend=0`;
+            case 'rounded':
+                return `${input}format=rgba,geq=r='r(X,Y)':a='if(gt(abs(X-W/2),W/2-10)*if(gt(abs(Y-H/2),H/2-10),0,1)'`;
+            default:
+                return input;
+        }
+    }
+
+    function applyTransition(type, duration) {
+        const fadeDuration = Math.min(1, duration/4); // Max 1s fade
+        switch (type) {
+            case 'fade':
+                return `fade=t=in:st=0:d=${fadeDuration},fade=t=out:st=${duration-fadeDuration}:d=${fadeDuration}`;
+            case 'slide':
+                return `crop=iw:ih-ih*2*t/${duration},pad=iw:ih:0:ih*2*t/${duration}:${options.bgColor}`;
+            case 'zoom':
+                return `zoompan=z='if(lte(t,${fadeDuration}),1+0.5*t/${fadeDuration},if(gte(t,${duration-fadeDuration}),2-0.5*(t-${duration-fadeDuration})/${fadeDuration},1.5)'`;
+            default:
+                return '';
+        }
+    }
+
+    async function generateHighlightFile(duration, fps) {
+        // AI-based highlight detection would go here
+        // For demo, we'll just highlight the middle 20%
+        const highlightStart = duration * 0.4;
+        const highlightEnd = duration * 0.6;
+        
+        let commands = [];
+        for (let t = 0; t < duration; t += 1/fps) {
+            if (t >= highlightStart && t <= highlightEnd) {
+                commands.push(`between(t,${t},${t+1/fps}) drawbox 50 50 50 50 red 2`);
+            }
+        }
+        fs.writeFileSync('./highlight.txt', commands.join('\n'));
+    }
+
+    async function executeWithProgress(command, duration) {
+        return new Promise((resolve, reject) => {
+            const ffmpeg = exec(command);
+            let lastProgress = 0;
+            
+            ffmpeg.stderr.on('data', (data) => {
+                const timeMatch = data.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+                if (timeMatch) {
+                    const hours = parseFloat(timeMatch[1]);
+                    const mins = parseFloat(timeMatch[2]);
+                    const secs = parseFloat(timeMatch[3]);
+                    const currentTime = hours * 3600 + mins * 60 + secs;
+                    const progress = Math.floor((currentTime / duration) * 100);
+                    
+                    if (progress > lastProgress) {
+                        repondre(`Processing: ${progress}%`);
+                        lastProgress = progress;
+                    }
+                }
+            });
+            
+            ffmpeg.on('close', (code) => {
+                code === 0 ? resolve() : reject(new Error(`FFmpeg exited with code ${code}`));
+            });
+        });
+    }
+});
