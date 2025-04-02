@@ -181,3 +181,67 @@ keith({
         repondre('Error processing the audio message');
     }
 });
+
+
+keith({
+    nomCom: 'volvideo',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+    const volume = parseFloat(arg[0]); // Get volume level from command
+
+    // Validation checks
+    if (!msgRepondu) {
+        return repondre('Please reply to a video message to adjust volume');
+    }
+
+    if (!msgRepondu.videoMessage) {
+        return repondre('The command only works with video messages');
+    }
+
+    if (!volume || isNaN(volume)) {
+        return repondre('Please specify a valid volume level (e.g., .volvideo 10)');
+    }
+
+    try {
+        // Download the video message
+        const videoPath = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
+        const outputPath = `${filename}.mp4`;
+        
+        // FFmpeg command to adjust video volume while preserving video stream
+        const ffmpegCommand = `ffmpeg -i "${videoPath}" -c:v copy -af "volume=${volume}dB" -c:a aac -b:a 192k "${outputPath}"`;
+        
+        exec(ffmpegCommand, (error, stdout, stderr) => {
+            // Clean up the original video file
+            fs.unlinkSync(videoPath);
+            
+            if (error) {
+                console.error('FFmpeg error:', error);
+                console.error('FFmpeg stderr:', stderr);
+                return repondre('Error adjusting video volume');
+            }
+            
+            try {
+                const videoBuffer = fs.readFileSync(outputPath);
+                zk.sendMessage(
+                    dest,
+                    { 
+                        video: videoBuffer,
+                        mimetype: "video/mp4",
+                        caption: `Video volume increased by ${volume}dB`
+                    },
+                    { quoted: ms }
+                );
+                
+                // Clean up the generated video file
+                fs.unlinkSync(outputPath);
+            } catch (sendError) {
+                console.error('Error sending video:', sendError);
+                repondre('Error sending the volume-adjusted video');
+            }
+        });
+    } catch (downloadError) {
+        console.error('Download error:', downloadError);
+        repondre('Error processing the video message');
+    }
+});
