@@ -607,3 +607,78 @@ keith({
         repondre('Error processing the audio message');
     }
 });
+
+
+
+keith({
+    nomCom: 'toptt',
+    categorie: 'Audio-Edit',
+    description: 'Quote an audio message and convert to MP3'
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, msgRepondu } = commandeOptions;
+
+    // Check if the message is a reply
+    if (!msgRepondu) {
+        return repondre('Please reply to an audio message to convert');
+    }
+
+    // Check if the replied message is an audio
+    if (!msgRepondu.audioMessage) {
+        return repondre('The command only works with audio messages');
+    }
+
+    try {
+        // Generate a unique filename
+        const filename = `quote_audio_${Date.now()}.mp3`;
+        
+        // Download the audio message
+        const audioPath = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
+        
+        // Convert to MP3 using FFmpeg
+        const ffmpegCommand = `ffmpeg -i "${audioPath}" -c:a libmp3lame -q:a 2 "${filename}"`;
+        
+        exec(ffmpegCommand, async (error) => {
+            // Clean up the original audio file
+            fs.unlinkSync(audioPath);
+            
+            if (error) {
+                console.error('FFmpeg error:', error);
+                return repondre('Error converting audio to MP3');
+            }
+            
+            try {
+                // Read the converted file
+                const audioBuffer = fs.readFileSync(filename);
+                
+                // Get quoted message details
+                const quotedMsg = {
+                    key: msgRepondu.key,
+                    message: msgRepondu.message
+                };
+                
+                // Send the converted audio with quoted message
+                await zk.sendMessage(
+                    dest,
+                    { 
+                        audio: audioBuffer,
+                        mimetype: "audio/mpeg",
+                        ptt: true,
+                        contextInfo: {
+                            quotedMessage: quotedMsg
+                        }
+                    },
+                    { quoted: ms }
+                );
+                
+                // Clean up the converted file
+                fs.unlinkSync(filename);
+            } catch (sendError) {
+                console.error('Error sending audio:', sendError);
+                repondre('Error sending the converted audio');
+            }
+        });
+    } catch (downloadError) {
+        console.error('Download error:', downloadError);
+        repondre('Error processing the audio message');
+    }
+});
