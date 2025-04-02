@@ -1,1 +1,377 @@
+const { keith } = require('../keizzah/keith');
+const fs = require("fs");
+const { exec } = require("child_process");
+const path = require("path");
+const axios = require("axios");
 
+keith({
+    nomCom: 'react',
+    categorie: 'Video-Edit',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+
+    // Validate input
+    if (!msgRepondu?.videoMessage) {
+        return repondre('Please reply to the main video');
+    }
+
+    const options = {
+        template: 'sidebyside', // sidebyside, pictureinpicture, topbottom
+        ratio: '1:1',           // Aspect ratio for split templates
+        camSize: '30%',         // Size for PiP template
+        border: '3px',          # Border styling
+        muteOriginal: false     # Mute main video
+    };
+
+    // Parse arguments
+    arg.forEach(opt => {
+        const [key, value] = opt.split('=');
+        if (options.hasOwnProperty(key)) {
+            options[key] = value;
+        }
+    });
+
+    try {
+        repondre('Creating reaction video... 🎬');
+
+        // Setup workspace
+        const tempDir = fs.mkdtempSync(`./react_${Date.now()}_`);
+        const mainVideoPath = path.join(tempDir, 'main.mp4');
+        const reactionVideoPath = path.join(tempDir, 'reaction.mp4');
+        const outputPath = path.join(tempDir, 'output.mp4');
+
+        // Step 1: Download both videos
+        await Promise.all([
+            zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage, mainVideoPath),
+            (async () => {
+                if (commandeOptions.mentionedJidList?.length) {
+                    // Get reaction video from mentioned user's last video
+                    const userMsg = await zk.loadMessage(dest, commandeOptions.mentionedJidList[0]);
+                    if (userMsg?.videoMessage) {
+                        return zk.downloadAndSaveMediaMessage(userMsg.videoMessage, reactionVideoPath);
+                    }
+                }
+                throw new Error('Please mention a user with a video message');
+            })()
+        ]);
+
+        // Step 2: Process videos
+        const { width, height } = await getVideoDimensions(mainVideoPath);
+        const ffmpegCommand = buildFFmpegCommand(mainVideoPath, reactionVideoPath, outputPath, options, { width, height });
+
+        await executeFFmpeg(ffmpegCommand);
+
+        // Step 3: Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, {
+            video: videoBuffer,
+            mimetype: "video/mp4",
+            caption: "Your Reaction Video"
+        }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Reaction error:', error);
+        repondre(`Failed: ${error.message}`);
+    } finally {
+        // Cleanup
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true });
+        }
+    }
+
+    // Helper Functions
+    async function getVideoDimensions(videoPath) {
+        return new Promise((resolve) => {
+            exec(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${videoPath}"`,
+                (err, stdout) => {
+                    const { streams: [ { width, height } ] } = JSON.parse(stdout);
+                    resolve({ width, height });
+                });
+        });
+    }
+
+    function buildFFmpegCommand(mainPath, reactPath, outputPath, options, dimensions) {
+        const base = [
+            'ffmpeg -y',
+            `-i "${mainPath}"`,
+            `-i "${reactPath}"`,
+            '-filter_complex'
+        ];
+
+        const filters = [];
+        const outputs = [];
+
+        // Audio handling
+        if (options.muteOriginal) {
+            filters.push(`[1:a]volume=1[a]`);
+            outputs.push('-map', '[a]');
+        } else {
+            filters.push(`[0:a][1:a]amix=inputs=2:duration=longest[a]`);
+            outputs.push('-map', '[a]');
+        }
+
+        // Video processing based on template
+        switch (options.template) {
+            case 'pictureinpicture':
+                const pipSize = options.camSize || '30%';
+                filters.push(
+                    `[0:v]scale=${dimensions.width}:${dimensions.height}[main]`,
+                    `[1:v]scale=iw*${parseFloat(pipSize)/100}:-1[react]`,
+                    `[main][react]overlay=W-w-10:H-h-10:format=auto`
+                );
+                break;
+
+            case 'topbottom':
+                const [ratioW, ratioH] = options.ratio.split(':').map(Number);
+                filters.push(
+                    `[0:v]scale=${dimensions.width}:${dimensions.height/(ratioW+ratioH)*ratioH}[top]`,
+                    `[1:v]scale=${dimensions.width}:${dimensions.height/(ratioW+ratioH)*ratioW}[bottom]`,
+                    `[top][bottom]vstack=inputs=2`,
+                    `pad=${dimensions.width}:${dimensions.height}:(ow-iw)/2:(oh-ih)/2`
+                );
+                break;
+
+            default: // sidebyside
+                const border = options.border ? `fill=black@0.5:x=${dimensions.width/2}-${options.border}` : '';
+                filters.push(
+                    `[0:v]scale=${dimensions.width/2}:${dimensions.height}[left]`,
+                    `[1:v]scale=${dimensions.width/2}:${dimensions.height}[right]`,
+                    `[left][right]hstack=inputs=2${border ? `,${border}` : ''}`
+                );
+        }
+
+        outputs.push(
+            '-map', '[v]',
+            '-c:v libx264 -preset fast -crf 18',
+            '-movflags +faststart',
+            `"${outputPath}"`
+        );
+
+        return [...base, `"${filters.join(';')}"`, ...outputs].join(' ');
+    }
+
+    async function executeFFmpeg(command) {
+        return new Promise((resolve, reject) => {
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('FFmpeg stderr:', stderr);
+                    reject(new Error('Video processing failed'));
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+});
+
+keith({
+    nomCom: 'subtitle3',
+    categorie: 'Video-Edit',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+    
+    if (!msgRepondu?.videoMessage) {
+        return repondre('Please reply to a video message');
+    }
+
+    // Enhanced argument parsing with multiple text support
+    const textBlocks = [];
+    let currentArgs = [...arg];
+    let options = {
+        color: 'white',
+        font: 'Arial',
+        size: 24,
+        position: 'bottom',
+        border: 2,
+        bgcolor: 'black@0.5',
+        shadow: '2:2:3',
+        effect: 'none',
+        duration: 'full'
+    };
+
+    // Parse text blocks and options
+    while (currentArgs.length > 0) {
+        const textMatch = currentArgs.join(' ').match(/^(["'“])(.+?)\1/);
+        if (textMatch) {
+            textBlocks.push({
+                text: textMatch[2],
+                options: {...options} // Clone current options
+            });
+            currentArgs = currentArgs.join(' ').substring(textMatch[0].length).trim().split(' ');
+        } else {
+            const optionMatch = currentArgs[0].match(/^(\w+)=(.+)$/);
+            if (optionMatch) {
+                options[optionMatch[1]] = optionMatch[2];
+                currentArgs.shift();
+            } else {
+                currentArgs.shift(); // Skip invalid
+            }
+        }
+    }
+
+    if (textBlocks.length === 0) {
+        return repondre([
+            'Format: .subtitle "text1" [options] "text2" [options]',
+            'Options (per text):',
+            'color: red/blue/#FFFFFF (default: white)',
+            'font: Arial/Helvetica/etc (default: Arial)',
+            'size: font size (default: 24)',
+            'position: top/middle/bottom (default: bottom)',
+            'border: border width (default: 2)',
+            'bgcolor: color@opacity (default: black@0.5)',
+            'shadow: x:y:blur (default: 2:2:3)',
+            'effect: fade/typewriter (default: none)',
+            'duration: full/5s/10-15s (default: full)'
+        ].join('\n'));
+    }
+
+    try {
+        repondre('Processing subtitles...');
+
+        // Setup temp directory
+        const tempDir = fs.mkdtempSync(`./subtitle_${Date.now()}_`);
+        const inputPath = path.join(tempDir, 'input.mp4');
+        const outputPath = path.join(tempDir, 'output.mp4');
+
+        // Download video
+        await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage, inputPath);
+
+        // Generate complex filter
+        const videoInfo = await getVideoInfo(inputPath);
+        const filters = generateFilters(textBlocks, videoInfo);
+
+        // Build FFmpeg command
+        const ffmpegCommand = [
+            'ffmpeg -y',
+            `-i "${inputPath}"`,
+            '-vf', `"${filters.join(',')}"`,
+            '-c:v libx264 -preset fast -crf 18',
+            '-c:a copy',
+            `"${outputPath}"`
+        ].join(' ');
+
+        await executeCommand(ffmpegCommand);
+
+        // Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, { video: videoBuffer }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Subtitle error:', error);
+        repondre(`Error: ${error.message}`);
+    } finally {
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true });
+        }
+    }
+
+    // Helper Functions
+    async function getVideoInfo(filePath) {
+        return new Promise((resolve) => {
+            exec(`ffprobe -v error -show_format -show_streams -of json "${filePath}"`,
+                (err, stdout) => {
+                    const info = JSON.parse(stdout.toString());
+                    resolve({
+                        duration: parseFloat(info.format.duration),
+                        width: info.streams[0].width,
+                        height: info.streams[0].height
+                    });
+                });
+        });
+    }
+
+    function generateFilters(textBlocks, videoInfo) {
+        const baseFilters = [];
+        const overlayFilters = [];
+        
+        textBlocks.forEach((block, index) => {
+            const { text, options } = block;
+            const fontPath = getFontPath(options.font);
+            
+            // Calculate timing
+            const [start, end] = parseDuration(options.duration, videoInfo.duration);
+            
+            // Background box
+            if (options.bgcolor) {
+                const [bgColor, opacity] = options.bgcolor.split('@');
+                baseFilters.push(
+                    `color=${bgColor}@${opacity || '0.5'}:` +
+                    `${videoInfo.width}x${options.size * 2}[bg${index}]`
+                );
+            }
+            
+            // Text with effects
+            let textFilter = `drawtext=` +
+                `text='${escapeText(text)}':` +
+                `fontfile='${fontPath}':` +
+                `fontcolor=${options.color}:` +
+                `fontsize=${options.size}:` +
+                `box=1:boxcolor=black@0.5:boxborderw=5:` +
+                `shadowcolor=black:shadowx=${options.shadow?.split(':')[0] || 2}:` +
+                `shadowy=${options.shadow?.split(':')[1] || 2}:` +
+                `shadowt=${options.shadow?.split(':')[2] || 3}:` +
+                `x=(w-text_w)/2:` +
+                `y=${getYPosition(options.position, videoInfo.height, options.size)}:` +
+                `enable='between(t,${start},${end})'`;
+                
+            if (options.effect === 'fade') {
+                textFilter += `:alpha='if(lt(t,${start}+1),(t-${start})/1,` +
+                    `if(lt(t,${end}-1),1,(${end}-t)/1))'`;
+            } else if (options.effect === 'typewriter') {
+                textFilter += `:text='${typewriterEffect(text, start, end)}'`;
+            }
+            
+            overlayFilters.push(textFilter);
+        });
+        
+        return [...baseFilters, ...overlayFilters];
+    }
+
+    function escapeText(text) {
+        return text.replace(/'/g, "'\\\\''")
+                  .replace(/%/g, '%%')
+                  .replace(/\\n/g, '\n');
+    }
+
+    function getYPosition(position, videoHeight, fontSize) {
+        const padding = fontSize;
+        switch (position) {
+            case 'top': return padding;
+            case 'middle': return `(h-text_h)/2`;
+            default: return `h-text_h-${padding}`; // bottom
+        }
+    }
+
+    function parseDuration(duration, videoDuration) {
+        if (duration === 'full') return [0, videoDuration];
+        if (duration.includes('-')) {
+            const [start, end] = duration.split('-').map(parseFloat);
+            return [start, end];
+        }
+        const seconds = parseFloat(duration);
+        return [0, seconds];
+    }
+
+    function typewriterEffect(text, start, end) {
+        const duration = end - start;
+        return `substring(0,ceil((t-${start})/${duration/text.length}*${text.length}))`;
+    }
+
+    function getFontPath(fontName) {
+        const customPath = path.join(__dirname, 'fonts', `${fontName}.ttf`);
+        return fs.existsSync(customPath) ? customPath : '';
+    }
+
+    async function executeCommand(command) {
+        return new Promise((resolve, reject) => {
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('FFmpeg stderr:', stderr);
+                    reject(error);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+});
