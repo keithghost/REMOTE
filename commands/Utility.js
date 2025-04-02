@@ -1013,3 +1013,165 @@ keith({
         });
     }
 });
+
+
+keith({
+    nomCom: 'reactvid',
+    aliases: ['reactvideo'],
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+
+    // Validate input
+    if (!msgRepondu?.videoMessage) {
+        return repondre('Please reply to the main video');
+    }
+
+    const options = {
+        template: 'sidebyside', // sidebyside, pictureinpicture, topbottom
+        ratio: '1:1',           // Aspect ratio for split templates
+        camSize: '30%',         // Size for PiP template
+        border: '3px',          # Border styling
+        muteOriginal: false     # Mute main video
+    };
+
+    // Parse arguments
+    arg.forEach(opt => {
+        const [key, value] = opt.split('=');
+        if (options.hasOwnProperty(key)) {
+            options[key] = value;
+        }
+    });
+
+    try {
+        repondre('Creating reaction video... 🎬');
+
+        // Setup workspace
+        const tempDir = fs.mkdtempSync(`./react_${Date.now()}_`);
+        const mainVideoPath = path.join(tempDir, 'main.mp4');
+        const reactionVideoPath = path.join(tempDir, 'reaction.mp4');
+        const outputPath = path.join(tempDir, 'output.mp4');
+
+        // Step 1: Download both videos
+        await Promise.all([
+            zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage, mainVideoPath),
+            (async () => {
+                if (commandeOptions.mentionedJidList?.length) {
+                    // Get reaction video from mentioned user's last video
+                    const userMsg = await zk.loadMessage(dest, commandeOptions.mentionedJidList[0]);
+                    if (userMsg?.videoMessage) {
+                        return zk.downloadAndSaveMediaMessage(userMsg.videoMessage, reactionVideoPath);
+                    }
+                }
+                throw new Error('Please mention a user with a video message');
+            })()
+        ]);
+
+        // Step 2: Process videos
+        const { width, height } = await getVideoDimensions(mainVideoPath);
+        const ffmpegCommand = buildFFmpegCommand(mainVideoPath, reactionVideoPath, outputPath, options, { width, height });
+
+        await executeFFmpeg(ffmpegCommand);
+
+        // Step 3: Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, {
+            video: videoBuffer,
+            mimetype: "video/mp4",
+            caption: "Your Reaction Video"
+        }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Reaction error:', error);
+        repondre(`Failed: ${error.message}`);
+    } finally {
+        // Cleanup
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true });
+        }
+    }
+
+    // Helper Functions
+    async function getVideoDimensions(videoPath) {
+        return new Promise((resolve) => {
+            exec(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${videoPath}"`,
+                (err, stdout) => {
+                    const { streams: [ { width, height } ] } = JSON.parse(stdout);
+                    resolve({ width, height });
+                });
+        });
+    }
+
+    function buildFFmpegCommand(mainPath, reactPath, outputPath, options, dimensions) {
+        const base = [
+            'ffmpeg -y',
+            `-i "${mainPath}"`,
+            `-i "${reactPath}"`,
+            '-filter_complex'
+        ];
+
+        const filters = [];
+        const outputs = [];
+
+        // Audio handling
+        if (options.muteOriginal) {
+            filters.push(`[1:a]volume=1[a]`);
+            outputs.push('-map', '[a]');
+        } else {
+            filters.push(`[0:a][1:a]amix=inputs=2:duration=longest[a]`);
+            outputs.push('-map', '[a]');
+        }
+
+        // Video processing based on template
+        switch (options.template) {
+            case 'pictureinpicture':
+                const pipSize = options.camSize || '30%';
+                filters.push(
+                    `[0:v]scale=${dimensions.width}:${dimensions.height}[main]`,
+                    `[1:v]scale=iw*${parseFloat(pipSize)/100}:-1[react]`,
+                    `[main][react]overlay=W-w-10:H-h-10:format=auto`
+                );
+                break;
+
+            case 'topbottom':
+                const [ratioW, ratioH] = options.ratio.split(':').map(Number);
+                filters.push(
+                    `[0:v]scale=${dimensions.width}:${dimensions.height/(ratioW+ratioH)*ratioH}[top]`,
+                    `[1:v]scale=${dimensions.width}:${dimensions.height/(ratioW+ratioH)*ratioW}[bottom]`,
+                    `[top][bottom]vstack=inputs=2`,
+                    `pad=${dimensions.width}:${dimensions.height}:(ow-iw)/2:(oh-ih)/2`
+                );
+                break;
+
+            default: // sidebyside
+                const border = options.border ? `fill=black@0.5:x=${dimensions.width/2}-${options.border}` : '';
+                filters.push(
+                    `[0:v]scale=${dimensions.width/2}:${dimensions.height}[left]`,
+                    `[1:v]scale=${dimensions.width/2}:${dimensions.height}[right]`,
+                    `[left][right]hstack=inputs=2${border ? `,${border}` : ''}`
+                );
+        }
+
+        outputs.push(
+            '-map', '[v]',
+            '-c:v libx264 -preset fast -crf 18',
+            '-movflags +faststart',
+            `"${outputPath}"`
+        );
+
+        return [...base, `"${filters.join(';')}"`, ...outputs].join(' ');
+    }
+
+    async function executeFFmpeg(command) {
+        return new Promise((resolve, reject) => {
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    console.error('FFmpeg stderr:', stderr);
+                    reject(new Error('Video processing failed'));
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+});
