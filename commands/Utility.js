@@ -245,3 +245,68 @@ keith({
         repondre('Error processing the video message');
     }
 });
+
+
+keith({
+    nomCom: 'trimaudio',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+
+    // Validate input
+    if (!msgRepondu) return repondre('Please reply to an audio message');
+    if (!msgRepondu.audioMessage) return repondre('Only works with audio messages');
+    if (arg.length < 2) return repondre('Format: .trimaudio start end\nExample: .trimaudio 1:20 1:50');
+
+    try {
+        // Parse time arguments
+        const parseTime = (timeStr) => {
+            if (timeStr.includes(':')) {
+                const [mins, secs] = timeStr.split(':').map(Number);
+                return mins * 60 + secs;
+            }
+            return parseFloat(timeStr);
+        };
+
+        const startTime = parseTime(arg[0]);
+        const endTime = parseTime(arg[1]);
+
+        if (isNaN(startTime) return repondre('Invalid start time format');
+        if (isNaN(endTime)) return repondre('Invalid end time format');
+        if (startTime >= endTime) return repondre('End time must be after start time');
+
+        // Download and process audio
+        const audioPath = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
+        const outputPath = `${filename}.mp3`;
+
+        // FFmpeg command with precise seeking and duration
+        const ffmpegCommand = `ffmpeg -ss ${startTime} -i "${audioPath}" -to ${endTime - startTime} -c copy "${outputPath}"`;
+
+        exec(ffmpegCommand, (error) => {
+            fs.unlinkSync(audioPath); // Cleanup original
+            
+            if (error) {
+                console.error('FFmpeg error:', error);
+                return repondre('Error trimming audio');
+            }
+
+            try {
+                const audioBuffer = fs.readFileSync(outputPath);
+                zk.sendMessage(dest, {
+                    audio: audioBuffer,
+                    mimetype: "audio/mpeg"
+                    
+                }, { quoted: ms });
+                
+                fs.unlinkSync(outputPath); // Cleanup trimmed
+            } catch (e) {
+                console.error('Send error:', e);
+                repondre('Error sending trimmed audio');
+            }
+        });
+
+    } catch (error) {
+        console.error('Processing error:', error);
+        repondre('Error processing audio');
+    }
+});
