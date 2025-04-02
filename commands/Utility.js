@@ -310,3 +310,75 @@ keith({
         repondre('Error processing audio');
     }
 });
+
+
+keith({
+    nomCom: 'trimvideo',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+
+    // Validate input
+    if (!msgRepondu) return repondre('Please reply to a video message');
+    if (!msgRepondu.videoMessage) return repondre('Only works with video messages');
+    if (arg.length < 2) return repondre('Format: .trimvideo start end\nExample: .trimvideo 1:20 1:50');
+
+    try {
+        // Parse time arguments
+        const parseTime = (timeStr) => {
+            if (timeStr.includes(':')) {
+                const parts = timeStr.split(':');
+                if (parts.length === 3) { // HH:MM:SS format
+                    return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2]);
+                } else { // MM:SS format
+                    return parseInt(parts[0]) * 60 + parseFloat(parts[1]);
+                }
+            }
+            return parseFloat(timeStr);
+        };
+
+        const startTime = parseTime(arg[0]);
+        const endTime = parseTime(arg[1]);
+
+        if (isNaN(startTime)) return repondre('Invalid start time format');
+        if (isNaN(endTime)) return repondre('Invalid end time format');
+        if (startTime >= endTime) return repondre('End time must be after start time');
+
+        // Download and process video
+        const videoPath = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
+        const outputPath = `${filename}.mp4`;
+
+        // FFmpeg command with precise seeking and duration
+        const ffmpegCommand = `ffmpeg -ss ${startTime} -i "${videoPath}" -to ${endTime - startTime} -c:v libx264 -preset fast -c:a aac -movflags +faststart "${outputPath}"`;
+
+        repondre('Processing video trim... Please wait ⏳');
+
+        exec(ffmpegCommand, (error, stdout, stderr) => {
+            fs.unlinkSync(videoPath); // Cleanup original
+            
+            if (error) {
+                console.error('FFmpeg error:', error);
+                console.error('FFmpeg stderr:', stderr);
+                return repondre('Error trimming video');
+            }
+
+            try {
+                const videoBuffer = fs.readFileSync(outputPath);
+                zk.sendMessage(dest, {
+                    video: videoBuffer,
+                    mimetype: "video/mp4",
+                    caption: `Trimmed from ${arg[0]} to ${arg[1]}`
+                }, { quoted: ms });
+                
+                fs.unlinkSync(outputPath); // Cleanup trimmed
+            } catch (e) {
+                console.error('Send error:', e);
+                repondre('Error sending trimmed video');
+            }
+        });
+
+    } catch (error) {
+        console.error('Processing error:', error);
+        repondre('Error processing video');
+    }
+});
