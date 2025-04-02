@@ -678,3 +678,126 @@ keith({
         ].join(';');
     }
 });
+
+
+keith({
+    nomCom: 'subtitle',
+    categorie: 'Utility',
+}, async (dest, zk, commandeOptions) => {
+    const { ms, repondre, arg, msgRepondu } = commandeOptions;
+    
+    // Validate replied message
+    if (!msgRepondu || !msgRepondu.videoMessage) {
+        return repondre('Please reply to a video message');
+    }
+
+    // Parse arguments
+    const textMatch = arg.join(' ').match(/"([^"]+)"|“([^”]+)”|'([^']+)'/);
+    if (!textMatch) {
+        return repondre([
+            'Format: .subtitle "text" [options]',
+            'Example: .subtitle "Hello World" color=red font=Arial size=24',
+            'Options:',
+            'color: red/blue/#FFFFFF (default: white)',
+            'font: Arial/Helvetica/etc (default: Arial)',
+            'size: font size (default: 24)',
+            'position: top/middle/bottom (default: bottom)',
+            'border: border width (default: 2)'
+        ].join('\n'));
+    }
+
+    const text = textMatch.slice(1).find(m => m);
+    const options = parseOptions(arg.join(' '));
+
+    try {
+        repondre('Adding subtitles...');
+
+        // Download video
+        const tempDir = `./temp_subtitle_${Date.now()}`;
+        fs.mkdirSync(tempDir);
+        const inputPath = path.join(tempDir, 'input.mp4');
+        await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage, inputPath);
+
+        // Generate subtitles
+        const outputPath = path.join(tempDir, 'output.mp4');
+        await burnSubtitles(inputPath, outputPath, text, options);
+
+        // Send result
+        const videoBuffer = fs.readFileSync(outputPath);
+        await zk.sendMessage(dest, {
+            video: videoBuffer,
+            mimetype: "video/mp4"
+        }, { quoted: ms });
+
+    } catch (error) {
+        console.error('Subtitle error:', error);
+        repondre('Failed to add subtitles: ' + error.message);
+    } finally {
+        // Cleanup
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true });
+        }
+    }
+
+    // Helper functions
+    function parseOptions(input) {
+        const options = {
+            color: 'white',
+            font: 'Arial',
+            size: 24,
+            position: 'bottom',
+            border: 2
+        };
+
+        const optionRegex = /(\w+)=([^ ]+)/g;
+        let match;
+        while ((match = optionRegex.exec(input)) !== null) {
+            options[match[1]] = match[2];
+        }
+
+        // Validate color
+        if (!options.color.match(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^[a-zA-Z]+$/)) {
+            options.color = 'white';
+        }
+
+        return options;
+    }
+
+    async function burnSubtitles(input, output, text, options) {
+        const fontPath = path.join(__dirname, 'fonts', `${options.font}.ttf`);
+        const hasCustomFont = fs.existsSync(fontPath);
+
+        // Calculate position
+        let yPosition;
+        switch (options.position) {
+            case 'top': yPosition = 'h/10'; break;
+            case 'middle': yPosition = 'h/2-text_h/2'; break;
+            default: yPosition = 'h-h/10-text_h'; // bottom
+        }
+
+        const ffmpegCommand = [
+            'ffmpeg -y',
+            `-i "${input}"`,
+            '-vf',
+            `"drawtext=` +
+            `text='${text.replace(/'/g, "'\\\\''")}':` +
+            `fontfile=${hasCustomFont ? fontPath : ''}:` +
+            `fontcolor=${options.color}:` +
+            `fontsize=${options.size}:` +
+            `bordercolor=black:` +
+            `borderw=${options.border}:` +
+            `x=(w-text_w)/2:` +
+            `y=${yPosition}:` +
+            `enable='between(t,0,30)'"`, // Show for first 30 seconds
+            '-c:a copy',
+            `"${output}"`
+        ].join(' ');
+
+        return new Promise((resolve, reject) => {
+            exec(ffmpegCommand, (error) => {
+                if (error) reject(error);
+                else resolve();
+            });
+        });
+    }
+});
