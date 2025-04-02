@@ -1,7 +1,125 @@
-const { keith } = require('../keizzah/keith');
+const { keith } = require("../keizzah/keith");
 const axios = require('axios');
-const conf = require(__dirname + "/../set");
+const conf = require(__dirname + '/../set');
+const { repondre } = require(__dirname + "/../keizzah/context");
 
+// Common contextInfo configuration
+const getContextInfo = (title = '', userJid = '', thumbnailUrl = '') => ({
+  mentionedJid: [userJid],
+  forwardingScore: 999,
+  isForwarded: true,
+  forwardedNewsletterMessageInfo: {
+    newsletterJid: "120363266249040649@newsletter",
+    newsletterName: "Keith Support 🔥",
+    serverMessageId: Math.floor(100000 + Math.random() * 900000),
+  },
+  externalAdReply: {
+    showAdAttribution: true,
+    title: conf.BOT || 'SoundCloud Downloader',
+    body: title || "Media Downloader",
+    thumbnailUrl: thumbnailUrl || conf.URL || '',
+    sourceUrl: conf.GURL || '',
+    mediaType: 1,
+    renderLargerThumbnail: false
+  }
+});
+
+// Search SoundCloud for tracks
+async function searchSoundCloud(query) {
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/search/soundcloud?q=${encodeURIComponent(query)}`);
+    
+    if (!response.data.status || !response.data.result.result.length) {
+      throw new Error('No results found on SoundCloud');
+    }
+
+    // Filter to only include actual tracks (not profiles)
+    const tracks = response.data.result.result.filter(track => track.timestamp);
+    
+    if (!tracks.length) {
+      throw new Error('No playable tracks found');
+    }
+
+    return tracks[0]; // Return first track
+  } catch (error) {
+    console.error('SoundCloud search error:', error);
+    throw new Error('Failed to search SoundCloud');
+  }
+}
+
+// Download SoundCloud track
+async function downloadSoundCloud(url) {
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/download/soundcloud?url=${encodeURIComponent(url)}`);
+    
+    if (!response.data.status || !response.data.result.track.downloadUrl) {
+      throw new Error('Failed to get download URL');
+    }
+
+    return response.data.result.track;
+  } catch (error) {
+    console.error('SoundCloud download error:', error);
+    throw new Error('Failed to download from SoundCloud');
+  }
+}
+
+// Audio download command
+keith({
+  nomCom: "pla",
+  aliases: ["song", "playdoc", "audio", "mp3"],
+  categorie: "download",
+  reaction: "🎵"
+}, async (dest, zk, commandOptions) => {
+  const { arg, ms, userJid } = commandOptions;
+
+  try {
+    if (!arg[0]) {
+      return repondre(zk, dest, ms, "Please provide a song name.");
+    }
+
+    const query = arg.join(" ");
+    
+    // Search for the track
+    await zk.sendMessage(dest, {
+      text: "🔍 Searching SoundCloud...",
+      contextInfo: getContextInfo("Searching", userJid)
+    }, { quoted: ms });
+
+    const track = await searchSoundCloud(query);
+    
+    // Download the track
+    await zk.sendMessage(dest, {
+      text: "⬇️ Downloading audio... This may take a moment...",
+      contextInfo: getContextInfo(track.title, userJid, track.thumb)
+    }, { quoted: ms });
+
+    const downloadData = await downloadSoundCloud(track.url);
+
+    const messagePayloads = [
+      {
+        audio: { url: downloadData.downloadUrl },
+        mimetype: 'audio/mpeg',
+        caption: `🎵 *${track.title}* by ${track.artist}`,
+        contextInfo: getContextInfo(track.title, userJid, track.thumb)
+      },
+      {
+        document: { url: downloadData.downloadUrl },
+        mimetype: 'audio/mpeg',
+        fileName: `${track.title} - ${track.artist}.mp3`.replace(/[^\w\s.-]/gi, ''),
+        caption: `📁 *${track.title}* by ${track.artist} (Document)`,
+        contextInfo: getContextInfo(track.title, userJid, track.thumb)
+      }
+    ];
+
+    for (const payload of messagePayloads) {
+      await zk.sendMessage(dest, payload, { quoted: ms });
+    }
+
+  } catch (error) {
+    console.error('SoundCloud download error:', error);
+    repondre(zk, dest, ms, `❌ Error: ${error.message}`);
+  }
+});
 keith({
   nomCom: "yout",
   aliases: ["yt", "ytdl", "youtubedl"],
