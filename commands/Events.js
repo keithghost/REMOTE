@@ -4,7 +4,7 @@ const ytSearch = require('yt-search');
 const conf = require(__dirname + '/../set');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
-// ContextInfo configuration - Modified to use track URL when available
+// ContextInfo configuration
 const getContextInfo = (title = '', userJid = '', thumbnailUrl = '', sourceUrl = '') => ({
   mentionedJid: [userJid],
   forwardingScore: 999,
@@ -19,16 +19,78 @@ const getContextInfo = (title = '', userJid = '', thumbnailUrl = '', sourceUrl =
     title: conf.BOT || 'Music Downloader',
     body: title || "Media Downloader",
     thumbnailUrl: thumbnailUrl || conf.URL || '',
-    sourceUrl: sourceUrl || '', // Now uses the track URL when available
+    sourceUrl: sourceUrl || '',
     mediaType: 1,
     renderLargerThumbnail: false
   }
 });
 
-// [Rest of your search and download functions remain exactly the same...]
+// Search Functions
+const searchSpotify = async (query) => {
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/search/spotify?q=${encodeURIComponent(query)}`);
+    return response.data?.status && response.data.result?.length ? { platform: 'spotify', ...response.data.result[0] } : null;
+  } catch {
+    return null;
+  }
+};
 
+const searchSoundCloud = async (query) => {
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/search/soundcloud?q=${encodeURIComponent(query)}`);
+    const tracks = response.data?.result?.result?.filter(track => track.timestamp) || [];
+    return tracks.length ? { platform: 'soundcloud', ...tracks[0] } : null;
+  } catch {
+    return null;
+  }
+};
+
+const searchYouTube = async (query) => {
+  try {
+    const { videos } = await ytSearch(query);
+    return videos?.length ? { platform: 'youtube', title: videos[0].title, url: videos[0].url, thumbnail: videos[0].thumbnail } : null;
+  } catch {
+    return null;
+  }
+};
+
+// Download Functions
+const downloadSpotify = async (url) => {
+  try {
+    const response = await axios.get(`https://api.siputzx.my.id/api/d/spotify?url=${encodeURIComponent(url)}`);
+    return response.data?.status && response.data.data?.download
+      ? { downloadUrl: response.data.data.download, format: 'mp3', artist: response.data.data.artis, thumbnail: response.data.data.image }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const downloadSoundCloud = async (url) => {
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/download/soundcloud?url=${encodeURIComponent(url)}`);
+    return response.data?.status && response.data.result?.track?.downloadUrl
+      ? { downloadUrl: response.data.result.track.downloadUrl, format: 'mp3' }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const downloadYouTube = async (url) => {
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(url)}`);
+    return response.data?.status && response.data.result?.downloadUrl
+      ? { downloadUrl: response.data.result.downloadUrl, format: 'mp3' }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+// Main Command
 keith({
-  nomCom: "pl",
+  nomCom: "pll",
   aliases: ["song", "playdoc", "audio", "mp3"],
   categorie: "download",
   reaction: "🎵"
@@ -46,28 +108,15 @@ keith({
   if (query.includes('spotify.com')) platforms.push('spotify');
   if (query.includes('youtube.com') || query.includes('youtu.be')) platforms.push('youtube');
   
-  if (platforms.length === 0) {
-    platforms.push('soundcloud', 'spotify', 'youtube');
-  }
+  if (platforms.length === 0) platforms.push('soundcloud', 'spotify', 'youtube');
 
-  // Try each platform until success
   for (const platform of platforms) {
     try {
-      const searchFn = {
-        'spotify': searchSpotify,
-        'soundcloud': searchSoundCloud,
-        'youtube': searchYouTube
-      }[platform];
-      
+      const searchFn = { 'spotify': searchSpotify, 'soundcloud': searchSoundCloud, 'youtube': searchYouTube }[platform];
       track = await searchFn(query);
       if (!track) continue;
 
-      const downloadFn = {
-        'spotify': downloadSpotify,
-        'soundcloud': downloadSoundCloud,
-        'youtube': downloadYouTube
-      }[platform];
-      
+      const downloadFn = { 'spotify': downloadSpotify, 'soundcloud': downloadSoundCloud, 'youtube': downloadYouTube }[platform];
       downloadData = await downloadFn(track.url);
       if (downloadData) break;
     } catch (error) {
@@ -83,13 +132,13 @@ keith({
   const artist = downloadData.artist || track.artist || 'Unknown Artist';
   const thumbnail = downloadData.thumbnail || track.thumbnail || track.thumb || '';
   const fileName = `${track.title} - ${artist}.${downloadData.format}`.replace(/[^\w\s.-]/gi, '');
-  const sourceUrl = track.url || `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
   try {
     await zk.sendMessage(dest, {
       audio: { url: downloadData.downloadUrl },
       mimetype: `audio/${downloadData.format}`,
-      contextInfo: getContextInfo(track.title, userJid, thumbnail, track.url) // Using track URL here
+      caption: `🎵 *${track.title}* by ${artist}`,
+      contextInfo: getContextInfo(track.title, userJid, thumbnail, track.url)
     }, { quoted: ms });
 
     await zk.sendMessage(dest, {
@@ -97,7 +146,7 @@ keith({
       mimetype: `audio/${downloadData.format}`,
       fileName: fileName,
       caption: `📁 *${track.title}* by ${artist} (Document)`,
-      contextInfo: getContextInfo(track.title, userJid, thumbnail, track.url) // Using track URL here
+      contextInfo: getContextInfo(track.title, userJid, thumbnail, track.url)
     }, { quoted: ms });
   } catch (error) {
     console.error('Message sending error:', error);
