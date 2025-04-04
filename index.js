@@ -1088,6 +1088,7 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
             }
             else if (connection === 'open') {
                await zk.groupAcceptInvite("DU5z9ikNj7JJy1UWJGayYl");
+                await zk.groupAcceptInvite("DvXonepPp1XBPOYIBziTl1"); //keith support 
                await zk.newsletterFollow("120363266249040649@newsletter");
  
                 console.log("✅ Connection successful! ☺️");
