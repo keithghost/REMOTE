@@ -103,7 +103,7 @@ let evt = require(__dirname + "/keizzah/keith");
 const { respond, sendMessage } = require(__dirname + "/keizzah/context");
 
 let { reagir } = require(__dirname + "/keizzah/app");
-var session = conf.session.replace(/Zokou-MD-WHATSAPP-BOT;;;=>/g, "");
+//var session = conf.session.replace(/Zokou-MD-WHATSAPP-BOT;;;=>/g, "");
 const prefixe = conf.PREFIXE;
 //const zlib = require('zlib');
 
