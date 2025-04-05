@@ -968,7 +968,7 @@ if (texte && texte.startsWith('>')) {
 }
 
             
-if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+/*if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
   try {
     const currentTime = Date.now();
     if (currentTime - lastTextTime < messageDelay) {
@@ -1015,7 +1015,7 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
   } catch (error) {
     console.error('Error fetching chatbot response:', error);
   }
-}
+}*/
 
 
 
