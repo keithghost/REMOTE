@@ -1,5 +1,5 @@
 "use strict";
-const fs = require('fs');
+/*const fs = require('fs');
 const zlib = require('zlib');
 const session = process.env.SESSION_ID || '';
 
@@ -56,7 +56,7 @@ async function authenticationn() {
 }
 
 
-authenticationn();
+authenticationn();*/
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -105,9 +105,9 @@ const { respond, sendMessage } = require(__dirname + "/keizzah/context");
 let { reagir } = require(__dirname + "/keizzah/app");
 var session = conf.session.replace(/Zokou-MD-WHATSAPP-BOT;;;=>/g, "");
 const prefixe = conf.PREFIXE;
-//const zlib = require('zlib');
+const zlib = require('zlib');
 
-/*async function authentification() {
+async function authentification() {
     try {
         if (!fs.existsSync(__dirname + "/auth/creds.json")) {
             console.log("Session connected...");
@@ -139,7 +139,7 @@ const prefixe = conf.PREFIXE;
         return;
     }
 }
-authentification();*/
+authentification();
 
 const store = (0, baileys_1.makeInMemoryStore)({
     logger: pino().child({ level: "silent", stream: "store" }),
