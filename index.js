@@ -2,48 +2,30 @@
 const fs = require('fs');
 const zlib = require('zlib');
 const session = process.env.SESSION_ID || '';
-
-async function authenticationn() {
+async function authentication() {
   try {
     const credsPath = "./auth/creds.json";
 
-   
     if (!fs.existsSync(credsPath)) {
       console.log("Connecting...🗿");
-
       
       const [header, b64data] = session.split(';;;');
-
       
       if (header === "ALPHA" && b64data) {
-        
         let compressedData = Buffer.from(b64data.replace('...', ''), 'base64');
-
-       
         let decompressedData = zlib.gunzipSync(compressedData);
-
-       
         fs.writeFileSync(credsPath, decompressedData, "utf8");
       } else {
         throw new Error("Invalid session format");
       }
-    }
-    
-    else if (session !== "zokk") {
+    } else if (session !== "zokk") {
       console.log("Updating existing session...");
 
-    
       const [header, b64data] = session.split(';;;');
-
       
       if (header === "ALPHA" && b64data) {
-        
         let compressedData = Buffer.from(b64data.replace('...', ''), 'base64');
-
-       
         let decompressedData = zlib.gunzipSync(compressedData);
-
-       
         fs.writeFileSync(credsPath, decompressedData, "utf8");
       } else {
         throw new Error("Invalid session format");
@@ -55,8 +37,8 @@ async function authenticationn() {
   }
 }
 
+authentication();
 
-authenticationn();
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
