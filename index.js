@@ -5,7 +5,7 @@ const session = process.env.SESSION_ID || '';
 
 async function authenticationn() {
   try {
-    const credsPath = "./session/creds.json";
+    const credsPath = "./auth/creds.json";
 
    
     if (!fs.existsSync(credsPath)) {
