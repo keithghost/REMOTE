@@ -258,6 +258,54 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });
+        const isBotMessage = (message) => {
+    // Check for bot messages (BAES or BAE5 prefixes with 16 chars)
+    const msgId = message.key?.id || '';
+    return (msgId.startsWith('BAES') || msgId.startsWith('BAE5')) && msgId.length === 16;
+};
+
+zk.ev.on('messages.upsert', async (msg) => {
+    try {
+        const { messages } = msg;
+        const message = messages[0];
+
+        if (!message.message) return; // Skip empty messages
+
+        const from = message.key.remoteJid; // Chat ID
+        const sender = message.key.participant || message.key.remoteJid; // Sender ID
+        const isGroup = from.endsWith('@g.us'); // Check if group
+
+        if (!isGroup) return; // Skip non-group messages
+
+        const groupMetadata = await zk.groupMetadata(from); // Fetch group info
+        const groupAdmins = groupMetadata.participants
+            .filter((member) => member.admin)
+            .map((admin) => admin.id);
+
+        // Skip if sender is admin
+        if (groupAdmins.includes(sender)) return;
+
+        // Only proceed if GCF is enabled
+        if (conf.GCF === 'yes') {
+            // Check if message is from a bot
+            if (isBotMessage(message)) {
+                // Notify group
+                await zk.sendMessage(from, {
+                    text: `🚫 Antibot detected 🚫\n\n@${sender.split('@')[0]} has been removed for sending bot messages.`,
+                    mentions: [sender],
+                });
+
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
+
+                // Remove sender
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
+            }
+        }
+    } catch (err) {
+        console.error('Error handling antibot:', err);
+    }
+});
 
 
         
