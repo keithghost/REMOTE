@@ -143,7 +143,7 @@ setTimeout(() => {
     }
   }
 });
-        /*const isAnyBadWord = (message) => {
+        const isAnyBadWord = (message) => {
     // Load bad words from JSON file
     const badWordsPath = path.join(__dirname, 'database/antibad.json');
     const badWordsData = fs.readFileSync(badWordsPath);
@@ -202,8 +202,8 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});*/
-        /*const isAnyLink = (message) => {
+});
+        const isAnyLink = (message) => {
     // Regex pattern to detect any link
     const linkPattern = /https?:\/\/[^\s]+/;
     return linkPattern.test(message);
@@ -433,7 +433,7 @@ zk.ev.on("messages.upsert", async m => {
       }
     }
   }
-});*/
+});
  
           
           
