@@ -143,7 +143,7 @@ setTimeout(() => {
     }
   }
 });
-        /*const isBotMessage = (message) => {
+        const isBotMessage = (message) => {
     const messageId = message.key?.id;
     // Detect common bot message ID patterns
     return (messageId?.startsWith('BAES') || messageId?.startsWith('BAE5')) && messageId?.length === 16;
@@ -304,11 +304,11 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});*/
+});
 
 
         
-        function createNotification(deletedMessage) {
+        /*function createNotification(deletedMessage) {
   const deletedBy = deletedMessage.key.participant || deletedMessage.key.remoteJid;
   return `*😈 ${conf.BOT} ANTIDELETE👿*\n\n` +
     `*Time deleted🥀:* ${new Date().toLocaleString()}\n` +
@@ -480,7 +480,7 @@ zk.ev.on("messages.upsert", async m => {
       }
     }
   }
-});
+});*/
  
           
           
