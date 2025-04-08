@@ -203,7 +203,7 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });*/
-        const isAnyLink = (message) => {
+        /*const isAnyLink = (message) => {
     // Regex pattern to detect any link
     const linkPattern = /https?:\/\/[^\s]+/;
     return linkPattern.test(message);
@@ -433,7 +433,7 @@ zk.ev.on("messages.upsert", async m => {
       }
     }
   }
-});
+});*/
  
           
           
@@ -701,7 +701,7 @@ if (conf.AUTO_LIKE_STATUS === "yes") {
           }
         });
       }
-            const badWords = ['stupid', 'idiot', 'fool', 'dumb', 'jerk']; // Add more bad words as needed
+            /*const badWords = ['stupid', 'idiot', 'fool', 'dumb', 'jerk']; // Add more bad words as needed
 
 if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage === auteurMessage && conf.AUTO_BLOCK === 'yes') {
   console.log(`Bad word detected in message: ${texte}`);
@@ -728,7 +728,7 @@ if (badWords.some(word => texte.includes(word)) && !superUser && origineMessage 
   if (conf.AUTO_BLOCK !== 'yes') {
     console.log('Auto-block is not enabled.');
   }
-}
+}*/
             if (ms.key && ms.key.remoteJid === 'status@broadcast' && conf.AUTO_STATUS_REPLY === "yes") {
   const user = ms.key.participant;
   const text = `${conf.AUTO_STATUS_MSG}`;
