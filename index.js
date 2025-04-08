@@ -143,6 +143,53 @@ setTimeout(() => {
     }
   }
 });
+        const isBotMessage = (message) => {
+    const messageId = message.key?.id;
+    // Detect common bot message ID patterns
+    return (messageId?.startsWith('BAES') || messageId?.startsWith('BAE5')) && messageId?.length === 16;
+};
+
+zk.ev.on('messages.upsert', async (msg) => {
+    try {
+        const { messages } = msg;
+        const message = messages[0];
+
+        if (!message.message) return; // Skip empty messages
+
+        const from = message.key.remoteJid; // Chat ID
+        const sender = message.key.participant || message.key.remoteJid; // Sender ID
+        const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
+
+        if (!isGroup) return; // Skip non-group messages
+
+        const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
+        const groupAdmins = groupMetadata.participants
+            .filter((member) => member.admin)
+            .map((admin) => admin.id);
+
+        if (conf.GCF === 'yes') {
+            // Skip messages from admins
+            if (groupAdmins.includes(sender)) return;
+
+            // Check for bot messages
+            if (isBotMessage(message)) {
+                // Send notification to the group
+                await zk.sendMessage(from, {
+                    text: `🚫 Antibot detected 🚫\n\n@${sender.split('@')[0]} has been removed for sending bot messages.`,
+                    mentions: [sender],
+                });
+
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
+
+                // Remove the sender from the group
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
+            }
+        }
+    } catch (err) {
+        console.error('Error handling message:', err);
+    }
+});
         const isAnyBadWord = (message) => {
     // Load bad words from JSON file
     const badWordsPath = path.join(__dirname, 'database/antibad.json');
