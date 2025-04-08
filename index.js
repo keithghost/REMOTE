@@ -308,7 +308,7 @@ zk.ev.on('messages.upsert', async (msg) => {
 
 
         
-        /*function createNotification(deletedMessage) {
+        function createNotification(deletedMessage) {
   const deletedBy = deletedMessage.key.participant || deletedMessage.key.remoteJid;
   return `*😈 ${conf.BOT} ANTIDELETE👿*\n\n` +
     `*Time deleted🥀:* ${new Date().toLocaleString()}\n` +
@@ -480,7 +480,7 @@ zk.ev.on("messages.upsert", async m => {
       }
     }
   }
-});*/
+});
  
           
           
@@ -1120,7 +1120,7 @@ if (texte && texte.startsWith('>')) {
             }
             else if (connection === 'open') {
                //await zk.groupAcceptInvite("DU5z9ikNj7JJy1UWJGayYl");
-            //   await zk.newsletterFollow("120363266249040649@newsletter");
+               await zk.newsletterFollow("120363266249040649@newsletter");
  
                 console.log("✅ Connection successful! ☺️");
                 console.log("--");
