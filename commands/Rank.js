@@ -38,7 +38,7 @@ async function analyzeImage(imageUrl, question) {
 keith({
   nomCom: 'vision',
   aliases: ['analyse', 'aigenerate'],
-  categorie: "AI Tools",
+  categorie: "AI",
   reaction: '🔍'
 }, async (dest, zk, commandOptions) => {
   const { msgRepondu, arg, ms } = commandOptions;
