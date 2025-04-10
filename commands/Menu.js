@@ -1,5 +1,6 @@
 const { keith } = require(__dirname + "/../keizzah/keith");
 const moment = require("moment-timezone");
+const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
 const settings = require(__dirname + "/../set");
 const { cm } = require(__dirname + "/../keizzah/keith");
 const os = require("os");
@@ -274,7 +275,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
         await zk.sendMessage(dest, { react: { text: '⬇️', key: ms.key } });
 
         // Send main menu
-        const sentMessage = await zk.sendMessage(dest, {
+        const sentMessage = await sendMessage(zk, dest, ms, {
             text: menuMessage,
             contextInfo: {
                 mentionedJid: [dest],
@@ -331,7 +332,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
 
                 // Get and send category commands
                 const { text: commandsText } = getCategoryCommands(categoryGroups, selectedNumber);
-                const categoryMessage = await zk.sendMessage(dest, { 
+                const categoryMessage = await sendMessage(zk, dest, ms, { 
                     text: commandsText,
                     contextInfo: {
                         mentionedJid: [dest],
