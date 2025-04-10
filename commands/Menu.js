@@ -25,13 +25,13 @@ const toFancyLowercaseFont = (text) => {
 
 // Inspirational Quotes
 const quotes = [
-    "Dream big, work hard.",
-    "Stay humble, hustle hard.",
-    "Believe in yourself.",
-    "Success is earned, not given.",
-    "Actions speak louder than words.",
-    "Don't count the days, make the days count.",
-    "Success is not the key to happiness. Happiness is the key to success."
+    "✨ Dream big, work hard.",
+    "🌟 Stay humble, hustle hard.",
+    "💫 Believe in yourself.",
+    "🚀 Success is earned, not given.",
+    "🔥 Actions speak louder than words.",
+    "⏳ Don't count the days, make the days count.",
+    "🌈 Success is not the key to happiness. Happiness is the key to success."
 ];
 
 const getRandomQuote = () => quotes[Math.floor(Math.random() * quotes.length)];
@@ -85,13 +85,13 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 
     return {
         text: commandsInCategory.length > 0
-            ? `╭─────━ ⟮ *${selectedCategory}*⟯━─────\n\n` +
-              commandsInCategory.map((cmd, idx) => `││◦➛ ${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
-              `\n\n│◦➛╰─────────────` +
-              `\n\n╰──────────────┈⊷` +   
-              `\n\nTotal: ${commandsInCategory.length} commands\n\n` +
-              `🔢 Reply with another number or "0" to return to main menu`
-            : "⚠️ No commands found in this category\n\n🔢 Reply with another number or '0' to return",
+            ? `╭────「 ${toFancyUppercaseFont(selectedCategory)} 」──┈⊷\n` +
+              `│◦➛╭───────────────\n` +
+              commandsInCategory.map((cmd, idx) => `│◦➛ ${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
+              `\n│◦➛╰─────────────\n` +
+              `╰──────────────┈⊷\n\n` +
+              `🔢 Total: ${commandsInCategory.length} commands | Reply "0" to return`
+            : `⚠️ No commands found in ${selectedCategory}\n\n🔢 Reply "0" to return`,
         category: selectedCategory
     };
 }
@@ -127,29 +127,29 @@ keith({
         const categoryGroups = {
             "AI": ["AI"],
             "AUDIO EDIT": ["AUDIO-EDIT"],
-            "BUG-CMDS🦠": ["BUG-CMDS"],
-            "CODING🗿🎭": ["CODING"],
-            "CONVERT CMDS🔄": ["CONVERSATION"],
-            "DOWNLOAD🎵🎥": ["DOWNLOAD"],
-            "EDITTING💿": ["EDITTING"],
-            "FUN😂": ["FUN"],
-            "GENERAL COMMANDS": ["GENERAL"],
-            "IMAGES🏙️": ["IMAGES"],
-            "MODERN-LOGO🗽": ["MODERN-LOGO"],
-            "MODS 🚀": ["MODS"],
-            "OWNER 🥷": ["OWNER"],
-            "REACTION COMMANDS": ["REACTION"],
-            "SCREENSHOT TYPES📸": ["SCREENSHOTS"],
-            "SEARCH🔎": ["SEARCH"],
-            "SOCCER⚽": ["SOCCER"],
-            "STALKERS🤫": ["STALKER"],
-            "SYSTEM⚒️": ["SYSTEM"],
-            "TOOLS🛠️": ["TOOLS"],
-            "TRADE💵": ["TRADE"],
+            "BUG-CMDS": ["BUG-CMDS"],
+            "CODING": ["CODING"],
+            "CONVERT CMDS": ["CONVERSATION"],
+            "DOWNLOAD": ["DOWNLOAD"],
+            "EDITTING": ["EDITTING"],
+            "FUN": ["FUN"],
+            "GENERAL": ["GENERAL"],
+            "IMAGES": ["IMAGES"],
+            "MODERN-LOGO": ["MODERN-LOGO"],
+            "MODS": ["MODS"],
+            "OWNER": ["OWNER"],
+            "REACTION": ["REACTION"],
+            "SCREENSHOTS": ["SCREENSHOTS"],
+            "SEARCH": ["SEARCH"],
+            "SOCCER": ["SOCCER"],
+            "STALKER": ["STALKER"],
+            "SYSTEM": ["SYSTEM"],
+            "TOOLS": ["TOOLS"],
+            "TRADE": ["TRADE"],
             "TTS": ["TTS"],
-            "UTILITY📎": ["SEARCH"],
-            "SETTINGS⚙️": ["SETTINGS"],
-            "HEROKU🚮": ["HEROKU-CLIENT"]
+            "UTILITY": ["SEARCH"],
+            "SETTINGS": ["SETTINGS"],
+            "HEROKU": ["HEROKU-CLIENT"]
         };
 
         // System info
@@ -164,28 +164,24 @@ keith({
 
         // Main menu message
         const menuMessage = `
-╰► *${toFancyUppercaseFont(greeting)}*
-      *${randomQuote}*
-╭━━━ 〔  *${toFancyUppercaseFont(settings.BOT)}* 〕━━━┈⊷
-⟮ 𝗥𝗲𝗽𝗹𝘆 𝘄𝗶𝘁𝗵 𝗮 𝗻𝘂𝗺𝗯𝗲𝗿 𝘁𝗼 𝗮𝗰𝗰𝗲𝘀𝘀 𝗯𝗼𝘁 𝗰𝗼𝗺𝗺𝗮𝗻𝗱𝘀 ⟯
-┃✵╭──────────────
-┃✵│▸ *ᴘʀᴇғɪx:* *[ ${settings.PREFIXE} ]*
-┃✵│▸ *ᴛɪᴍᴇ:* ${formattedTime}
-┃✵│▸ *ᴄᴏᴍᴍᴀɴᴅꜱ:* ${totalCommands} 
-┃✵│▸ *ᴅᴀᴛᴇ:* ${formattedDate}
-┃✵│▸ *ᴍᴏᴅᴇ:* ${mode}
-┃✵│▸ *ᴜsᴇʀ* : ${nomAuteurMessage}
-┃✵│▸ *ᴛɪᴍᴇ ᴢᴏɴᴇ:* Africa/Nairobi
-┃✵│▸ *ʀᴀᴍ:* ${usedMemory}/${totalMemory}
-┃✵│▸ *ᴜᴘᴛɪᴍᴇ:* ${uptime}
-┃✵╰──────────────
-╰━━━━━━━━━━━━━━━┈⊷
+╭───〔  *${toFancyUppercaseFont(settings.BOT)}* 〕───┈⊷
+│ ${toFancyUppercaseFont(greeting)} ${nomAuteurMessage}!
+│ ${randomQuote}
+├──────────────
+│✵│▸ 𝗣𝗿𝗲𝗳𝗶𝘅: [ ${settings.PREFIXE} ]
+│✵│▸ 𝗠𝗼𝗱𝗲: ${mode}
+│✵│▸ 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀: ${totalCommands}
+│✵│▸ 𝗥𝗔𝗠: ${usedMemory}/${totalMemory}
+│✵│▸ 𝗨𝗽𝘁𝗶𝗺𝗲: ${uptime}
+│✵│▸ 𝗗𝗮𝘁𝗲: ${formattedDate}
+│✵│▸ 𝗧𝗶𝗺𝗲: ${formattedTime}
+╰──────────────────────⊷
 
- ${greeting} Here are my command categories:
-╭──────────────
- *"Reply with below numbers"*
+
+╭───◇ *𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗘𝗦* ◇───┈⊷
+│「 𝗥𝗲𝗽𝗹𝘆 �𝘄𝗶𝘁𝗵 𝗻𝘂𝗺𝗯𝗲𝗿𝘀 𝗯𝗲𝗹𝗼𝘄 」
 ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
-╰──────────────
+╰─────────────────────┈⊷
 `.trim();
 
         // Send loading reaction
@@ -197,8 +193,8 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
             contextInfo: {
                 mentionedJid: [dest],
                 externalAdReply: {
-                    title: settings.BOT,
-                    body: settings.OWNER_NAME,
+                    title: `${settings.BOT} Menu`,
+                    body: `By ${settings.OWNER_NAME}`,
                     thumbnailUrl: settings.URL,
                     sourceUrl: settings.GURL,
                     mediaType: 1,
@@ -226,7 +222,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                 const selectedNumber = parseInt(userInput);
 
                 // Send loading reaction for processing
-                await zk.sendMessage(dest, { react: { text: '⬇️', key: message.key } });
+                await zk.sendMessage(dest, { react: { text: '⏳', key: message.key } });
 
                 // Handle back to menu command
                 if (userInput === "0") {
@@ -236,15 +232,14 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                         handler: replyHandler,
                         lastCategoryMessage: null
                     });
-                    
-                    await zk.sendMessage(dest, { react: { text: '✅', key: message.key } });
+                    await zk.sendMessage(dest, { react: { text: '🔙', key: message.key } });
                     return;
                 }
 
                 const categories = Object.keys(categoryGroups);
                 if (selectedNumber < 1 || selectedNumber > categories.length) {
                     await repondre(`❌ Invalid number. Please choose between 1-${categories.length} or "0" to return`);
-                    await zk.sendMessage(dest, { react: { text: '✅', key: message.key } });
+                    await zk.sendMessage(dest, { react: { text: '⚠️', key: message.key } });
                     return;
                 }
 
@@ -255,8 +250,8 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                     contextInfo: {
                         mentionedJid: [dest],
                         externalAdReply: {
-                            title: settings.BOT,
-                            body: settings.OWNER_NAME,
+                            title: `${categories[selectedNumber - 1]} Commands`,
+                            body: `Total: ${commandList[categories[selectedNumber - 1]]?.length || 0} commands`,
                             thumbnailUrl: settings.URL,
                             sourceUrl: settings.GURL,
                             mediaType: 1,
@@ -276,6 +271,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
 
             } catch (error) {
                 console.error("Menu handler error:", error);
+                await zk.sendMessage(dest, { react: { text: '❌', key: ms.key } });
             }
         };
 
@@ -298,6 +294,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
     } catch (error) {
         console.error("Menu command error:", error);
         await repondre("❌ An error occurred while processing the menu command.");
+        await zk.sendMessage(dest, { react: { text: '❌', key: ms.key } });
     }
 });
 
