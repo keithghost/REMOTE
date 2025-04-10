@@ -99,7 +99,7 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 
 // Main Command
 keith({ 
-    nomCom: "menu", 
+    nomCom: "menu2", 
     aliases: ["commands", "listcmds"], 
     categorie: "General" 
 }, async (dest, zk, commandeOptions) => {
