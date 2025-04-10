@@ -7,8 +7,8 @@ const os = require("os");
 // Font Transformations
 const toFancyUppercaseFont = (text) => {
     const fonts = {
-        'A': '𝐀', 'B': '𝐁', 'C': '𝐂', 'D': '𝐃', 'E': '𝐄', 'F': '𝐅', 'G': '𝐆', 'H': '𝐇', 'I': '𝐈', 'J': '𝐉', 
-        'K': '𝐊', 'L': '𝐋', 'M': '𝐌', 'N': '𝐍', 'O': '𝐎', 'P': '𝐏', 'Q': '𝐐', 'R': '𝐑', 'S': '𝐒', 
+        'A': '𝐀', 'B': '𝐁', 'C': '𝐂', 'D': '𝐃', 'E': '𝐄', 'F': '𝐅', 'G': '𝐆', 'H': '𝐇', 'I': '𝐈', 'J': '𝐉',
+        'K': '𝐊', 'L': '𝐋', 'M': '𝐌', 'N': '𝐍', 'O': '𝐎', 'P': '𝐏', 'Q': '𝐐', 'R': '𝐑', 'S': '𝐒',
         'T': '𝐓', 'U': '𝐔', 'V': '𝐕', 'W': '𝐖', 'X': '𝐗', 'Y': '𝐘', 'Z': '𝐙'
     };
     return text.split('').map(char => fonts[char] || char).join('');
@@ -16,8 +16,8 @@ const toFancyUppercaseFont = (text) => {
 
 const toFancyLowercaseFont = (text) => {
     const fonts = {
-        'a': '𝚊', 'b': '𝚋', 'c': '𝚌', 'd': '𝚍', 'e': '𝚎', 'f': '𝚏', 'g': '𝚐', 'h': '𝚑', 'i': '𝚒', 
-        'j': '𝚓', 'k': '𝚔', 'l': '𝚕', 'm': '𝚖', 'n': '𝚗', 'o': '𝚘', 'p': '𝚙', 'q': '𝚚', 'r': '𝚛', 
+        'a': '𝚊', 'b': '𝚋', 'c': '𝚌', 'd': '𝚍', 'e': '𝚎', 'f': '𝚏', 'g': '𝚐', 'h': '𝚑', 'i': '𝚒',
+        'j': '𝚓', 'k': '𝚔', 'l': '𝚕', 'm': '𝚖', 'n': '𝚗', 'o': '𝚘', 'p': '𝚙', 'q': '𝚚', 'r': '𝚛',
         's': '𝚜', 't': '𝚝', 'u': '𝚞', 'v': '𝚟', 'w': '𝚠', 'x': '𝚡', 'y': '𝚢', 'z': '𝚣'
     };
     return text.split('').map(char => fonts[char] || char).join('');
@@ -81,15 +81,14 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
     const selectedCategory = categories[selectedNumber - 1];
     const categoryTags = categoryGroups[selectedCategory];
     
-    let commandsInCategory = [];
-    categoryTags.forEach(tag => {
-        commandsInCategory = commandsInCategory.concat(commandList[tag] || []);
-    });
+    const commandsInCategory = categoryTags.flatMap(tag => commandList[tag] || []);
 
     return {
         text: commandsInCategory.length > 0
             ? `╭─────━ ⟮ *${selectedCategory}*⟯━─────\n\n` +
-              commandsInCategory.map((cmd, idx) => ` ││◦➛ ${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
+              commandsInCategory.map((cmd, idx) => `││◦➛ ${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
+              `│◦➛╰─────────────` +
+              `╰──────────────┈⊷ ` +   
               `\n\nTotal: ${commandsInCategory.length} commands\n\n` +
               `🔢 Reply with another number or "0" to return to main menu`
             : "⚠️ No commands found in this category\n\n🔢 Reply with another number or '0' to return",
@@ -135,7 +134,7 @@ keith({
             "EDITTING💿": ["EDITTING"],
             "FUN😂": ["FUN"],
             "GENERAL COMMANDS": ["GENERAL"],
-             "IMAGES🏙️": ["IMAGES"],
+            "IMAGES🏙️": ["IMAGES"],
             "MODERN-LOGO🗽": ["MODERN-LOGO"],
             "MODS 🚀": ["MODS"],
             "OWNER 🥷": ["OWNER"],
@@ -185,14 +184,12 @@ keith({
  ${greeting} Here are my command categories:
 ╭──────────────
  *"Reply with below numbers"*
-${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
+${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
 ╰──────────────
 `.trim();
 
         // Send loading reaction
-        await zk.sendMessage(dest, {
-            react: { text: '⬇️', key: ms.key },
-        });
+        await zk.sendMessage(dest, { react: { text: '⬇️', key: ms.key } });
 
         // Send main menu
         const sentMessage = await zk.sendMessage(dest, {
@@ -211,9 +208,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toF
         }, { quoted: ms });
 
         // Send completion reaction
-        await zk.sendMessage(dest, {
-            react: { text: '✅', key: ms.key },
-        });
+        await zk.sendMessage(dest, { react: { text: '✅', key: ms.key } });
 
         // Handler for user responses
         const replyHandler = async (update) => {
@@ -231,9 +226,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toF
                 const selectedNumber = parseInt(userInput);
 
                 // Send loading reaction for processing
-                await zk.sendMessage(dest, {
-                    react: { text: '⬇️', key: message.key },
-                });
+                await zk.sendMessage(dest, { react: { text: '⬇️', key: message.key } });
 
                 // Handle back to menu command
                 if (userInput === "0") {
@@ -244,21 +237,14 @@ ${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toF
                         lastCategoryMessage: null
                     });
                     
-                    // Send completion reaction
-                    await zk.sendMessage(dest, {
-                        react: { text: '✅', key: message.key },
-                    });
+                    await zk.sendMessage(dest, { react: { text: '✅', key: message.key } });
                     return;
                 }
 
                 const categories = Object.keys(categoryGroups);
                 if (selectedNumber < 1 || selectedNumber > categories.length) {
                     await repondre(`❌ Invalid number. Please choose between 1-${categories.length} or "0" to return`);
-                    
-                    // Send completion reaction
-                    await zk.sendMessage(dest, {
-                        react: { text: '✅', key: message.key },
-                    });
+                    await zk.sendMessage(dest, { react: { text: '✅', key: message.key } });
                     return;
                 }
 
@@ -279,10 +265,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toF
                     }
                 }, { quoted: message });
 
-                // Send completion reaction
-                await zk.sendMessage(dest, {
-                    react: { text: '✅', key: message.key },
-                });
+                await zk.sendMessage(dest, { react: { text: '✅', key: message.key } });
 
                 // Update active session
                 activeMenus.set(userId, { 
