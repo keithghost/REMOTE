@@ -126,17 +126,31 @@ keith({
 
         // Category groups
         const categoryGroups = {
-            "AI COMMANDS": ["AI"],
-            "🎵 AUDIO COMMANDS": ["AUDIO"],
-            "📥 DOWNLOAD COMMANDS": ["DOWNLOAD"],
-            "🛠️ TOOLS COMMANDS": ["TOOLS"],
-            "😂 FUN COMMANDS": ["FUN"],
-            "🎮 GAME COMMANDS": ["GAME"],
-            "👥 GROUP COMMANDS": ["GROUP"],
-            "🖼️ IMAGE COMMANDS": ["IMAGE"],
-            "⚙️ SYSTEM COMMANDS": ["SYSTEM"],
-            "🔍 SEARCH COMMANDS": ["SEARCH"],
-            "🌐 WEB COMMANDS": ["WEB"]
+            "AI": ["AI"],
+            "AUDIO EDIT": ["AUDIO-EDIT"],
+            "BUG-CMDS🦠": ["BUG-CMDS"],
+            "CODING🗿🎭": ["CODING"],
+            "CONVERT CMDS🔄": ["CONVERSATION"],
+            "DOWNLOAD🎵🎥": ["DOWNLOAD"],
+            "EDITTING💿": ["EDITTING"],
+            "FUN😂": ["FUN"],
+            "GENERAL COMMANDS": ["GENERAL"],
+             "IMAGES🏙️": ["IMAGES"],
+            "MODERN-LOGO🗽": ["MODERN-LOGO"],
+            "MODS 🚀": ["MODS"],
+            "OWNER 🥷": ["OWNER"],
+            "REACTION COMMANDS": ["REACTION"],
+            "SCREENSHOT TYPES📸": ["SCREENSHOTS"],
+            "SEARCH🔎": ["SEARCH"],
+            "SOCCER⚽": ["SOCCER"],
+            "STALKERS🤫": ["STALKER"],
+            "SYSTEM⚒️": ["SYSTEM"],
+            "TOOLS🛠️": ["TOOLS"],
+            "TRADE💵": ["TRADE"],
+            "TTS": ["TTS"],
+            "UTILITY📎": ["SEARCH"],
+            "SETTINGS⚙️": ["SETTINGS"],
+            "HEROKU🚮": ["HEROKU-CLIENT"]
         };
 
         // System info
@@ -171,7 +185,7 @@ keith({
  ${greeting} Here are my command categories:
 ╭──────────────
  *"Reply with below numbers"*
-${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
+${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
 ╰──────────────
 `.trim();
 
