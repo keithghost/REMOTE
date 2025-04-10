@@ -88,8 +88,8 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 
     return {
         text: commandsInCategory.length > 0
-            ? `📜 *${selectedCategory}*\n\n` +
-              commandsInCategory.map((cmd, idx) => `${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
+            ? `╭─────━ ⟮ *${selectedCategory}*⟯━─────\n\n` +
+              commandsInCategory.map((cmd, idx) => ` ││◦➛ ${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
               `\n\nTotal: ${commandsInCategory.length} commands\n\n` +
               `🔢 Reply with another number or "0" to return to main menu`
             : "⚠️ No commands found in this category\n\n🔢 Reply with another number or '0' to return",
