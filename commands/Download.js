@@ -234,11 +234,11 @@ keith({
   categorie: "download",
   reaction: "🔞"
 }, async (dest, zk, commandOptions) => {
-  const { arg, ms, repondre } = commandOptions;
+  const { arg, ms } = commandOptions;
 
   /
   if (!arg[0]) {
-    return repondre("Please provide a search term.");
+    return repondre(zk, dest, ms, "Please provide a search term.");
   }
 
   const query = arg.join(" ");
@@ -250,7 +250,7 @@ keith({
 
     
     if (!searchData.status || !searchData.result || searchData.result.length === 0) {
-      return repondre('No videos found for the specified query.');
+      return repondre(zk, dest, ms, 'No videos found for the specified query.');
     }
 
     const firstVideo = searchData.result[0];
@@ -262,7 +262,7 @@ keith({
 
     
     if (!downloadData.status || !downloadData.result) {
-      return repondre('Failed to retrieve download URL. Please try again later.');
+      return repondre(zk, dest, ms, 'Failed to retrieve download URL. Please try again later.');
     }
 
     const downloadUrl = downloadData.result.downloads.highQuality || downloadData.result.downloads.lowQuality;
