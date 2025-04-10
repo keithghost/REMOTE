@@ -101,7 +101,7 @@ keith({
 });
 keith({
   nomCom: "emomix",
-  categorie: "Conversion"
+  categorie: "Convert"
 }, async (dest, zk, commandeOptions) => {
   const { arg, ms } = commandeOptions;
 
