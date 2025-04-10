@@ -26,6 +26,91 @@ const toFancyLowercaseFont = (text) => {
 // Inspirational Quotes
 const quotes = [
     "✨ Dream big, work hard.",
+   // "✨ Dream big, work hard.",
+    "🌟 Stay humble, hustle hard.",
+    "💫 Believe in yourself.",
+    "🚀 Success is earned, not given.",
+    "🔥 Actions speak louder than words.",
+    "⏳ Don't count the days, make the days count.",
+    "🌈 Success is not the key to happiness. Happiness is the key to success.",
+    
+    // New deep and motivational quotes
+    "🌊 Smooth seas never made skilled sailors.",
+    "🧠 Your mind is a powerful thing - fill it with positive thoughts.",
+    "🦋 Growth begins when we step outside our comfort zone.",
+    "⚡ Don't watch the clock; do what it does - keep going.",
+    "🌱 Small steps every day lead to big results.",
+    "🧗 The only way to fail is to stop climbing.",
+    "🛤️ The road to success is always under construction.",
+    "💎 Pressure creates diamonds - embrace the challenge.",
+    "🕯️ Light your own path when others doubt your way.",
+    "🌌 The stars you reach for are closer than they appear.",
+    "🦅 Comfort is the enemy of achievement.",
+    "🧩 Every struggle is part of the masterpiece.",
+    "🌻 Bloom where you're planted, but never stop growing.",
+    "⚓ Discipline is the bridge between goals and accomplishment.",
+    "🖌️ You are the artist of your own life - paint boldly.",
+    "🌄 Tomorrow belongs to those who prepare today.",
+    "🦉 Wisdom comes from experience, experience from mistakes.",
+    "🎯 Focus on the step in front of you, not the whole staircase.",
+    "🕊️ Let go of what was, believe in what can be.",
+    "🏹 Aim for the moon - even if you miss, you'll land among stars.",
+      /*=== HARD WORK & PERSISTENCE ===*/
+    "🛠️ Great things never come from comfort zones.",
+    "🏋️ Obstacles are just weights to strengthen your resolve.",
+    "⛏️ Dig deep when you're tired—that's when diamonds are formed.",
+    "🧗 The summit is reserved for those who keep climbing.",
+    "🚂 Success is a train that runs on the tracks of daily effort.",
+    "🔨 Build your future brick by brick—no shortcuts.",
+    "🦾 Strength grows in the moments when you think you can’t go on.",
+    "🏗️ Rome wasn’t built in a day, but they worked daily.",
+    "🪓 Chop down the tree of doubt with the axe of action.",
+
+    /*=== MINDSET & GROWTH ===*/
+    "🌵 In the desert of struggle, cacti still bloom—adapt and thrive.",
+    "🧠 Your thoughts shape your reality—sculpt them wisely.",
+    "🔄 Every 'no' is a redirect to a better 'yes'.",
+    "🪴 Growth happens in the tension between 'I can’t' and 'I must'.",
+    "🎭 You’re not stuck—you’re just in character development.",
+    "📈 Compare yourself only to who you were yesterday.",
+    "🧲 What you focus on expands—aim at greatness.",
+    "🕰️ Time doesn’t heal wounds—growth does.",
+
+    /*=== COURAGE & RISK ===*/
+    "🎪 Life’s circus needs trapeze artists—take the leap.",
+    "🪂 Fear is just the universe checking if you’re serious.",
+    "⚔️ Fortune favors the bold, not the bystanders.",
+    "🏴‍☠️ Ships in harbor are safe—but that’s not why ships exist.",
+    "🎲 Luck is probability taken personally—roll the dice.",
+    "🦁 Roar louder than your doubts.",
+
+    /*=== PURPOSE & VISION ===*/
+    "🗺️ A goal without a plan is just a wish.",
+    "🔭 Adjust your focus—micro failures, macro vision.",
+    "🎯 Hit the bullseye by aiming first, not shooting randomly.",
+    "🧭 A wandering ship reaches no port—steer with purpose.",
+    "🪐 Shoot for galaxies; even meteors catch fire.",
+    "🏹 The arrow sees the target before the bow releases.",
+
+    /*=== RESILIENCE ===*/
+    "🪖 Scars are proof you showed up for battle.",
+    "♻️ Breakdowns often lead to breakthroughs.",
+    "🛡️ Resilience is armor forged in life’s fires.",
+    "🎢 Life’s rollercoaster only throws off those who stop climbing in.",
+    "🌪️ Storms teach trees to grow deeper roots.",
+
+    /*=== INSPIRATIONAL ===*/
+    "🪶 Light as a feather in commitment, solid as a mountain in discipline.",
+    "🎻 Even broken violins can play symphonies when repaired.",
+    "🕊️ Wings grow back stronger after molting.",
+    "🎨 Turn your life’s canvas into a masterpiece—paint boldly.",
+    "📜 Your story isn’t written in ink but in actions—edit daily.",
+
+    /*=== SHORT & POWERFUL ===*/
+    "⚡ Just. Start.",
+    "🔥 Burn excuses. Fuel progress.",
+    "⏳ Now > Later.",
+    "🪙 Invest in yourself—compound interest applies.",
     "🌟 Stay humble, hustle hard.",
     "💫 Believe in yourself.",
     "🚀 Success is earned, not given.",
@@ -85,7 +170,7 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 
     return {
         text: commandsInCategory.length > 0
-            ? `╭────「 ${toFancyUppercaseFont(selectedCategory)} 」──┈⊷\n` +
+            ? `╭────「 ${toFancyUppercaseFont(selectedCategory)} 」──┈⊷𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭\n` +
               `│◦➛╭───────────────\n` +
               commandsInCategory.map((cmd, idx) => `│◦➛ ${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
               `\n│◦➛╰─────────────\n` +
@@ -164,9 +249,10 @@ keith({
 
         // Main menu message
         const menuMessage = `
-╭───〔  *${toFancyUppercaseFont(settings.BOT)}* 〕───┈⊷
-│ ${toFancyUppercaseFont(greeting)} ${nomAuteurMessage}!
-│ ${randomQuote}
+        ╰► ${toFancyUppercaseFont(greeting)} ${nomAuteurMessage}!
+╭───〔  *${toFancyUppercaseFont(settings.BOT)}* 〕────┈⊷𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭
+| *motivational quote*
+> ${randomQuote}
 ├──────────────
 │✵│▸ 𝗣𝗿𝗲𝗳𝗶𝘅: [ ${settings.PREFIXE} ]
 │✵│▸ 𝗠𝗼𝗱𝗲: ${mode}
@@ -178,7 +264,7 @@ keith({
 ╰──────────────────────⊷
 
 
-╭───◇ *𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗘𝗦* ◇───┈⊷
+╭───◇ *𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗘𝗦* ◇─────┈⊷
 │「 𝗥𝗲𝗽𝗹𝘆 �𝘄𝗶𝘁𝗵 𝗻𝘂𝗺𝗯𝗲𝗿𝘀 𝗯𝗲𝗹𝗼𝘄 」
 ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
 ╰─────────────────────┈⊷
