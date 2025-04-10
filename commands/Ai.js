@@ -273,7 +273,7 @@ keith({
   nomCom: "github",
   aliases: ["git"],
   reaction: '💻',
-  categorie: "stalker"
+  categorie: "search"
 }, async (dest, zk, commandeOptions) => {
   const { arg, ms } = commandeOptions;
   const githubUsername = arg.join(" ");
@@ -331,7 +331,7 @@ keith({
   nomCom: "tempmail",
   aliases: ['mail', 'temp'],
   reaction: '📧',
-  categorie: "General"
+  categorie: "Utility"
 }, async (dest, zk, context) => {
   const { prefix, ms } = context;
 
