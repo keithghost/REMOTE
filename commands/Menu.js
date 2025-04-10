@@ -171,7 +171,7 @@ keith({
  ${greeting} Here are my command categories:
 ╭──────────────
  *"Reply with below numbers"*
-${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
+${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${toFancyUppercaseFont(cat)}`).join("\n")}
 ╰──────────────
 `.trim();
 
