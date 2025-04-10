@@ -204,9 +204,9 @@ keith({
 
         // Dynamic greeting
         const hour = moment().hour();
-        let greeting = " Good Night!🌙";
-        if (hour >= 5 && hour < 12) greeting = " Good Morning!🌅";
-        else if (hour >= 12 && hour < 18) greeting = " Good Afternoon!☀️";
+        let greeting = "Good Night!🌙";
+        if (hour >= 5 && hour < 12) greeting = "Good Morning!🌅";
+        else if (hour >= 12 && hour < 18) greeting = "Good Afternoon!☀️";
         else if (hour >= 18 && hour < 22) greeting = "Good Evening! 🪄";
 
         // Category groups
