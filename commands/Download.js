@@ -231,12 +231,12 @@ keith({
 keith({
   nomCom: "xvideo",
   aliases: ["xvideos", "porn", "xxx"],
-  categorie: "Search",
+  categorie: "download",
   reaction: "🔞"
 }, async (dest, zk, commandOptions) => {
   const { arg, ms, repondre } = commandOptions;
 
-  // Check if a query is provided
+  /
   if (!arg[0]) {
     return repondre("Please provide a search term.");
   }
@@ -244,11 +244,11 @@ keith({
   const query = arg.join(" ");
 
   try {
-    // Perform a search using the API
+    
     const searchResponse = await axios.get(`https://apis-keith.vercel.app/search/searchxvideos?q=${encodeURIComponent(query)}`);
     const searchData = searchResponse.data;
 
-    // Check if search was successful and has results
+    
     if (!searchData.status || !searchData.result || searchData.result.length === 0) {
       return repondre('No videos found for the specified query.');
     }
@@ -256,11 +256,11 @@ keith({
     const firstVideo = searchData.result[0];
     const videoUrl = firstVideo.url;
 
-    // Get download links from the download API
+    
     const downloadResponse = await axios.get(`https://apis-keith.vercel.app/download/porn?url=${encodeURIComponent(videoUrl)}`);
     const downloadData = downloadResponse.data;
 
-    // Check if download data was retrieved successfully
+    
     if (!downloadData.status || !downloadData.result) {
       return repondre('Failed to retrieve download URL. Please try again later.');
     }
@@ -268,7 +268,7 @@ keith({
     const downloadUrl = downloadData.result.downloads.highQuality || downloadData.result.downloads.lowQuality;
     const videoInfo = downloadData.result.videoInfo;
 
-    // Prepare the message payload with external ad details
+    
     const messagePayloads = [
       {
         video: { url: downloadUrl },
@@ -305,7 +305,7 @@ keith({
       }
     ];
 
-    // Send the download link to the user
+    
     for (const messagePayload of messagePayloads) {
       await zk.sendMessage(dest, messagePayload, { quoted: ms });
     }
