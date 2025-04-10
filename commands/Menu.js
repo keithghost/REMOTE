@@ -176,8 +176,8 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
               commandsInCategory.map((cmd, idx) => `│◦➛ ${idx + 1}. ${toFancyLowercaseFont(cmd)}`).join("\n") +
               `\n│◦➛╰─────────────\n` +
               `╰──────────────┈⊷\n\n` +
-              `🔢 Total: ${commandsInCategory.length} commands | Reply "0" to return`
-            : `⚠️ No commands found in ${selectedCategory}\n\n🔢 Reply "0" to return`,
+              `🔢 Total: ${commandsInCategory.length} commands | Reply "0" to return to main menu`
+            : `⚠️ No commands found in ${selectedCategory}\n\n🔢 Reply "0" to return to main menu`,
         category: selectedCategory
     };
 }
