@@ -196,7 +196,7 @@ keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie
 const { keith } = require(__dirname + "/../keizzah/keith");
 const moment = require("moment-timezone");
 const settings = require(__dirname + "/../set");
-//const { repondre } = require(__dirname + "/../keizzah/context");
+const { cm } = require(__dirname + "/../keizzah/keith");
 
 // Command storage (only stored once)
 const commandList = {};
@@ -224,48 +224,48 @@ keith({
     categorie: "General" 
 }, async (dest, zk, commandeOptions) => {
     const { nomAuteurMessage, ms, repondre } = commandeOptions;
-    const { cm } = require(__dirname + "/../keizzah/keith");
 
-    // Store commands only once
-    if (!commandsStored) {
-        cm.forEach((com) => {
-            const category = com.categorie.toUpperCase();
-            if (!commandList[category]) commandList[category] = [];
-            commandList[category].push(com.nomCom);
-        });
-        commandsStored = true;
-    }
+    try {
+        // Store commands only once
+        if (!commandsStored) {
+            cm.forEach((com) => {
+                const category = com.categorie?.toUpperCase() || 'UNCATEGORIZED';
+                if (!commandList[category]) commandList[category] = [];
+                commandList[category].push(com.nomCom);
+            });
+            commandsStored = true;
+        }
 
-    moment.tz.setDefault(settings.TZ || "Africa/Nairobi");
-    const date = moment().format("DD/MM/YYYY");
-    const time = moment().format("HH:mm:ss");
-    const mode = settings.MODE.toLowerCase() !== "public" ? "Private" : "Public";
+        moment.tz.setDefault(settings.TZ || "Africa/Nairobi");
+        const date = moment().format("DD/MM/YYYY");
+        const time = moment().format("HH:mm:ss");
+        const mode = settings.MODE?.toLowerCase() !== "public" ? "Private" : "Public";
 
-    // Dynamic greeting based on time
-    const hour = moment().hour();
-    let greeting = "🌙 Good Night!";
-    if (hour >= 5 && hour < 12) greeting = "🌅 Good Morning!";
-    else if (hour >= 12 && hour < 18) greeting = "☀️ Good Afternoon!";
-    else if (hour >= 18 && hour < 22) greeting = "🌆 Good Evening!";
+        // Dynamic greeting based on time
+        const hour = moment().hour();
+        let greeting = "🌙 Good Night!";
+        if (hour >= 5 && hour < 12) greeting = "🌅 Good Morning!";
+        else if (hour >= 12 && hour < 18) greeting = "☀️ Good Afternoon!";
+        else if (hour >= 18 && hour < 22) greeting = "🌆 Good Evening!";
 
-    // Define your category groups
-    const categoryGroups = {
-        "🤖 AI COMMANDS": ["AI"],
-        "🎵 AUDIO COMMANDS": ["AUDIO"],
-        "📥 DOWNLOAD COMMANDS": ["DOWNLOAD"],
-        "🛠️ TOOLS COMMANDS": ["TOOLS"],
-        "😂 FUN COMMANDS": ["FUN"],
-        "🎮 GAME COMMANDS": ["GAME"],
-        "👥 GROUP COMMANDS": ["GROUP"],
-        "🖼️ IMAGE COMMANDS": ["IMAGE"],
-        "⚙️ SYSTEM COMMANDS": ["SYSTEM"],
-        "🔍 SEARCH COMMANDS": ["SEARCH"],
-        "🌐 WEB COMMANDS": ["WEB"]
-    };
+        // Define your category groups
+        const categoryGroups = {
+            "🤖 AI COMMANDS": ["AI"],
+            "🎵 AUDIO COMMANDS": ["AUDIO"],
+            "📥 DOWNLOAD COMMANDS": ["DOWNLOAD"],
+            "🛠️ TOOLS COMMANDS": ["TOOLS"],
+            "😂 FUN COMMANDS": ["FUN"],
+            "🎮 GAME COMMANDS": ["GAME"],
+            "👥 GROUP COMMANDS": ["GROUP"],
+            "🖼️ IMAGE COMMANDS": ["IMAGE"],
+            "⚙️ SYSTEM COMMANDS": ["SYSTEM"],
+            "🔍 SEARCH COMMANDS": ["SEARCH"],
+            "🌐 WEB COMMANDS": ["WEB"]
+        };
 
-    // Generate the main menu message
-    const menuMessage = `
-╭─❖「 ${settings.BOT} 」❖─╮
+        // Generate the main menu message
+        const menuMessage = `
+╭─❖「 ${settings.BOT || "Bot"} 」❖─╮
 │
 │ 👤 User: ${nomAuteurMessage}
 │ 📅 Date: ${date}
@@ -278,56 +278,78 @@ keith({
 │ 📜 Reply with a number to select:
 ${Object.keys(categoryGroups).map((cat, index) => `│ ${index + 1}. ${cat}`).join("\n")}
 │
-╰─❖「 ©${settings.OWNER_NAME} 」❖─╯
-`;
+╰─❖「 ©${settings.OWNER_NAME || "Owner"} 」❖─╯
+`.trim();
 
-    // Send the main menu
-    const sentMessage = await zk.sendMessage(zk, dest, {
-        text: menuMessage
-    }, { quoted: ms });
+        // Send the main menu
+        const sentMessage = await zk.sendMessage(dest, {
+            text: menuMessage
+        }, { quoted: ms });
 
-    // Listen for category selection
-    zk.ev.on("messages.upsert", async (update) => {
-        const message = update.messages[0];
-        if (!message.message || !message.message.extendedTextMessage) return;
+        // Create a one-time listener for the response
+        const responseListener = async (update) => {
+            try {
+                const message = update.messages?.[0];
+                if (!message?.message?.extendedTextMessage) return;
 
-        const response = message.message.extendedTextMessage;
-        if (response.contextInfo && response.contextInfo.stanzaId === sentMessage.key.id) {
-            const selectedNumber = parseInt(response.text.trim());
-            const categories = Object.keys(categoryGroups);
+                const response = message.message.extendedTextMessage;
+                if (response.contextInfo?.stanzaId !== sentMessage.key.id) return;
 
-            // Validate input
-            if (isNaN(selectedNumber)) {
-                return repondre("❌ Please reply with a number from the list");
-            }
+                // Remove the listener after we get a response
+                zk.ev.off("messages.upsert", responseListener);
 
-            if (selectedNumber < 1 || selectedNumber > categories.length) {
-                return repondre(`❌ Invalid number. Please choose between 1-${categories.length}`);
-            }
+                const selectedNumber = parseInt(response.text.trim());
+                const categories = Object.keys(categoryGroups);
 
-            // Get selected category
-            const selectedCategory = categories[selectedNumber - 1];
-            const categoryTags = categoryGroups[selectedCategory];
-            
-            // Collect all commands in these categories
-            let commandsInCategory = [];
-            categoryTags.forEach(tag => {
-                if (commandList[tag]) {
-                    commandsInCategory = commandsInCategory.concat(commandList[tag]);
+                // Validate input
+                if (isNaN(selectedNumber)) {
+                    return await repondre("❌ Please reply with a number from the list");
                 }
-            });
 
-            // Format the commands list
-            const commandsList = commandsInCategory.length > 0 
-                ? `📜 *${selectedCategory}*\n\n` +
-                  commandsInCategory.map((cmd, idx) => `${idx + 1}. ${cmd}`).join("\n") +
-                  `\n\nTotal: ${commandsInCategory.length} commands`
-                : "⚠️ No commands found in this category";
+                if (selectedNumber < 1 || selectedNumber > categories.length) {
+                    return await repondre(`❌ Invalid number. Please choose between 1-${categories.length}`);
+                }
 
-            // Send the commands list
-            await zk.sendMessage(dest, {
-                text: commandsList
-            }, { quoted: message });
-        }
-    });
+                // Get selected category
+                const selectedCategory = categories[selectedNumber - 1];
+                const categoryTags = categoryGroups[selectedCategory];
+                
+                // Collect all commands in these categories
+                let commandsInCategory = [];
+                categoryTags.forEach(tag => {
+                    if (commandList[tag]) {
+                        commandsInCategory = commandsInCategory.concat(commandList[tag]);
+                    }
+                });
+
+                // Format the commands list
+                const commandsList = commandsInCategory.length > 0 
+                    ? `📜 *${selectedCategory}*\n\n` +
+                      commandsInCategory.map((cmd, idx) => `${idx + 1}. ${cmd}`).join("\n") +
+                      `\n\nTotal: ${commandsInCategory.length} commands`
+                    : "⚠️ No commands found in this category";
+
+                // Send the commands list
+                await zk.sendMessage(dest, {
+                    text: commandsList
+                }, { quoted: message });
+
+            } catch (error) {
+                console.error("Error in response handler:", error);
+                await repondre("❌ An error occurred while processing your request");
+            }
+        };
+
+        // Set up the listener with a timeout
+        zk.ev.on("messages.upsert", responseListener);
+
+        // Automatically remove listener after 2 minutes if no response
+        setTimeout(() => {
+            zk.ev.off("messages.upsert", responseListener);
+        }, 120000);
+
+    } catch (error) {
+        console.error("Error in menu command:", error);
+        await repondre("❌ An error occurred while generating the menu");
+    }
 });
