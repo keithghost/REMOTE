@@ -1,6 +1,7 @@
 const { keith } = require('../keizzah/keith');
 const axios = require('axios');
 const fs = require('fs-extra');  
+const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
 const { igdl } = require('ruhend-scraper');
 const conf = require(__dirname + "/../set");
 const getFBInfo = require("@xaviabot/fb-downloader");
@@ -11,16 +12,16 @@ keith({
   categorie: "Download",
   reaction: "📽️"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const { ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || !arg[0]) {
-    return repondre('Please provide a Facebook video URL!');
+    return repondre(zk, dest, ms, 'Please provide a Facebook video URL!');
   }
 
   const fbUrl = arg[0].trim();
   if (!fbUrl.includes('https://') || !fbUrl.includes('facebook.com')) {
-    return repondre("Please provide a valid Facebook video URL.");
+    return repondre(zk, dest, ms, "Please provide a valid Facebook video URL.");
   }
 
   try {
@@ -28,7 +29,7 @@ keith({
     const videoData = await getFBInfo(fbUrl);
     
     if (!videoData || !videoData.sd) {
-      return repondre("Could not retrieve video information. The link may be invalid or private.");
+      return repondre(zk, dest, ms, "Could not retrieve video information. The link may be invalid or private.");
     }
 
     // Prepare common contextInfo
@@ -183,7 +184,7 @@ keith({
 
   } catch (error) {
     console.error("Facebook download error:", error);
-    repondre(`Failed to download video. Error: ${error.message}\nYou can try with another link or check if the video is public.`);
+    repondre(zk, dest, ms, `Failed to download video. Error: ${error.message}\nYou can try with another link or check if the video is public.`);
   }
 });
 
@@ -193,16 +194,16 @@ keith({
   categorie: "Download",
   reaction: "🐦"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const { ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || !arg[0]) {
-    return repondre('Please provide a Twitter video URL!');
+    return repondre(zk, dest, ms, 'Please provide a Twitter video URL!');
   }
 
   const tweetUrl = arg[0].trim();
   if (!tweetUrl.includes('https://') || !tweetUrl.includes('twitter.com')) {
-    return repondre("Please provide a valid Twitter URL.");
+    return repondre(zk, dest, ms, "Please provide a valid Twitter URL.");
   }
 
   try {
@@ -214,7 +215,7 @@ keith({
     const tweetData = response.data;
 
     if (!tweetData.status || !tweetData.result) {
-      return repondre("Could not retrieve video information. The tweet may be private or not contain media.");
+      return repondre(zk, dest, ms, "Could not retrieve video information. The tweet may be private or not contain media.");
     }
 
     const videoInfo = tweetData.result;
@@ -360,7 +361,7 @@ keith({
 
   } catch (error) {
     console.error("Twitter download error:", error);
-    repondre(`Failed to download tweet. Error: ${error.message}\nYou can try with another link or check if the tweet is public.`);
+    repondre(zk, dest, ms, `Failed to download tweet. Error: ${error.message}\nYou can try with another link or check if the tweet is public.`);
   }
 });
 
@@ -371,16 +372,16 @@ keith({
   categorie: "Download",
   reaction: "📸"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const { ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || !arg[0]) {
-    return repondre('Please provide an Instagram URL!');
+    return repondre(zk, dest, ms, 'Please provide an Instagram URL!');
   }
 
   const igUrl = arg[0].trim();
   if (!igUrl.includes('https://') || !igUrl.includes('instagram.com')) {
-    return repondre("Please provide a valid Instagram URL.");
+    return repondre(zk, dest, ms, "Please provide a valid Instagram URL.");
   }
 
   try {
@@ -392,7 +393,7 @@ keith({
     const data = response.data;
 
     if (!data.status || !data.result || !data.result.downloadUrl) {
-      return repondre("Could not retrieve video. The post may be private or unavailable.");
+      return repondre(zk, dest, ms, "Could not retrieve video. The post may be private or unavailable.");
     }
 
     const downloadUrl = data.result.downloadUrl;
@@ -525,7 +526,7 @@ keith({
 
   } catch (error) {
     console.error("Instagram download error:", error);
-    repondre(`Failed to download Instagram media. Error: ${error.message}\nYou can try with another link or check if the post is public.`);
+    repondre(zk, dest, ms, `Failed to download Instagram media. Error: ${error.message}\nYou can try with another link or check if the post is public.`);
   }
 }); 
 
@@ -536,16 +537,16 @@ keith({
   categorie: "Download",
   reaction: "🎵"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const {  ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || !arg[0]) {
-    return repondre('Please provide a TikTok URL!');
+    return repondre(zk, dest, ms, 'Please provide a TikTok URL!');
   }
 
   const tiktokUrl = arg[0].trim();
   if (!tiktokUrl.includes('https://') || !(tiktokUrl.includes('tiktok.com') || tiktokUrl.includes('vt.tiktok.com'))) {
-    return repondre("Please provide a valid TikTok URL.");
+    return repondre(zk, dest, ms, "Please provide a valid TikTok URL.");
   }
 
   try {
@@ -557,7 +558,7 @@ keith({
     const data = response.data;
 
     if (!data.status || !data.result) {
-      return repondre("Could not retrieve video. The TikTok may be private or unavailable.");
+      return repondre(zk, dest, ms, "Could not retrieve video. The TikTok may be private or unavailable.");
     }
 
     const videoInfo = data.result;
@@ -690,7 +691,7 @@ keith({
 
   } catch (error) {
     console.error("TikTok download error:", error);
-    repondre(`Failed to download TikTok. Error: ${error.message}\nYou can try with another link or check if the video is public.`);
+    repondre(zk, dest, ms, `Failed to download TikTok. Error: ${error.message}\nYou can try with another link or check if the video is public.`);
   }
 });
 
@@ -700,16 +701,16 @@ keith({
   categorie: "Download",
   reaction: "📦"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const { ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || !arg[0]) {
-    return repondre('Please provide a MediaFire URL!');
+    return repondre(zk, dest, ms, 'Please provide a MediaFire URL!');
   }
 
   const mediafireUrl = arg[0].trim();
   if (!mediafireUrl.includes('https://') || !mediafireUrl.includes('mediafire.com')) {
-    return repondre("Please provide a valid MediaFire URL.");
+    return repondre(zk, dest, ms, "Please provide a valid MediaFire URL.");
   }
 
   try {
@@ -721,7 +722,7 @@ keith({
     const data = response.data;
 
     if (!data.status || !data.result || !data.result.dl_link) {
-      return repondre("Could not retrieve file. The link may be invalid or the file unavailable.");
+      return repondre(zk, dest, ms, "Could not retrieve file. The link may be invalid or the file unavailable.");
     }
 
     const fileInfo = data.result;
@@ -770,7 +771,7 @@ keith({
 
   } catch (error) {
     console.error("MediaFire download error:", error);
-    repondre(`Failed to download file. Error: ${error.message}\nPlease check the link and try again.`);
+    repondre(zk, dest, ms, `Failed to download file. Error: ${error.message}\nPlease check the link and try again.`);
   }
 });
 
@@ -781,7 +782,7 @@ keith({
   categorie: "download",
   reaction: "🔞"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const {  ms, arg } = commandeOptions;
 
   try {
     // API endpoint
@@ -792,7 +793,7 @@ keith({
     const data = response.data;
 
     if (!data.status || !data.result || data.result.length === 0) {
-      return repondre("Could not retrieve videos. Please try again later.");
+      return repondre(zk, dest, ms, "Could not retrieve videos. Please try again later.");
     }
 
     const videos = data.result.slice(0, 8); // Ensure max 8 videos
@@ -892,7 +893,7 @@ keith({
 
   } catch (error) {
     console.error("Hentai video download error:", error);
-    repondre(`Failed to fetch videos. Error: ${error.message}`);
+    repondre(zk, dest, ms, `Failed to fetch videos. Error: ${error.message}`);
   }
 });
 
@@ -903,11 +904,11 @@ keith({
   categorie: "Download",
   reaction: "🎵"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const {  ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || !arg[0]) {
-    return repondre('Please provide a search query or YouTube URL!\nExample: .youtube Alan Walker Faded');
+    return repondre(zk, dest, ms, 'Please provide a search query or YouTube URL!\nExample: .youtube Alan Walker Faded');
   }
 
   const query = arg.join(' ').trim();
@@ -921,7 +922,7 @@ keith({
       const data = response.data;
 
       if (!data.status || !data.result) {
-        return repondre("Could not download audio. The video may be unavailable.");
+        return repondre(zk, dest, ms, "Could not download audio. The video may be unavailable.");
       }
 
       const audioInfo = data.result;
@@ -951,7 +952,7 @@ keith({
       const searchData = response.data;
 
       if (!searchData.status || !searchData.results || searchData.results.length === 0) {
-        return repondre("No search results found. Try a different query.");
+        return repondre(zk, dest, ms, "No search results found. Try a different query.");
       }
 
       const videos = searchData.results.slice(0, 10); // Get top 10 results
@@ -1066,7 +1067,7 @@ keith({
 
   } catch (error) {
     console.error("YouTube error:", error);
-    repondre(`Failed to process YouTube request. Error: ${error.message}`);
+    repondre(zk, dest, ms, `Failed to process YouTube request. Error: ${error.message}`);
   }
 });
 
@@ -1090,11 +1091,11 @@ keith({
   categorie: "Download",
   reaction: "🎬"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const { ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || arg.length < 1) {
-    return repondre('Usage:\n.yt [URL or search query]\nExample:\n.yt Alan Walker Faded\n.yt https://youtu.be/2WmBa1CviYE');
+    return repondre(zk, dest, ms, 'Usage:\n.yt [URL or search query]\nExample:\n.yt Alan Walker Faded\n.yt https://youtu.be/2WmBa1CviYE');
   }
 
   const query = arg.join(' ').trim();
@@ -1218,7 +1219,7 @@ keith({
       const searchData = response.data;
 
       if (!searchData.status || !searchData.results || searchData.results.length === 0) {
-        return repondre("No search results found. Try a different query.");
+        return repondre(zk, dest, ms, "No search results found. Try a different query.");
       }
 
       const videos = searchData.results.slice(0, 10); // Get top 10 results
@@ -1406,7 +1407,7 @@ keith({
 
   } catch (error) {
     console.error("YouTube error:", error);
-    repondre(`Failed to process YouTube request. Error: ${error.message}`);
+    repondre(zk, dest, ms, `Failed to process YouTube request. Error: ${error.message}`);
   }
 });
 
@@ -1430,22 +1431,22 @@ keith({
   categorie: "Download",
   reaction: "🎬"
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, ms, arg } = commandeOptions;
+  const { ms, arg } = commandeOptions;
 
   // Validate input
   if (!arg || arg.length < 1) {
-    return repondre('Usage:\n.yt [video/audio] [URL or search query]\nExample:\n.yt video Alan Walker Faded\n.yt audio https://youtu.be/2WmBa1CviYE');
+    return repondre(zk, dest, ms, 'Usage:\n.yt [video/audio] [URL or search query]\nExample:\n.yt video Alan Walker Faded\n.yt audio https://youtu.be/2WmBa1CviYE');
   }
 
   const type = arg[0].toLowerCase();
   const query = arg.slice(1).join(' ').trim();
 
   if (!['video', 'audio'].includes(type)) {
-    return repondre('Please specify "video" or "audio" as first argument');
+    return repondre(zk, dest, ms, 'Please specify "video" or "audio" as first argument');
   }
 
   if (!query) {
-    return repondre('Please provide a search query or YouTube URL');
+    return repondre(zk, dest, ms, 'Please provide a search query or YouTube URL');
   }
 
   try {
@@ -1458,7 +1459,7 @@ keith({
       const data = response.data;
 
       if (!data.status || !data.result) {
-        return repondre(`Could not download ${type}. The video may be unavailable.`);
+        return repondre(zk, dest, ms, `Could not download ${type}. The video may be unavailable.`);
       }
 
       const mediaInfo = data.result;
@@ -1490,7 +1491,7 @@ keith({
       const searchData = response.data;
 
       if (!searchData.status || !searchData.results || searchData.results.length === 0) {
-        return repondre("No search results found. Try a different query.");
+        return repondre(zk, dest, ms, "No search results found. Try a different query.");
       }
 
       const videos = searchData.results.slice(0, 10); // Get top 10 results
@@ -1608,7 +1609,7 @@ keith({
 
   } catch (error) {
     console.error("YouTube error:", error);
-    repondre(`Failed to process YouTube request. Error: ${error.message}`);
+    repondre(zk, dest, ms, `Failed to process YouTube request. Error: ${error.message}`);
   }
 });
 
