@@ -196,7 +196,7 @@ keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie
 const { keith } = require(__dirname + "/../keizzah/keith");
 const moment = require("moment-timezone");
 const settings = require(__dirname + "/../set");
-const { repondre } = require(__dirname + "/../keizzah/context");
+//const { repondre } = require(__dirname + "/../keizzah/context");
 
 // Command storage (only stored once)
 const commandList = {};
