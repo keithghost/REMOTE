@@ -54,7 +54,7 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 }
 
 keith({ 
-    nomCom: "men3", 
+    nomCom: "menu3", 
     aliases: ["help", "commands", "list"], 
     categorie: "General" 
 }, async (dest, zk, commandeOptions) => {
