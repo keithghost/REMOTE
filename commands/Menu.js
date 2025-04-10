@@ -196,7 +196,7 @@ keith({ nomCom: "menu", aliases: ["liste", "helplist", "commandlist"], categorie
 const { keith } = require(__dirname + "/../keizzah/keith");
 const moment = require("moment-timezone");
 const settings = require(__dirname + "/../set");
-const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
+const { repondre } = require(__dirname + "/../keizzah/context");
 
 // Command storage (only stored once)
 const commandList = {};
@@ -219,7 +219,7 @@ const formatUptime = (seconds) => {
 };
 
 keith({ 
-    nomCom: "menu4", 
+    nomCom: "menu3", 
     aliases: ["help", "commands", "list"], 
     categorie: "General" 
 }, async (dest, zk, commandeOptions) => {
@@ -282,7 +282,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `│ ${index + 1}. ${cat}`).jo
 `;
 
     // Send the main menu
-    const sentMessage = await sendMessage(zk, dest, {
+    const sentMessage = await zk.sendMessage(zk, dest, {
         text: menuMessage
     }, { quoted: ms });
 
@@ -325,7 +325,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `│ ${index + 1}. ${cat}`).jo
                 : "⚠️ No commands found in this category";
 
             // Send the commands list
-            await sendMessage(zk, dest, {
+            await zk.sendMessage(dest, {
                 text: commandsList
             }, { quoted: message });
         }
