@@ -445,7 +445,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `│◦➛ ${index + 1}. ${toF
 
             } catch (error) {
                 console.error("Menu handler error:", error);
-                await repondre("❌ An error occurred. Please try again.");
+                //await repondre("❌ An error occurred. Please try again.");
             }
         };
 
