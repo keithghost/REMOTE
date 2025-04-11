@@ -1,6 +1,7 @@
 const { keith } = require("../keizzah/keith");
 const axios = require('axios');
 const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
+const conf = require(__dirname + "/../set");
 
 keith({
   nomCom: "gpt",
@@ -9,39 +10,47 @@ keith({
   categorie: "AI"
 }, async (dest, zk, commandeOptions) => {
   const { ms, arg } = commandeOptions;
-  const query = arg.join(" ").trim(); // Get the user's query
+  const query = arg.join(" ").trim();
 
   if (!query) {
     return repondre(zk, dest, ms, "Please provide a message.");
   }
 
   try {
-    // Fetch response from the API
-    const response = await axios.get(`https://apis-keith.vercel.app/ai/gpt?q=${encodeURIComponent(query)}`);
+    const response = await axios.get(
+      `https://apis-keith.vercel.app/ai/gpt?q=${encodeURIComponent(query)}`,
+      { timeout: 10000 } // Added timeout for better error handling
+    );
 
-    // Check if the API response is valid
-    if (response.data.status && response.data.result) {
-      const aiResponse = response.data.result;
-
-      // Send the AI response to the user
-      await sendMessage(zk, dest, ms, {
-        text: aiResponse,
-        contextInfo: {
-          externalAdReply: {
-            title: "ALPHA-MD GPT",
-            body: `Powered by Keithkeizzah`,
-            thumbnailUrl: "https://files.catbox.moe/palnd8.jpg", // Replace with your bot profile photo URL
-            sourceUrl: "https://whatsapp.com/channel/0029Vaan9TF9Bb62l8wpoD47", // Your channel URL
-            mediaType: 1,
-            showAdAttribution: true, // Verified badge
-          },
-        },
-      });
-    } else {
-      repondre(zk, dest, ms, "Failed to get a response from the AI.");
+    if (!response.data?.status || !response.data?.result) {
+      return repondre(zk, dest, ms, "Failed to get a response from the AI.");
     }
+
+    const messageOptions = {
+      text: response.data.result,
+      contextInfo: {
+        externalAdReply: {
+          title: `${conf.BOT} GPT`,
+          body: conf.OWNER_NAME,
+          thumbnailUrl: conf.URL,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true,
+        },
+      },
+    };
+
+    await sendMessage(zk, dest, ms, messageOptions);
+
   } catch (error) {
     console.error("Error fetching GPT response:", error);
-    repondre(zk, dest, ms, "Sorry, I couldn't process your request.");
+    
+    const errorMessage = error.response 
+      ? "The AI service is currently unavailable."
+      : error.request
+      ? "Request timed out. Please try again."
+      : "Sorry, I couldn't process your request.";
+    
+    repondre(zk, dest, ms, errorMessage);
   }
 });
