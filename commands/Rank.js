@@ -88,11 +88,6 @@ keith({
 });
 
 // Initialize ACRCloud
-const acr = new acrcloud({
-  host: 'identify-ap-southeast-1.acrcloud.com',
-  access_key: '26afd4eec96b0f5e5ab16a7e6e05ab37',
-  access_secret: 'wXOZIqdMNZmaHJP1YDWVyeQLg579uK2CfY6hWMN8'
-});
 
 
 
