@@ -4,6 +4,254 @@ const { default: axios } = require('axios');
 const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
 
 // IP Stalker Command
+
+keith({
+  nomCom: "countrystalk",
+  aliases: ["countryinfo", "nationstalk"],
+  categorie: "stalker"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const countryName = arg.join(' ');
+
+  if (!arg[0]) {
+    return repondre(zk, dest, ms, 'Please enter a country name to search.');
+  }
+
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/stalker/country?region=${encodeURIComponent(countryName)}`);
+
+    if (response.data.status && response.data.result) {
+      const countryData = response.data.result;
+      const basicInfo = countryData.basicInfo;
+      const geography = countryData.geography;
+      const culture = countryData.culture;
+      const government = countryData.government;
+
+      // Format neighbors
+      let neighborsList = 'None';
+      if (geography.neighbors && geography.neighbors.length > 0) {
+        neighborsList = geography.neighbors.map(neighbor => neighbor.name).join(', ');
+      }
+
+      // Format languages
+      const languages = culture.languages.native.join(', ');
+
+      await sendMessage(zk, dest, ms, {
+        text: `*Country Information: ${basicInfo.name}*\n\n` +
+              `🏙️ *Capital:* ${basicInfo.capital}\n` +
+              `📞 *Phone Code:* ${basicInfo.phoneCode}\n` +
+              `🌐 *Internet TLD:* ${basicInfo.internetTLD}\n\n` +
+              
+              `*🌍 Geography*\n` +
+              `📍 *Continent:* ${geography.continent.name} ${geography.continent.emoji}\n` +
+              `📏 *Area:* ${geography.area.sqKm.toLocaleString()} km² (${geography.area.sqMiles.toLocaleString()} mi²)\n` +
+              `🧭 *Coordinates:* ${geography.coordinates.latitude}, ${geography.coordinates.longitude}\n` +
+              `🚫 *Landlocked:* ${geography.landlocked ? 'Yes' : 'No'}\n` +
+              `🧩 *Neighboring Countries:* ${neighborsList}\n\n` +
+              
+              `*🎭 Culture*\n` +
+              `🗣️ *Languages:* ${languages}\n` +
+              `⭐ *Famous For:* ${culture.famousFor}\n` +
+              `🚗 *Driving Side:* ${culture.drivingSide}\n` +
+              `🍷 *Alcohol Policy:* ${culture.alcoholPolicy || 'Not specified'}\n\n` +
+              
+              `*🏛️ Government*\n` +
+              `📜 *Constitutional Form:* ${government.constitutionalForm}\n` +
+              `💰 *Currency:* ${government.currency}\n\n` +
+              
+              `*🔗 Links*\n` +
+              `🗺️ *Google Maps:* ${basicInfo.googleMaps}\n` +
+              `🆔 *ISO Codes:* ${countryData.isoCodes.alpha2}/${countryData.isoCodes.alpha3}/${countryData.isoCodes.numeric}`,
+        contextInfo: {
+          externalAdReply: {
+            title: `Country Information: ${basicInfo.name}`,
+            body: `Capital: ${basicInfo.capital} | ${geography.continent.name}`,
+            thumbnailUrl: basicInfo.flag || conf.GURL,
+            sourceUrl: basicInfo.googleMaps,
+            mediaType: 1,
+            showAdAttribution: true,
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, 'Country not found. Please check the spelling and try again.');
+    }
+  } catch (e) {
+    repondre(zk, dest, ms, `An error occurred while fetching country information: ${e.message}`);
+  }
+});
+keith({
+  nomCom: "ytstalk",
+  aliases: ["youtubestalk", "channelstalk"],
+  categorie: "stalker"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const username = arg.join(' ');
+
+  if (!arg[0]) {
+    return repondre(zk, dest, ms, 'Please insert a YouTube channel username or ID.');
+  }
+
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/stalker/ytchannel?user=${encodeURIComponent(username)}`);
+
+    if (response.data.status && response.data.result) {
+      const channelData = response.data.result;
+      const channel = channelData.channel;
+      const videos = channelData.videos || [];
+
+      // Format channel information
+      let channelInfo = `*YouTube Channel Info*\n\n` +
+                       `📺 *Channel:* ${channel.username}\n` +
+                       `🔗 *URL:* ${channel.url}\n` +
+                       `📝 *Description:* ${channel.description || 'No description'}\n\n` +
+                       `*📊 Statistics*\n` +
+                       `👥 *Subscribers:* ${channel.stats.subscribers}\n` +
+                       `🎥 *Videos:* ${channel.stats.videos}\n\n`;
+
+      // Add recent videos if available
+      if (videos.length > 0) {
+        channelInfo += `*🎬 Recent Videos (${videos.length})*\n`;
+        videos.slice(0, 3).forEach((video, index) => {
+          channelInfo += `\n${index + 1}. *${video.title}*\n` +
+                        `⏱️ ${video.duration} | 👀 ${video.views} views\n` +
+                        `📅 ${video.published}\n` +
+                        `🔗 ${video.url}\n`;
+        });
+      }
+
+      await sendMessage(zk, dest, ms, {
+        text: channelInfo,
+        contextInfo: {
+          externalAdReply: {
+            title: "YouTube Channel Stalker",
+            body: channel.username,
+            thumbnailUrl: channel.avatar,
+            sourceUrl: conf.GURL,
+            mediaType: 1,
+            showAdAttribution: true,
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, 'Failed to retrieve YouTube channel details. Please check the username/ID and try again.');
+    }
+  } catch (e) {
+    repondre(zk, dest, ms, `An error occurred while fetching YouTube channel: ${e.message}`);
+  }
+});
+
+keith({
+  nomCom: "igstalk",
+  aliases: ["instastalk", "instagramstalk"],
+  categorie: "stalker"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const username = arg.join(' ');
+
+  if (!arg[0]) {
+    return repondre(zk, dest, ms, 'Please insert an Instagram username.');
+  }
+
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/stalker/ig?user=${encodeURIComponent(username)}`);
+
+    if (response.data.status && response.data.result) {
+      const userData = response.data.result;
+      const profile = userData.profile;
+      const stats = userData.stats;
+
+      // Format account type
+      const accountType = profile.isBusiness ? 'Business' : 
+                         profile.accountType === 1 ? 'Personal' : 'Unknown';
+
+      await sendMessage(zk, dest, ms, {
+        text: `*Instagram Profile Info*\n\n` +
+              `👤 *Username:* @${profile.username}\n` +
+              `📛 *Full Name:* ${profile.fullName || 'Not specified'}\n` +
+              `📝 *Bio:* ${profile.biography || 'No bio'}\n` +
+              `🌐 *External Link:* ${profile.externalUrl || 'None'}\n` +
+              `✅ *Verified:* ${profile.isVerified ? 'Yes' : 'No'}\n` +
+              `🔒 *Private Account:* ${profile.isPrivate ? 'Yes' : 'No'}\n` +
+              `🏢 *Account Type:* ${accountType}\n\n` +
+              `*📊 Statistics*\n` +
+              `👥 *Followers:* ${stats.followers}\n` +
+              `👤 *Following:* ${stats.following}\n` +
+              `📷 *Posts:* ${stats.mediaCount}\n\n` +
+              `🆔 *User ID:* ${profile.id}\n` +
+              `📅 *Created At:* ${profile.createdAt ? new Date(profile.createdAt / 1000).toLocaleString() : 'Unknown'}`,
+        contextInfo: {
+          externalAdReply: {
+            title: "Instagram Profile Stalker",
+            body: `@${profile.username}`,
+            thumbnailUrl: profile.avatars.standard,
+            sourceUrl: conf.GURL,
+            mediaType: 1,
+            showAdAttribution: true,
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, 'Failed to retrieve Instagram profile details. Please check the username and try again.');
+    }
+  } catch (e) {
+    repondre(zk, dest, ms, `An error occurred while fetching Instagram profile: ${e.message}`);
+  }
+});
+
+keith({
+  nomCom: "tiktokstalk",
+  aliases: ["ttstalk", "tstalk"],
+  categorie: "stalker"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const username = arg.join(' ');
+
+  if (!arg[0]) {
+    return repondre(zk, dest, ms, 'Please insert a TikTok username.');
+  }
+
+  try {
+    const response = await axios.get(`https://apis-keith.vercel.app/stalker/tiktok?user=${encodeURIComponent(username)}`);
+
+    if (response.data.status && response.data.result) {
+      const userData = response.data.result;
+      const profile = userData.profile;
+      const stats = userData.stats;
+
+      await sendMessage(zk, dest, ms, {
+        text: `*TikTok Profile Info*\n\n` +
+              `👤 *Username:* ${profile.username}\n` +
+              `📛 *Nickname:* ${profile.nickname}\n` +
+              `📝 *Bio:* ${profile.bio || 'No bio'}\n` +
+              `✅ *Verified:* ${profile.verified ? 'Yes' : 'No'}\n` +
+              `🔒 *Private Account:* ${profile.private ? 'Yes' : 'No'}\n` +
+              `📅 *Created At:* ${new Date(profile.createdAt).toLocaleString()}\n` +
+              `🌍 *Region:* ${profile.region}\n\n` +
+              `*📊 Statistics*\n` +
+              `👥 *Followers:* ${stats.followers}\n` +
+              `👤 *Following:* ${stats.following}\n` +
+              `❤️ *Total Likes:* ${stats.likes}\n` +
+              `🎥 *Videos:* ${stats.videos}\n` +
+              `🤝 *Friends:* ${stats.friends}`,
+        contextInfo: {
+          externalAdReply: {
+            title: "TikTok Profile Stalker",
+            body: `@${profile.username}`,
+            thumbnailUrl: profile.avatars.medium,
+            sourceUrl: conf.GURL,
+            mediaType: 1,
+            showAdAttribution: true,
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, 'Failed to retrieve TikTok profile details. Please check the username and try again.');
+    }
+  } catch (e) {
+    repondre(zk, dest, ms, `An error occurred while fetching TikTok profile: ${e.message}`);
+  }
+});
 keith({
   nomCom: "ipstalk",
   categorie: "stalker"
