@@ -54,3 +54,47 @@ keith({
     repondre(zk, dest, ms, errorMessage);
   }
 });
+
+keith({
+  nomCom: "deepseek",
+  aliases: ["deepseekai", "ds"],
+  reaction: '🔍',
+  categorie: "AI"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const query = arg.join(" ").trim(); // Get the user's query
+
+  if (!query) {
+    return repondre(zk, dest, ms, "Please provide a message.");
+  }
+
+  try {
+    // Fetch response from the DeepSeek API
+    const response = await axios.get(`https://apis-keith.vercel.app/ai/deepseek?q=${encodeURIComponent(query)}`);
+
+    // Check if the API response is valid
+    if (response.data.status && response.data.result) {
+      const aiResponse = response.data.result;
+
+      // Send the AI response to the user
+      await sendMessage(zk, dest, ms, {
+        text: aiResponse,
+        contextInfo: {
+          externalAdReply: {
+            title: `${conf.BOT} DeepSeek`,
+            body: conf.OWNER_NAME,
+            thumbnailUrl: conf.URL, // Replace with your bot profile photo URL
+            sourceUrl: conf.GURL, // Your channel URL
+            mediaType: 1,
+            showAdAttribution: true, // Verified badge
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, "Failed to get a response from DeepSeek AI.");
+    }
+  } catch (error) {
+    console.error("Error fetching DeepSeek response:", error);
+    repondre(zk, dest, ms, "Sorry, I couldn't process your request to DeepSeek.");
+  }
+});
