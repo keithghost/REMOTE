@@ -913,12 +913,13 @@ keith({
   'reaction': '📡',
   'category': 'AI'
 }, async (user, message, context) => {
-  const { repondre: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, arg, messageInstance } = context;
   try {
-    if (!args || args.length === 0) {
+        
+    if (!arg || arg.length === 0) {
       return sendMessage("Please describe your image and Alpha-MD will generate it.");
     }
-    const prompt = args.join(" ");
+    const prompt = arg.join(" ");
     const generatedImageUrl = "https://apis-keith.vercel.app/ai/flux?q=" + prompt;
     message.sendMessage(user, {
       'image': {
@@ -939,12 +940,12 @@ keith({
   'reaction': '📡',
   'category': 'AI'
 }, async (user, message, context) => {
-  const { repondre: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, arg, messageInstance } = context;
   try {
-    if (!args || args.length === 0) {
+    if (!arg || arg.length === 0) {
       return sendMessage("Please describe your image and Alpha-MD will generate it.");
     }
-    const prompt = args.join(" ");
+    const prompt = arg.join(" ");
     const generatedImageUrl = "https://apis-keith.vercel.app/ai/flux?q=" + prompt;
     message.sendMessage(user, {
       'image': {
@@ -965,12 +966,12 @@ keith({
   'reaction': '📡',
   'category': 'images'
 }, async (user, message, context) => {
-  const { repondre: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, arg, messageInstance } = context;
   try {
-    if (!args || args.length === 0) {
+    if (!arg || arg.length === 0) {
       return sendMessage("Please describe your image and Alpha-MD will generate it.");
     }
-    const prompt = args.join(" ");
+    const prompt = arg.join(" ");
     const generatedImageUrl = "https://www.samirxpikachu.run.place/multi/Ml?prompt=" + prompt;
     message.sendMessage(user, {
       'image': {
