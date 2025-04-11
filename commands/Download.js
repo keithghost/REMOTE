@@ -58,81 +58,7 @@ async function searchYouTube(query) {
   }
 }
 
-// Common function for downloading media from APIs
-async function downloadFromApis(apis) {
-  for (const api of apis) {
-    try {
-      const response = await axios.get(api, { timeout: 15000 });
-      if (response.data?.success) {
-        return response.data;
-      }
-    } catch (error) {
-      console.warn(`API ${api} failed:`, error.message);
-      continue;
-    }
-  }
-  throw new Error('Failed to retrieve download URL from all sources.');
-}
-
-// Audio download command
-/*keith({
-  nomCom: "play",
-  aliases: ["song", "playdoc", "audio", "mp3"],
-  categorie: "download",
-  reaction: "🎵"
-}, async (dest, zk, commandOptions) => {
-  const { arg, ms, userJid } = commandOptions;
-
-  try {
-    if (!arg[0]) {
-      return repondre(zk, dest, ms, "Please provide a song name.");
-    }
-
-    const query = arg.join(" ");
-    const video = await searchYouTube(query);
-    
-    await zk.sendMessage(dest, {
-      text: "⬇️ Downloading audio... This may take a moment...",
-      contextInfo: getContextInfo("Downloading", userJid, video.thumbnail)
-    }, { quoted: ms });
-
-    const apis = [
-      `https://api.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(video.url)}`,
-      `https://www.dark-yasiya-api.site/download/ytmp3?url=${encodeURIComponent(video.url)}`,
-      `https://api.giftedtech.web.id/api/download/dlmp3?url=${encodeURIComponent(video.url)}&apikey=gifted-md`,
-      `https://api.dreaded.site/api/ytdl/audio?url=${encodeURIComponent(video.url)}`
-    ];
-
-    const downloadData = await downloadFromApis(apis);
-    const { download_url, title } = downloadData.result;
-
-    const messagePayloads = [
-      {
-        audio: { url: download_url },
-        mimetype: 'audio/mp4',
-        caption: `🎵 *${title}*`,
-        contextInfo: getContextInfo(title, userJid, video.thumbnail)
-      },
-      {
-        document: { url: download_url },
-        mimetype: 'audio/mpeg',
-        fileName: `${title}.mp3`.replace(/[^\w\s.-]/gi, ''),
-        caption: `📁 *${title}* (Document)`,
-        contextInfo: getContextInfo(title, userJid, video.thumbnail)
-      }
-    ];
-
-    for (const payload of messagePayloads) {
-      await zk.sendMessage(dest, payload, { quoted: ms });
-    }
-
-  } catch (error) {
-    console.error('Audio download error:', error);
-    repondre(zk, dest, ms, `Download failed: ${error.message}`);
-  }
-});*/
-
-// Video download command
+// Video download command using the specified API endpoint
 keith({
   nomCom: "video",
   aliases: ["videodoc", "film", "mp4"],
@@ -143,40 +69,47 @@ keith({
 
   try {
     if (!arg[0]) {
-      return repondre(zk, dest, ms, "Please provide a video name.");
+      return repondre(zk, dest, ms, "Please provide a video name or URL.");
     }
 
-    const query = arg.join(" ");
-    const video = await searchYouTube(query);
+    let videoUrl = arg[0];
+    let video;
     
+    // If it's not a URL, search YouTube
+    if (!videoUrl.startsWith('http')) {
+      const query = arg.join(" ");
+      video = await searchYouTube(query);
+      videoUrl = video.url;
+    }
+
     await zk.sendMessage(dest, {
       text: "⬇️ Downloading video... This may take a moment...",
-      contextInfo: getContextInfo("Downloading", userJid, video.thumbnail)
+      contextInfo: getContextInfo("Downloading", userJid, video?.thumbnail)
     }, { quoted: ms });
 
-    const apis = [
-      `https://api.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(video.url)}`,
-      `https://www.dark-yasiya-api.site/download/ytmp4?url=${encodeURIComponent(video.url)}`,
-      `https://api.giftedtech.web.id/api/download/dlmp4?url=${encodeURIComponent(video.url)}&apikey=gifted-md`,
-      `https://api.dreaded.site/api/ytdl/video?url=${encodeURIComponent(video.url)}`
-    ];
+    // Use the specified API endpoint
+    const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${encodeURIComponent(videoUrl)}`;
+    const response = await axios.get(apiUrl, { timeout: 15000 });
+    
+    if (!response.data?.status) {
+      throw new Error('Failed to retrieve download URL from the API.');
+    }
 
-    const downloadData = await downloadFromApis(apis);
-    const { download_url, title } = downloadData.result;
+    const { downloadUrl, title, quality } = response.data.result;
 
     const messagePayloads = [
       {
-        video: { url: download_url },
+        video: { url: downloadUrl },
         mimetype: 'video/mp4',
-        caption: `🎥 *${title}*`,
-        contextInfo: getContextInfo(title, userJid, video.thumbnail)
+        caption: `🎥 *${title}*\nQuality: ${quality}`,
+        contextInfo: getContextInfo(title, userJid, video?.thumbnail)
       },
       {
-        document: { url: download_url },
+        document: { url: downloadUrl },
         mimetype: 'video/mp4',
         fileName: `${title}.mp4`.replace(/[^\w\s.-]/gi, ''),
-        caption: `📁 *${title}* (Document)`,
-        contextInfo: getContextInfo(title, userJid, video.thumbnail)
+        caption: `📁 *${title}* (Document)\nQuality: ${quality}`,
+        contextInfo: getContextInfo(title, userJid, video?.thumbnail)
       }
     ];
 
@@ -227,7 +160,6 @@ keith({
     repondre(zk, dest, ms, `Upload failed: ${error.message}`);
   }
 });
-
 keith({
   nomCom: "xvideo",
   aliases: ["xvideos", "porn", "xxx"],
@@ -315,3 +247,4 @@ keith({
     return repondre(`Download failed due to an error: ${error.message || error}`);
   }
 });
+
