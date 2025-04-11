@@ -982,7 +982,7 @@ keith({
 keith({
   'nomCom': "flux",
   'reaction': '📡',
-  'category': 'images'
+  'category': 'AI'
 }, async (user, message, context) => {
   const { respond: sendMessage, args, messageInstance } = context;
   try {
@@ -990,7 +990,7 @@ keith({
       return sendMessage("Please describe your image and Alpha-MD will generate it.");
     }
     const prompt = args.join(" ");
-    const generatedImageUrl = "https://www.samirxpikachu.run.place/flux?prompt=" + prompt;
+    const generatedImageUrl = "https://apis-keith.vercel.app/ai/flux?q=" + prompt;
     message.sendMessage(user, {
       'image': {
         'url': generatedImageUrl
@@ -1005,6 +1005,31 @@ keith({
   }
 });
 
+keith({
+  'nomCom': "bing",
+  'reaction': '📡',
+  'category': 'AI'
+}, async (user, message, context) => {
+  const { respond: sendMessage, args, messageInstance } = context;
+  try {
+    if (!args || args.length === 0) {
+      return sendMessage("Please describe your image and Alpha-MD will generate it.");
+    }
+    const prompt = args.join(" ");
+    const generatedImageUrl = "https://apis-keith.vercel.app/ai/flux?q=" + prompt;
+    message.sendMessage(user, {
+      'image': {
+        'url': generatedImageUrl
+      },
+      'caption': "*powered by ALPHA-MD*"
+    }, {
+      'quoted': messageInstance
+    });
+  } catch (error) {
+    console.error("Error:", error.message || "An error occurred");
+    sendMessage("Oops, an error occurred while processing your request");
+  }
+});
 
 
 // Ilama image generation command
