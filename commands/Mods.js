@@ -23,23 +23,44 @@ keith({
   }
 
   try {
-    // Get JID - either from replied message or current chat
-    const jid = msgRepondu ? auteurMessage : dest;
+    // Determine which JID to use
+    let targetJid;
+    let contextInfo = {};
     
-    // Extract phone number from JID (remove @s.whatsapp.net and country code if present)
-    let phoneNumber = jid.split('@')[0];
+    if (msgRepondu) {
+      // If it's a replied message, use the sender's JID from the replied message
+      targetJid = auteurMessage;
+      contextInfo = {
+        quoted: msgRepondu
+      };
+    } else {
+      // If no reply, use the current chat JID
+      targetJid = dest;
+    }
     
-    // Add '+' if it's not already present (international format)
+    // Extract phone number from JID
+    let phoneNumber = targetJid.split('@')[0];
+    
+    // Format phone number with international prefix
     if (!phoneNumber.startsWith('+')) {
       phoneNumber = `+${phoneNumber}`;
     }
     
-    // Send the formatted phone number
-    await repondre(`📱 Phone Number: ${phoneNumber}`);
+    // Prepare the response message
+    const responseMessage = {
+      text: `📱 JID Information:\n\n• Full JID: ${targetJid}\n• Phone Number: ${phoneNumber}`,
+      ...contextInfo
+    };
+    
+    // Send the response
+    await repondre(responseMessage);
 
   } catch (error) {
     console.error("Error in jid command:", error);
-    await repondre("An error occurred while processing the JID");
+    await repondre({
+      text: "An error occurred while processing the JID",
+      ...(msgRepondu ? { quoted: msgRepondu } : {})
+    });
   }
 });
 keith({ nomCom: "crew", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
