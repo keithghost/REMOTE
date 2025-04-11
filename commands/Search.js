@@ -52,7 +52,7 @@ keith({
 
 keith({
   nomCom: "forex",
-  category: "trade",
+  categorie: "trade",
   desc: "Fetches the latest forex news",
   reaction: "🤦",
 }, async (dest, zk, commandeOptions) => {
@@ -89,7 +89,7 @@ keith({
 });
 keith({
   nomCom: "fxstatus",
-  category: "trade",
+  categorie: "trade",
   desc: "Fetches the current status of the forex market",
   reaction: "🤦",
 }, async (dest, zk, commandeOptions) => {
@@ -143,8 +143,8 @@ keith({
 
 keith({
   nomCom: "fxpairs",
-aliases: ["forexpairs", "pairforex"],
-  category: "trade",
+  aliases: ["forexpairs", "pairforex"],
+  categorie: "trade",
   desc: "Fetches a list of active forex currency pairs",
   reaction: "🤦",
 }, async (dest, zk, commandeOptions) => {
@@ -174,7 +174,7 @@ aliases: ["forexpairs", "pairforex"],
 keith({
   nomCom: "stocktickers",
   aliases: ["stockticks", "tickets"],
-  category: "trade",
+  categorie: "trade",
   desc: "Fetches a list of active stock tickers",
   reaction: "🤦",
 }, async (dest, zk, commandeOptions) => {
@@ -205,7 +205,7 @@ keith({
 keith({
   nomCom: "fxexchange",
   aliases: ["forexexchange", "exchangerate"],
-  category: "trade",
+  categorie: "trade",
   desc: "Fetches the latest foreign exchange rates against the US Dollar",
   reaction: "🤦",
 }, async (dest, zk, commandeOptions) => {
