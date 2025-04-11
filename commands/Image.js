@@ -859,7 +859,7 @@ keith({
 keith({
   'nomCom': "img-generate",
   'reaction': '📡',
-  'category': 'images'
+  'categorie': 'images'
 }, async (user, message, context) => {
   const { repondre: sendMessage, args, messageInstance } = context;
   try {
@@ -885,7 +885,7 @@ keith({
 keith({
   'nomCom': "extract",
   'reaction': '📡',
-  'category': 'images'
+  'categorie': 'images'
 }, async (user, message, context) => {
   const { repondre: sendMessage, args, messageInstance } = context;
   try {
@@ -911,7 +911,7 @@ keith({
 keith({
   'nomCom': "flux",
   'reaction': '📡',
-  'category': 'AI'
+  'categorie': 'AI'
 }, async (user, message, context) => {
   const { repondre: sendMessage, arg, messageInstance } = context;
   try {
@@ -938,7 +938,7 @@ keith({
 keith({
   'nomCom': "bing",
   'reaction': '📡',
-  'category': 'AI'
+  'categorie': 'AI'
 }, async (user, message, context) => {
   const { repondre: sendMessage, arg, messageInstance } = context;
   try {
@@ -964,7 +964,7 @@ keith({
 keith({
   'nomCom': "mi",
   'reaction': '📡',
-  'category': 'images'
+  'categorie': 'images'
 }, async (user, message, context) => {
   const { repondre: sendMessage, arg, messageInstance } = context;
   try {
@@ -990,7 +990,7 @@ keith({
 keith({
   'nomCom': "beautify",
   'reaction': '📡',
-  'category': 'images'
+  'categorie': 'images'
 }, async (user, message, context) => {
   const { repondre: sendMessage, args, messageInstance } = context;
   try {
