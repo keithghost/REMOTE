@@ -8,6 +8,40 @@ let { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
 //const { removeSudoNumber, addSudoNumber, issudo } = require("../bdd/sudo");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+
+
+keith({ 
+  nomCom: "jid", 
+  categorie: "Mods",
+  reaction: "📱"
+}, async (dest, zk, commandeOptions) => {
+  const { repondre, superUser, auteurMessage, msgRepondu, ms } = commandeOptions;
+
+  if (!superUser) {
+    repondre("Command reserved for the bot owner");
+    return;
+  }
+
+  try {
+    // Get JID - either from replied message or current chat
+    const jid = msgRepondu ? auteurMessage : dest;
+    
+    // Extract phone number from JID (remove @s.whatsapp.net and country code if present)
+    let phoneNumber = jid.split('@')[0];
+    
+    // Add '+' if it's not already present (international format)
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = `+${phoneNumber}`;
+    }
+    
+    // Send the formatted phone number
+    await repondre(`📱 Phone Number: ${phoneNumber}`);
+
+  } catch (error) {
+    console.error("Error in jid command:", error);
+    await repondre("An error occurred while processing the JID");
+  }
+});
 keith({ nomCom: "crew", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
   const { ms, repondre, arg, auteurMessage, superUser, auteurMsgRepondu, msgRepondu } = commandeOptions;
 
@@ -37,17 +71,6 @@ keith({ nomCom: "join", categorie: "Mods" }, async (dest, zk, commandeOptions) =
   });
 });
 
-keith({ nomCom: "jid", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
-  const { arg, repondre, superUser, auteurMessage, msgRepondu } = commandeOptions;
-
-  if (!superUser) {
-    repondre("Command reserved for the bot owner");
-    return;
-  }
-
-  let jid = msgRepondu ? auteurMsgRepondu : dest;
-  zk.sendMessage(dest, { text: jid }, { quoted: ms });
-});
 
 keith({ nomCom: "block", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
   const { arg, repondre, verifGroupe, msgRepondu, superUser, auteurMessage, auteurMsgRepondu } = commandeOptions;
