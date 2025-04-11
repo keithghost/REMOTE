@@ -98,3 +98,179 @@ keith({
     repondre(zk, dest, ms, "Sorry, I couldn't process your request to DeepSeek.");
   }
 });
+
+
+keith({
+  nomCom: "blackbox",
+  aliases: ["bb", "blackboxai"],
+  reaction: '⬛',
+  categorie: "AI"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const query = arg.join(" ").trim(); // Get the user's query
+
+  if (!query) {
+    return repondre(zk, dest, ms, "Please provide a message for Blackbox AI.");
+  }
+
+  try {
+    // Fetch response from the Blackbox API
+    const response = await axios.get(`https://apis-keith.vercel.app/ai/blackbox?q=${encodeURIComponent(query)}`);
+
+    // Check if the API response is valid
+    if (response.data.status && response.data.result) {
+      const aiResponse = response.data.result;
+
+      // Send the AI response to the user
+      await sendMessage(zk, dest, ms, {
+        text: aiResponse,
+        contextInfo: {
+          externalAdReply: {
+            title: `${conf.BOT} Blackbox`,
+            body: conf.OWNER_NAME,
+            thumbnailUrl: conf.URL, // Replace with your bot profile photo URL
+            sourceUrl: conf.GURL, // Your channel URL
+            mediaType: 1,
+            showAdAttribution: true, // Verified badge
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, "Failed to get a response from Blackbox AI.");
+    }
+  } catch (error) {
+    console.error("Error fetching Blackbox response:", error);
+    repondre(zk, dest, ms, "Sorry, Blackbox AI is currently unavailable.");
+  }
+});
+
+keith({
+  nomCom: "ilama",
+  aliases: ["ilamai", "ilamaai"],
+  reaction: '⬛',
+  categorie: "AI"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const query = arg.join(" ").trim(); // Get the user's query
+
+  if (!query) {
+    return repondre(zk, dest, ms, "Please provide a message for Blackbox AI.");
+  }
+
+  try {
+    // Fetch response from the Blackbox API
+    const response = await axios.get(`https://apis-keith.vercel.app/ai/ilama?q=${encodeURIComponent(query)}`);
+
+    // Check if the API response is valid
+    if (response.data.status && response.data.result) {
+      const aiResponse = response.data.result;
+
+      // Send the AI response to the user
+      await sendMessage(zk, dest, ms, {
+        text: aiResponse,
+        contextInfo: {
+          externalAdReply: {
+            title: `${conf.BOT} Ilama`,
+            body: conf.OWNER_NAME,
+            thumbnailUrl: conf.URL, // Replace with your bot profile photo URL
+            sourceUrl: conf.GURL, // Your channel URL
+            mediaType: 1,
+            showAdAttribution: true, // Verified badge
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, "Failed to get a response from Ilama AI.");
+    }
+  } catch (error) {
+    console.error("Error fetching Blackbox response:", error);
+    repondre(zk, dest, ms, "Sorry, Blackbox AI is currently unavailable.");
+  }
+});
+
+keith({
+  nomCom: "gemini",
+  aliases: ["geminiai", "geminiiai"],
+  reaction: '⬛',
+  categorie: "AI"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const query = arg.join(" ").trim(); // Get the user's query
+
+  if (!query) {
+    return repondre(zk, dest, ms, "Please provide a message for Gemini AI.");
+  }
+
+  try {
+    // Fetch response from the Blackbox API
+    const response = await axios.get(`https://apis-keith.vercel.app/ai/gemini?q=${encodeURIComponent(query)}`);
+
+    // Check if the API response is valid
+    if (response.data.status && response.data.result) {
+      const aiResponse = response.data.result;
+
+      // Send the AI response to the user
+      await sendMessage(zk, dest, ms, {
+        text: aiResponse,
+        contextInfo: {
+          externalAdReply: {
+            title: `${conf.BOT} Gemini`,
+            body: conf.OWNER_NAME,
+            thumbnailUrl: conf.URL, // Replace with your bot profile photo URL
+            sourceUrl: conf.GURL, // Your channel URL
+            mediaType: 1,
+            showAdAttribution: true, // Verified badge
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, "Failed to get a response from Blackbox AI.");
+    }
+  } catch (error) {
+    console.error("Error fetching Blackbox response:", error);
+    repondre(zk, dest, ms, "Sorry, Blackbox AI is currently unavailable.");
+  }
+});
+keith({
+  nomCom: "bard",
+  aliases: ["bardai", "barddai"],
+  reaction: '⬛',
+  categorie: "AI"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+  const query = arg.join(" ").trim(); // Get the user's query
+
+  if (!query) {
+    return repondre(zk, dest, ms, "Please provide a message for Gemini AI.");
+  }
+
+  try {
+    // Fetch response from the Blackbox API
+    const response = await axios.get(`https://apis-keith.vercel.app/ai/bard?q=${encodeURIComponent(query)}`);
+
+    // Check if the API response is valid
+    if (response.data.status && response.data.result) {
+      const aiResponse = response.data.result;
+
+      // Send the AI response to the user
+      await sendMessage(zk, dest, ms, {
+        text: aiResponse,
+        contextInfo: {
+          externalAdReply: {
+            title: `${conf.BOT} Bard`,
+            body: conf.OWNER_NAME,
+            thumbnailUrl: conf.URL, // Replace with your bot profile photo URL
+            sourceUrl: conf.GURL, // Your channel URL
+            mediaType: 1,
+            showAdAttribution: true, // Verified badge
+          },
+        },
+      });
+    } else {
+      repondre(zk, dest, ms, "Failed to get a response from Blackbox AI.");
+    }
+  } catch (error) {
+    console.error("Error fetching Blackbox response:", error);
+    repondre(zk, dest, ms, "Sorry, Blackbox AI is currently unavailable.");
+  }
+});
