@@ -2,6 +2,7 @@ const { keith } = require('../keizzah/keith');
 const gis = require('g-i-s');
 const axios = require('axios');
 const conf = require(__dirname + '/../set');
+
 keith({
   nomCom: "sswidth",
   categorie: "screenshots",
@@ -10,29 +11,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provide
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/width/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "sscrop",
   categorie: "screenshots",
@@ -41,29 +38,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/crop/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "maxage",
   categorie: "screenshots",
@@ -72,29 +65,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/maxAge/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "jpg",
   categorie: "screenshots",
@@ -103,29 +92,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/allowJPG/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "png",
   aliases: ["ss", "sshot"],
@@ -135,29 +120,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/png/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "noanimate",
   categorie: "screenshots",
@@ -166,29 +147,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/noanimate/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "wait",
   aliases: ["ss", "sshot"],
@@ -198,29 +175,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/wait/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "viewportwidth",
   aliases: ["ss", "sshot"],
@@ -230,29 +203,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/viewportWidth/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "iphone5",
   categorie: "screenshots",
@@ -261,29 +230,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/iphone5/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "iphone6",
   aliases: ["ss", "sshot"],
@@ -293,29 +258,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/iphone6/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "iphone6plus",
   categorie: "screenshots",
@@ -324,29 +285,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/iphone6plus/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "iphoneX",
   categorie: "screenshots",
@@ -355,29 +312,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/iphoneX/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "iphone12pro",
   aliases: ["ss", "sshot"],
@@ -387,29 +340,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/iphone12pro/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "iphone14promax",
   aliases: ["ss", "sshot"],
@@ -419,29 +368,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/iphone14promax/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "galaxys5",
   aliases: ["ss", "sshot"],
@@ -451,29 +396,25 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/galaxys5/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
 });
+
 keith({
   nomCom: "screenshot",
   aliases: ["ss", "sshot"],
@@ -483,25 +424,20 @@ keith({
   const { repondre, ms, arg } = commandeOptions;
 
   try {
-    // Caption for the screenshot
     const cap = `*Screenshot by Alpha Md*`;
 
-    // Check if a URL is provided
     if (!arg[0]) {
       return repondre('Please insert a website link to take a screenshot!');
     }
 
-    // Construct the screenshot URL
     const image = `https://image.thum.io/get/fullpage/${arg[0]}`;
 
-    // Send the screenshot image with the caption
     await zk.sendMessage(dest, {
       image: { url: image },
       caption: cap
     }, { quoted: ms });
 
   } catch (error) {
-    // Log the error and notify the user with a formatted error message
     console.error(error);
     repondre(`An error occurred while processing the screenshot: ${error.message}`);
   }
@@ -590,13 +526,14 @@ keith({
     sendMessage("Error occurred while retrieving data: " + error.message);
   }
 });
+
 keith({
   nomCom: "waifu",
   categorie: "images",
   reaction: "🙄"
 }, async (origineMessage, zk, commandeOptions) => {
   const { repondre, ms } = commandeOptions;
-  const url = 'https://api.waifu.pics/nsfw/waifu'; // Replace with your actual URL
+  const url = 'https://api.waifu.pics/nsfw/waifu';
 
   try {
     for (let i = 0; i < 5; i++) {
@@ -622,13 +559,14 @@ keith({
     repondre('Error retrieving data: ' + error.message);
   }
 });
+
 keith({
   nomCom: "trap",
   categorie: "images",
   reaction: "🙄"
 }, async (origineMessage, zk, commandeOptions) => {
   const { repondre, ms } = commandeOptions;
-  const url = 'https://api.waifu.pics/nsfw/trap'; // Replace with your actual URL
+  const url = 'https://api.waifu.pics/nsfw/trap';
 
   try {
     for (let i = 0; i < 5; i++) {
@@ -654,13 +592,14 @@ keith({
     repondre('Error retrieving data: ' + error.message);
   }
 });
+
 keith({
   nomCom: "hneko",
   categorie: "images",
   reaction: "🙄"
 }, async (origineMessage, zk, commandeOptions) => {
   const { repondre, ms } = commandeOptions;
-  const url = 'https://api.waifu.pics/nsfw/neko'; // Replace with your actual URL
+  const url = 'https://api.waifu.pics/nsfw/neko';
 
   try {
     for (let i = 0; i < 5; i++) {
@@ -686,13 +625,14 @@ keith({
     repondre('Error retrieving data: ' + error.message);
   }
 });
+
 keith({
   nomCom: "blowjob",
   categorie: "images",
   reaction: "🙄"
 }, async (origineMessage, zk, commandeOptions) => {
   const { repondre, ms } = commandeOptions;
-  const url = 'https://api.waifu.pics/nsfw/blowjob'; // Replace with your actual URL
+  const url = 'https://api.waifu.pics/nsfw/blowjob';
 
   try {
     for (let i = 0; i < 5; i++) {
@@ -718,6 +658,7 @@ keith({
     repondre('Error retrieving data: ' + error.message);
   }
 });
+
 keith({
   'nomCom': "lulcat",
   'reaction': '📡',
@@ -740,7 +681,6 @@ keith({
   }
 });
 
-// Sadcat Meme Command
 keith({
   'nomCom': "sadcat",
   'reaction': '📡',
@@ -763,7 +703,6 @@ keith({
   }
 });
 
-// Nokia Meme Command
 keith({
   'nomCom': "nokia",
   'reaction': '📡',
@@ -786,7 +725,6 @@ keith({
   }
 });
 
-// Unforgivable Meme Command
 keith({
   'nomCom': "unforgivable",
   'reaction': '📡',
@@ -809,7 +747,6 @@ keith({
   }
 });
 
-// Pooh Meme Command
 keith({
   'nomCom': "pooh",
   'reaction': '📡',
@@ -832,7 +769,6 @@ keith({
   }
 });
 
-// Oogway Meme Command
 keith({
   'nomCom': "oogway",
   'reaction': '📡',
@@ -855,7 +791,6 @@ keith({
   }
 });
 
-// Biden Meme Command
 keith({
   'nomCom': "biden",
   'reaction': '📡',
@@ -878,7 +813,6 @@ keith({
   }
 });
 
-// Drip Meme Command
 keith({
   'nomCom': "drip",
   'reaction': '📡',
@@ -900,7 +834,6 @@ keith({
   }
 });
 
-// Clown Meme Command
 keith({
   'nomCom': "clown",
   'reaction': '📡',
@@ -923,14 +856,12 @@ keith({
   }
 });
 
-
-// Image generation command
 keith({
   'nomCom': "img-generate",
   'reaction': '📡',
   'category': 'images'
 }, async (user, message, context) => {
-  const { respond: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, args, messageInstance } = context;
   try {
     if (!args || args.length === 0) {
       return sendMessage("Please enter the necessary information to generate the image.");
@@ -951,13 +882,12 @@ keith({
   }
 });
 
-// Image text extraction command
 keith({
   'nomCom': "extract",
   'reaction': '📡',
   'category': 'images'
 }, async (user, message, context) => {
-  const { respond: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, args, messageInstance } = context;
   try {
     if (!args || args.length === 0) {
       return sendMessage("Please insert the image URL and Alpha-MD will extract the text for you.");
@@ -978,13 +908,12 @@ keith({
   }
 });
 
-// Bing image generation command
 keith({
   'nomCom': "flux",
   'reaction': '📡',
   'category': 'AI'
 }, async (user, message, context) => {
-  const { respond: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, args, messageInstance } = context;
   try {
     if (!args || args.length === 0) {
       return sendMessage("Please describe your image and Alpha-MD will generate it.");
@@ -1010,7 +939,7 @@ keith({
   'reaction': '📡',
   'category': 'AI'
 }, async (user, message, context) => {
-  const { respond: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, args, messageInstance } = context;
   try {
     if (!args || args.length === 0) {
       return sendMessage("Please describe your image and Alpha-MD will generate it.");
@@ -1031,14 +960,12 @@ keith({
   }
 });
 
-
-// Ilama image generation command
 keith({
   'nomCom': "mi",
   'reaction': '📡',
   'category': 'images'
 }, async (user, message, context) => {
-  const { respond: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, args, messageInstance } = context;
   try {
     if (!args || args.length === 0) {
       return sendMessage("Please describe your image and Alpha-MD will generate it.");
@@ -1059,13 +986,12 @@ keith({
   }
 });
 
-// Beautify image command
 keith({
   'nomCom': "beautify",
   'reaction': '📡',
   'category': 'images'
 }, async (user, message, context) => {
-  const { respond: sendMessage, args, messageInstance } = context;
+  const { repondre: sendMessage, args, messageInstance } = context;
   try {
     if (!args || args.length === 0) {
       return sendMessage("Kindly enter a valid image URL to beautify your image.");
@@ -1085,6 +1011,3 @@ keith({
     sendMessage("Oops, an error occurred while processing your request");
   }
 });
-
-
-
