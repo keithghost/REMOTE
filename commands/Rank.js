@@ -5,16 +5,17 @@ const { Catbox } = require("node-catbox");
 const fs = require('fs-extra');
 const yts = require("yt-search");
 const ytdl = require("ytdl-core");
-//const { keith } = require("../keizzah/keith");
-const acrcloud = require("acrcloud");
-//const fs = require("fs-extra");
-//const { repondre } = require(__dirname + "/../keizzah/context");
-
-//const fs = require("fs-extra");
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 // Initialize Catbox
 const catbox = new Catbox();
+
+// Initialize ACRCloud
+const acr = new acrcloud({
+  host: 'identify-ap-southeast-1.acrcloud.com',
+  access_key: '26afd4eec96b0f5e5ab16a7e6e05ab37',
+  access_secret: 'wXOZIqdMNZmaHJP1YDWVyeQLg579uK2CfY6hWMN8'
+});
 
 // Function to upload a file to Catbox
 async function uploadToCatbox(filePath) {
@@ -44,7 +45,6 @@ async function analyzeImage(imageUrl, question) {
   }
 }
 
-
 keith({
   nomCom: 'vision',
   aliases: ['analyse', 'aigenerate'],
@@ -55,7 +55,6 @@ keith({
   const question = arg.join(" ").trim();
 
   try {
-    // Check if there's a quoted image and question
     if (!msgRepondu?.imageMessage) {
       return repondre(zk, dest, ms, "❌ Please quote an image and provide a question.\nExample: /vision what's in this picture?");
     }
@@ -64,15 +63,12 @@ keith({
       return repondre(zk, dest, ms, "❌ Please provide a question for analysis.\nExample: /vision describe this image in detail");
     }
 
-    // Download and upload the image
     const mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
     const imageUrl = await uploadToCatbox(mediaPath);
-    fs.unlinkSync(mediaPath); // Clean up
+    fs.unlinkSync(mediaPath);
 
-    // Analyze the image
     const analysis = await analyzeImage(imageUrl, question);
     
-    // Send the result
     await zk.sendMessage(dest, {
       text: `🔍 *Vision Analysis*:\n\n${analysis}\n\n🖼️ *Image URL*: ${imageUrl}`,
       contextInfo: {
@@ -87,16 +83,6 @@ keith({
   }
 });
 
-// Initialize ACRCloud
-
-
-
-const acr = new acrcloud({
-  host: 'identify-ap-southeast-1.acrcloud.com',
-  access_key: '26afd4eec96b0f5e5ab16a7e6e05ab37',
-  access_secret: 'wXOZIqdMNZmaHJP1YDWVyeQLg579uK2CfY6hWMN8'
-});
-
 keith({
   nomCom: 'shazam',
   aliases: ['identify', 'findsong'],
@@ -106,18 +92,15 @@ keith({
   const { msgRepondu, ms } = commandOptions;
 
   try {
-    // Check if quoted message is audio/video
     if (!msgRepondu?.audioMessage && !msgRepondu?.videoMessage) {
       return repondre(zk, dest, ms, "❌ Please quote an *audio* or *video* (3+ seconds) to identify the song.");
     }
 
-    // Download media
     const bufferPath = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage || msgRepondu.videoMessage);
     const buffer = fs.readFileSync(bufferPath);
 
-    // Identify song
     const { status, metadata } = await acr.identify(buffer);
-    fs.unlinkSync(bufferPath); // Clean up
+    fs.unlinkSync(bufferPath);
 
     if (status.code !== 0) {
       throw new Error(
@@ -127,7 +110,6 @@ keith({
       );
     }
 
-    // Format result
     const { title, artists, album, genres, release_date } = metadata.music[0];
     let result = `🎵 *Song Found!*\n\n` +
       `📌 *Title*: ${title}\n` +
