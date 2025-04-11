@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 keith({
   nomCom: 'post',
   aliases: ['status', 'poststatus'],
-  categorie: "Group",
+  categorie: "owner",
   reaction: '⚪'
 }, async (dest, zk, context) => {
   const { repondre, superUser, ms, msgRepondu } = context;
@@ -163,7 +163,7 @@ keith({
   nomCom: "blocklist",
   aliases: ["listblock", "blacklist"],
   reaction: '⚔️',
-  categorie: "search"
+  categorie: "owner"
 }, async (dest, zk, commandeOptions) => {
   const { repondre } = commandeOptions;
 
@@ -204,9 +204,9 @@ keith({
 
 keith({
   nomCom: "fullpp",
-  aliases: ["updatepp", "ppfull"],
+  aliases: ["updatepp", "setpp"],
   reaction: '⚔️',
-  categorie: "search"
+  categorie: "owner"
 }, async (dest, zk, commandeOptions) => {
   const { repondre, msgRepondu, auteurMessage } = commandeOptions;
 
@@ -258,7 +258,7 @@ keith({
   nomCom: "profile",
   aliases: ["pp", "whois"],
   desc: "to generate profile picture",
-  categorie: "Fun"
+  categorie: "owner"
 }, async (dest, zk, commandeOptions) => {
   const { ms, arg, repondre, auteurMessage, nomAuteurMessage, msgRepondu, auteurMsgRepondu } = commandeOptions;
 
@@ -309,7 +309,7 @@ keith({
   nomCom: "profile2",
   aliases: ["pp2", "whois2"],
   desc: "to generate business profile picture",
-  categorie: "Fun"
+  categorie: "owner"
 }, async (dest, zk, commandeOptions) => {
   const { ms, arg, repondre, auteurMessage, nomAuteurMessage, msgRepondu, auteurMsgRepondu } = commandeOptions;
 
@@ -368,9 +368,9 @@ keith({
 });
 
 keith({
-  nomCom: "profile2",
+  nomCom: "businesspp2",
   aliases: ["pp2", "whois2"],
-  categorie: "Fun"
+  categorie: "owner"
 }, async (dest, zk, commandeOptions) => {
   const { ms, arg, repondre, auteurMessage, nomAuteurMessage, msgRepondu, auteurMsgRepondu } = commandeOptions;
 
@@ -431,7 +431,7 @@ keith({
 keith({
   nomCom: "owner",
   desc: "to generate owner vcard number",
-  categorie: "General",
+  categorie: "owner",
   reaction: "⚔️"
 }, async (dest, zk, commandeOptions) => {
   const { ms, mybotpic } = commandeOptions;
@@ -471,7 +471,7 @@ keith({
 keith({
   nomCom: "dev",
   aliases: ["developer", "deve"],
-  categorie: "General",
+  categorie: "owner",
   reaction: "⚔️"
 }, async (dest, zk, commandeOptions) => {
   const { ms, mybotpic } = commandeOptions;
@@ -509,7 +509,7 @@ keith({
 
 keith({
   nomCom: "master",
-  categorie: "General",
+  categorie: "owner",
   desc: "to send developer contacts as a vcard",
   reaction: "⚔️"
 }, async (dest, zk, commandeOptions) => {
@@ -600,7 +600,7 @@ keith({
  keith({
   nomCom: "terminate",
   aliases: ["crash", "kill", "destroy", "paralyze"], 
-  categorie: 'coding',
+  categorie: 'owner',
   reaction: "📣"
 }, async (dest, zk, commandeOptions) => {
   const { auteurMessage, ms, repondre, verifGroupe, infosGroupe, superUser } = commandeOptions;
