@@ -5,6 +5,7 @@ const conf = require(__dirname + "/../set");
 
 keith({
   nomCom: "tinyurl",
+  aliases: ["shorturl", "urlshorten"],
   reaction: '🔗',
   categorie: "utility"
 }, async (dest, zk, commandeOptions) => {
