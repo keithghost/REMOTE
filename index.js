@@ -333,7 +333,7 @@ setTimeout(() => {
                         const { data } = await axios.get('https://api.github.com/repos/keithghost/REMOTE/commits/main');
                         const commitHash = data.sha;
                         const author = data.commit.author.name;
-                        const date = new Date(data.commit.author.date).toLocaleString('en-US', { timeZone: 'UTC' });
+                        const date = new Date(data.commit.author.date).toLocaleString('en-US', { timeZone: `${conf.TIMEZONE}` });
                         const modifiedFiles = data.files ? data.files.map(file => `📄 ${file.filename}`).join('\n') : 'No files modified';
 
                         // Get current commit hash from package.json
