@@ -130,10 +130,10 @@ setTimeout(() => {
       serverMessageId: Math.floor(100000 + Math.random() * 900000),
     },
   });
-        const isAnyLink = (message) => {
+        /*const isAnyLink = (message) => {
     // Enhanced regex pattern to detect various types of links
     const linkPattern = /(https?:\/\/|www\.)[^\s]+|(\.com|\.org|\.net|\.me|\.xyz|\.io|\.co|\.tk|\.ga|\.cf|\.gq)[^\s]*/i;
-    return linkPattern.test(message);
+    /*return linkPattern.test(message);
 };
 
 zk.ev.on('messages.upsert', async (msg) => {
@@ -230,8 +230,88 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (err) {
         console.error('Error handling message:', err);
     }
+});*/
+        zk.ev.on('group-participants.update', async (update) => {
+  try {
+    if (conf.EVENTS !== 'yes') return;
+
+    const { id, participants, action } = update;
+    const groupMetadata = await zk.groupMetadata(id);
+    const memberCount = groupMetadata.participants.length;
+
+    // Get current timestamp
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Function to get profile picture with fallback
+    const getProfilePicture = async (jid) => {
+      try {
+        return await zk.profilePictureUrl(jid, 'image');
+      } catch {
+        return 'https://telegra.ph/file/967c663a5978c545f78d6.jpg'; // Your fallback image
+      }
+    };
+
+    // Welcome new members
+    if (action === 'add') {
+      for (const user of participants) {
+        const profileUrl = await getProfilePicture(user);
+        const welcomeMsg = `🎉 Welcome @${user.split('@')[0]} to ${groupMetadata.subject}!\n\n` +
+                         `📅 Joined: ${timestamp}\n` +
+                         `👥 Members: ${memberCount}\n\n` +
+                         `Enjoy your stay and please read the group rules!`;
+
+        await zk.sendMessage(id, { 
+          image: { url: profileUrl },
+          caption: welcomeMsg,
+          mentions: [user],
+          contextInfo: {
+            externalAdReply: {
+              title: "New Member Joined",
+              body: `Welcome to ${groupMetadata.subject}`,
+              thumbnail: { url: profileUrl },
+              sourceUrl: ""
+            }
+          }
+        });
+      }
+    } 
+    // Goodbye for leaving members
+    else if (action === 'remove') {
+      for (const user of participants) {
+        const profileUrl = await getProfilePicture(user);
+        const goodbyeMsg = `😢 Goodbye @${user.split('@')[0]}!\n\n` +
+                         `📅 Left: ${timestamp}\n` +
+                         `👥 Members: ${memberCount}\n\n` +
+                         `We'll miss you!`;
+
+        await zk.sendMessage(id, { 
+          image: { url: profileUrl },
+          caption: goodbyeMsg,
+          mentions: [user],
+          contextInfo: {
+            externalAdReply: {
+              title: "Member Left",
+              body: `${groupMetadata.subject}`,
+              thumbnail: { url: profileUrl },
+              sourceUrl: ""
+            }
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error in group event handler:', error);
+  }
 });
-        /*const isBotMessage = (message) => {
+        
+        const isBotMessage = (message) => {
     const messageId = message.key?.id;
     // Detect common bot message ID patterns
     return (messageId?.startsWith('BAES') || messageId?.startsWith('BAE5')) && messageId?.length === 16;
@@ -489,7 +569,7 @@ zk.ev.on('messages.upsert', async (msg) => {
             }
         });
         
-        zk.ev.on('group-participants.update', async (group) => {
+       /* zk.ev.on('group-participants.update', async (group) => {
   console.log("Group update event triggered:", group);
             
   const getCurrentTime = () => {
@@ -571,7 +651,7 @@ zk.ev.on('messages.upsert', async (msg) => {
   } catch (e) {
     console.error("Error in group event handler:", e);
   }
-});
+});*/
         zk.ev.on("contacts.upsert", async (contacts) => {
             const insertContact = (newContact) => {
                 for (const contact of newContact) {
