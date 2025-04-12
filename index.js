@@ -714,7 +714,7 @@ async function handleMediaMessage(chatJid, notification, mediaMessage, type, lab
                     }
                 });
             }
-            if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+            /*if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
   try {
     const currentTime = Date.now();
     if (currentTime - lastTextTime < messageDelay) return;
@@ -735,7 +735,7 @@ async function handleMediaMessage(chatJid, notification, mediaMessage, type, lab
     console.error('Chatbot error:', error);
     // No error message sent to user
   }
-}
+}*/
             
             if (verifCom) {
                 const cd = evt.cm.find(keith => keith.nomCom === com || keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
