@@ -332,7 +332,7 @@ zk.ev.on('messages.upsert', async (msg) => {
             const superUser = allAllowedNumbers.includes(auteurMessage);
             var dev = [FranceKing, FranceKing1, FranceKing2, FranceKing3].map((t) => t.replace(/[^0-9]/g) + "@s.whatsapp.net").includes(auteurMessage);
             function repondre(mes) { zk.sendMessage(origineMessage, { text: mes }, { quoted: ms }); }
-            console.log("\t [][]...{KEITH-TECH}...[][]");
+            console.log("\t [][]...{ALPHA-MD}...[][]");
             console.log("=========== New Message ===========");
             if (verifGroupe) {
                 console.log("Message from the group: " + nomGroupe);
