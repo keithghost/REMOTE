@@ -307,6 +307,89 @@ setTimeout(() => {
             }
         });
         
+        zk.ev.on('group-participants.update', async (group) => {
+  console.log("Group update event triggered:", group);
+            
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  try {
+    const metadata = await zk.groupMetadata(group.id);
+    const memberCount = metadata.participants.length;
+    const currentTime = getCurrentTime();
+
+    if (conf.EVENTS === 'yes') {
+      if (group.action === 'add') {
+        let membres = group.participants;
+        const memberPPs = await Promise.all(membres.map(async (membre) => {
+          try {
+            return await zk.profilePictureUrl(membre, 'image');
+          } catch {
+            return 'https://telegra.ph/file/967c663a5978c545f78d6.jpg';
+          }
+        }));
+
+        for (let i = 0; i < membres.length; i++) {
+          const contextInfo = getContextInfo('Welcome Message', membres[i]);
+          const welcomeMsg = `👋 *Welcome @${membres[i].split("@")[0]}!*\n\n` +
+                             `📅 Joined: ${currentTime}\n` +
+                             `👥 We're now ${memberCount} members\n\n` +
+                             `Please read the group rules in the description!`;
+
+          await zk.sendMessage(group.id, {
+            image: { url: memberPPs[i] },
+            caption: welcomeMsg,
+            mentions: [membres[i]],
+            contextInfo: contextInfo
+          });
+        }
+      }
+      else if (group.action === 'remove') {
+        let membres = group.participants;
+        
+        for (let membre of membres) {
+          try {
+            const ppuser = await zk.profilePictureUrl(membre, 'image');
+            const contextInfo = getContextInfo('Goodbye Message', membre);
+            const goodbyeMsg = `😢 *@${membre.split("@")[0]} left the group*\n\n` +
+                              `📅 Left: ${currentTime}\n` +
+                              `👥 Remaining members: ${memberCount}`;
+
+            await zk.sendMessage(group.id, {
+              image: { url: ppuser },
+              caption: goodbyeMsg,
+              mentions: [membre],
+              contextInfo: contextInfo
+            });
+          } catch (e) {
+            console.error("Error sending leave message:", e);
+            const contextInfo = getContextInfo('Goodbye Message', membre);
+            const goodbyeMsg = `😢 *@${membre.split("@")[0]} left the group*\n\n` +
+                              `📅 Left: ${currentTime}\n` +
+                              `👥 Remaining members: ${memberCount}`;
+
+            await zk.sendMessage(group.id, {
+              text: goodbyeMsg,
+              mentions: [membre],
+              contextInfo: contextInfo
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error in group event handler:", e);
+  }
+});
         zk.ev.on("contacts.upsert", async (contacts) => {
             const insertContact = (newContact) => {
                 for (const contact of newContact) {
