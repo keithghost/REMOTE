@@ -119,6 +119,28 @@ setTimeout(() => {
        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         let lastTextTime = 0;
         const messageDelay = 5000;  
+        
+       zk.ev.on("call", async callData => {
+  if (conf.ANTICALL === 'yes') {
+    const callId = callData[0].id;
+    const callerId = callData[0].from;
+    const currentTime = Date.now();
+
+    if (currentTime - lastTextTime >= messageDelay) {
+      try {
+        await zk.rejectCall(callId, callerId);
+        await zk.sendMessage(callerId, {
+          text: conf.ANTICALL_MSG
+        });
+        lastTextTime = currentTime;
+      } catch (error) {
+        console.error('Error handling call:', error);
+      }
+    } else {
+      console.log('Message not sent due to delay constraint');
+    }
+  }
+}); 
         //newsletter forwading 
         const getContextInfo = (title = '', userJid = '') => ({
     mentionedJid: [userJid],
