@@ -345,7 +345,7 @@ setTimeout(() => {
                             console.error('Error reading package.json:', error);
                         }
 
-                        commitInfo = `\n╭───◇\n┃ *Latest Updates*\n┃\n┃ *Last Commit*: \`${commitHash}\`\n┃ *Author*: ${author}\n┃ *Date*: ${date}\n┃ *Files Modified*:\n${modifiedFiles}\n┃\n┃ To update: run \`.update or restart your bot\`\n╰═════════════════⊷`;
+                        commitInfo = `\n╭───◇\n┃ *Latest Updates*\n┃\n┃ *Last Commit*: \`${commitHash}\`\n┃ *Author*: ${conf.OWNER_NAME}\n┃ *Date*: ${date}\n┃ *Files Modified*:\n${modifiedFiles}\n┃\n┃ To update: run \`.update or restart your bot\`\n╰═════════════════⊷`;
                     } catch (error) {
                         console.error('Error fetching GitHub commit info:', error);
                         commitInfo = "\n╭───◇\n┃ *Update Info*\n┃\n┃ Failed to fetch update information\n╰═════════════════⊷";
