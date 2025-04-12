@@ -943,6 +943,28 @@ if (texte && texte.startsWith('>')) {
     await zk.sendMessage(origineMessage, { text: String(err) });
   }
 }
+            if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+  try {
+    const currentTime = Date.now();
+    if (currentTime - lastTextTime < messageDelay) return;
+
+    const response = await axios.get('https://apis-keith.vercel.app/ai/gpt', {
+      params: { q: texte },
+      timeout: 10000
+    });
+
+    if (response.data?.status && response.data?.result) {
+      await zk.sendMessage(origineMessage, {
+        text: response.data.result,
+        contextInfo: getContextInfo()
+      });
+      lastTextTime = currentTime;
+    }
+  } catch (error) {
+    console.error('Chatbot error:', error);
+    // No error message sent to user
+  }
+}
 
             
 /*if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
