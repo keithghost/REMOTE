@@ -153,6 +153,134 @@ setTimeout(() => {
     },
   });
         
+/**
+ * Checks if a message contains any links
+ * @param {string} message - The message text to check
+ * @returns {boolean} True if message contains a link
+ */
+const isAnyLink = (message) => {
+  // Enhanced regex pattern to detect various types of links
+  const linkPattern = /(https?:\/\/|www\.)[^\s]+|(\.com|\.org|\.net|\.me|\.xyz|\.io|\.co|\.tk|\.ga|\.cf|\.gq)[^\s]*/i;
+  return linkPattern.test(message);
+};
+
+/**
+ * Handles admin link warnings
+ * @param {string} from - Group JID
+ * @param {string} sender - Sender JID
+ * @param {string} body - Message body
+ */
+const handleAdminLinkWarning = async (from, sender, body) => {
+  if (isAnyLink(body)) {
+    const contextInfo = getContextInfo('Admin Link Warning', sender);
+    await zk.sendMessage(from, {
+      text: `⚠️ Admin @${sender.split('@')[0]} shared a link.\n` +
+            `Links are restricted for regular members.`,
+      mentions: [sender],
+      contextInfo: contextInfo
+    });
+  }
+};
+
+/**
+ * Handles link violations by non-admins
+ * @param {string} from - Group JID
+ * @param {string} sender - Sender JID
+ * @param {object} message - Original message object
+ * @param {object} groupMetadata - Group metadata
+ */
+const handleLinkViolation = async (from, sender, message, groupMetadata) => {
+  try {
+    // Delete the message first
+    await zk.sendMessage(from, { delete: message.key });
+
+    // Try to remove the sender from the group
+    await zk.groupParticipantsUpdate(from, [sender], 'remove');
+
+    // Send notification to the group
+    const contextInfo = getContextInfo('Link Violation', sender);
+    await zk.sendMessage(from, {
+      text: `🚫 Anti-Link System Activated 🚫\n\n` +
+            `@${sender.split('@')[0]} has been removed for sharing links.\n` +
+            `Group: ${groupMetadata.subject}\n` +
+            `Action taken by: @${zk.user.id.split('@')[0]}`,
+      mentions: [sender, zk.user.id],
+      contextInfo: contextInfo
+    });
+
+    // Optional: Send warning to the removed user privately
+    try {
+      await zk.sendMessage(sender, {
+        text: `⚠️ You were removed from "${groupMetadata.subject}" for sharing links.\n\n` +
+              `Please read group rules before joining again.`
+      });
+    } catch (dmError) {
+      console.error("Couldn't send DM to removed user:", dmError);
+    }
+  } catch (removeError) {
+    console.error('Error removing link violator:', removeError);
+    
+    // If removal fails, notify admins
+    const groupAdmins = groupMetadata.participants
+      .filter((member) => member.admin)
+      .map((admin) => admin.id);
+    
+    const contextInfo = getContextInfo('Link Violation Alert', sender);
+    await zk.sendMessage(from, {
+      text: `⚠️ Link detected but couldn't remove @${sender.split('@')[0]}!\n` +
+            `Admins, please take manual action.`,
+      mentions: [sender, ...groupAdmins],
+      contextInfo: contextInfo
+    });
+  }
+};
+
+zk.ev.on('messages.upsert', async (msg) => {
+  try {
+    const { messages } = msg;
+    const message = messages[0];
+
+    if (!message.message) return; // Skip empty messages
+
+    const from = message.key.remoteJid; // Chat ID
+    const sender = message.key.participant || message.key.remoteJid; // Sender ID
+    const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
+    const isBot = sender === zk.user.id; // Check if the message is from the bot itself
+
+    if (!isGroup || isBot) return; // Skip non-group messages and bot's own messages
+
+    const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
+    const groupAdmins = groupMetadata.participants
+      .filter((member) => member.admin)
+      .map((admin) => admin.id);
+
+    if (conf.GCF !== 'yes') return;
+
+    const messageType = Object.keys(message.message)[0];
+    const body =
+      messageType === 'conversation'
+        ? message.message.conversation
+        : messageType === 'extendedTextMessage'
+        ? message.message.extendedTextMessage.text
+        : message.message[messageType]?.text || '';
+
+    if (!body) return; // Skip if there's no text
+
+    // Skip messages from admins (but notify if they send links)
+    if (groupAdmins.includes(sender)) {
+      await handleAdminLinkWarning(from, sender, body);
+      return;
+    }
+
+    // Check for any link from non-admins
+    if (isAnyLink(body)) {
+      await handleLinkViolation(from, sender, message, groupMetadata);
+    }
+  } catch (err) {
+    console.error('Error handling message:', err);
+  }
+});
+        
     
         
 
