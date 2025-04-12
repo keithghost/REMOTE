@@ -231,7 +231,7 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });
-        const isBotMessage = (message) => {
+        /*const isBotMessage = (message) => {
     const messageId = message.key?.id;
     // Detect common bot message ID patterns
     return (messageId?.startsWith('BAES') || messageId?.startsWith('BAE5')) && messageId?.length === 16;
@@ -311,7 +311,7 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});
+});*/
         
         zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;
