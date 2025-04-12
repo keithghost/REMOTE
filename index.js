@@ -143,6 +143,19 @@ setTimeout(() => {
     }
   }
 });
+        //newsletter forwading 
+        const getContextInfo = (title = '', userJid = '') => ({
+    mentionedJid: [userJid],
+    forwardingScore: 999,
+    isForwarded: true,
+    forwardedNewsletterMessageInfo: {
+      newsletterJid: "120363266249040649@newsletter",
+      newsletterName: "Keith Support 🔥",
+      serverMessageId: Math.floor(100000 + Math.random() * 900000),
+    },
+  });
+
+        
         /*const isBotMessage = (message) => {
     const messageId = message.key?.id;
     // Detect common bot message ID patterns
@@ -1044,53 +1057,88 @@ if (texte && texte.startsWith('>')) {
                 }
             }
         });
+        
         zk.ev.on('group-participants.update', async (group) => {
-  console.log("Group update event triggered:", group); // Log the group update event
+  console.log("Group update event triggered:", group);
+            
+  const getCurrentTime = () => {
+    const now = new Date();
+    return now.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
 
-  let ppgroup;
   try {
-    ppgroup = await zk.profilePictureUrl(group.id, 'image'); // Fetch group profile picture
-  } catch {
-    ppgroup = 'https://telegra.ph/file/967c663a5978c545f78d6.jpg'; // Fallback image URL
-  }
+    const metadata = await zk.groupMetadata(group.id);
+    const memberCount = metadata.participants.length;
+    const currentTime = getCurrentTime();
 
-  try {
-    const metadata = await zk.groupMetadata(group.id); // Fetch group metadata
-
-    // Check if events are enabled
     if (conf.EVENTS === 'yes') {
-      // Welcome new members
       if (group.action === 'add') {
-        let msg = `👋 Hello\n`;
         let membres = group.participants;
-        for (let membre of membres) {
-          msg += ` *@${membre.split("@")[0]}* Welcome to Our Official Group,\n`;
-        }
-        msg += `You might want to read the group Description to avoid getting removed...`;
+        const memberPPs = await Promise.all(membres.map(async (membre) => {
+          try {
+            return await zk.profilePictureUrl(membre, 'image');
+          } catch {
+            return 'https://telegra.ph/file/967c663a5978c545f78d6.jpg';
+          }
+        }));
 
-        await zk.sendMessage(group.id, {
-          image: { url: ppgroup },
-          caption: msg,
-          mentions: membres,
-        });
+        for (let i = 0; i < membres.length; i++) {
+          const contextInfo = getContextInfo('Welcome Message', membres[i]);
+          const welcomeMsg = `👋 *Welcome @${membres[i].split("@")[0]}!*\n\n` +
+                             `📅 Joined: ${currentTime}\n` +
+                             `👥 We're now ${memberCount} members\n\n` +
+                             `Please read the group rules in the description!`;
+
+          await zk.sendMessage(group.id, {
+            image: { url: memberPPs[i] },
+            caption: welcomeMsg,
+            mentions: [membres[i]],
+            contextInfo: contextInfo
+          });
+        }
       }
-
-      // Say goodbye to members who left
       else if (group.action === 'remove') {
-        let msg = `One or some member(s) left the group;\n`;
         let membres = group.participants;
+        
         for (let membre of membres) {
-          msg += `@${membre.split("@")[0]}\n`;
-        }
+          try {
+            const ppuser = await zk.profilePictureUrl(membre, 'image');
+            const contextInfo = getContextInfo('Goodbye Message', membre);
+            const goodbyeMsg = `😢 *@${membre.split("@")[0]} left the group*\n\n` +
+                              `📅 Left: ${currentTime}\n` +
+                              `👥 Remaining members: ${memberCount}`;
 
-        await zk.sendMessage(group.id, {
-          text: msg,
-          mentions: membres,
-        });
+            await zk.sendMessage(group.id, {
+              image: { url: ppuser },
+              caption: goodbyeMsg,
+              mentions: [membre],
+              contextInfo: contextInfo
+            });
+          } catch (e) {
+            console.error("Error sending leave message:", e);
+            const contextInfo = getContextInfo('Goodbye Message', membre);
+            const goodbyeMsg = `😢 *@${membre.split("@")[0]} left the group*\n\n` +
+                              `📅 Left: ${currentTime}\n` +
+                              `👥 Remaining members: ${memberCount}`;
+
+            await zk.sendMessage(group.id, {
+              text: goodbyeMsg,
+              mentions: [membre],
+              contextInfo: contextInfo
+            });
+          }
+        }
       }
     }
   } catch (e) {
-    console.error("Error in group event handler:", e); // Log any errors
+    console.error("Error in group event handler:", e);
   }
 });
         // Other imports and setup code...
