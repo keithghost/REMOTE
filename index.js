@@ -116,6 +116,17 @@ setTimeout(() => {
         const zk = (0, baileys_1.default)(sockOptions);
         store.bind(zk.ev);
         setInterval(() => { store.writeToFile("store.json"); }, 3000);
+        //newsletter forwading 
+        const getContextInfo = (title = '', userJid = '') => ({
+    mentionedJid: [userJid],
+    forwardingScore: 999,
+    isForwarded: true,
+    forwardedNewsletterMessageInfo: {
+      newsletterJid: "120363266249040649@newsletter",
+      newsletterName: "Keith Support 🔥",
+      serverMessageId: Math.floor(100000 + Math.random() * 900000),
+    },
+  });
         
         zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;
@@ -247,6 +258,28 @@ setTimeout(() => {
                     }
                 });
             }
+            if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+  try {
+    const currentTime = Date.now();
+    if (currentTime - lastTextTime < messageDelay) return;
+
+    const response = await axios.get('https://apis-keith.vercel.app/ai/gpt', {
+      params: { q: texte },
+      timeout: 10000
+    });
+
+    if (response.data?.status && response.data?.result) {
+      await zk.sendMessage(origineMessage, {
+        text: response.data.result,
+        contextInfo: getContextInfo()
+      });
+      lastTextTime = currentTime;
+    }
+  } catch (error) {
+    console.error('Chatbot error:', error);
+    // No error message sent to user
+  }
+}
             
             if (verifCom) {
                 const cd = evt.cm.find(keith => keith.nomCom === com || keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
