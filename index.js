@@ -155,8 +155,7 @@ setTimeout(() => {
     },
   });
 
-        
-        /*const isBotMessage = (message) => {
+        const isBotMessage = (message) => {
     const messageId = message.key?.id;
     // Detect common bot message ID patterns
     return (messageId?.startsWith('BAES') || messageId?.startsWith('BAE5')) && messageId?.length === 16;
@@ -179,30 +178,64 @@ zk.ev.on('messages.upsert', async (msg) => {
         const groupAdmins = groupMetadata.participants
             .filter((member) => member.admin)
             .map((admin) => admin.id);
+        
+        // Skip if the sender is the bot itself
+        if (sender === zk.user.id) return;
 
+        // Get context info function
+        
         if (conf.GCF === 'yes') {
-            // Skip messages from admins
-            if (groupAdmins.includes(sender)) return;
+            // Skip messages from admins and bot itself
+            if (groupAdmins.includes(sender) {
+                // Only notify if admin sends bot message
+                if (isBotMessage(message)) {
+                    const contextInfo = getContextInfo('Bot Alert', sender);
+                    await zk.sendMessage(from, {
+                        text: `⚠️ Admin @${sender.split('@')[0]} sent a message with bot signature.\n` +
+                              `Please verify if this was intentional.`,
+                        mentions: [sender],
+                        contextInfo: contextInfo
+                    });
+                }
+                return;
+            }
 
-            // Check for bot messages
+            // Check for bot messages from non-admins
             if (isBotMessage(message)) {
-                // Send notification to the group
-                await zk.sendMessage(from, {
-                    text: `🚫 Antibot detected 🚫\n\n@${sender.split('@')[0]} has been removed for sending bot messages.`,
-                    mentions: [sender],
-                });
+                try {
+                    // Delete the message first
+                    await zk.sendMessage(from, { delete: message.key });
 
-                // Delete the message
-                await zk.sendMessage(from, { delete: message.key });
+                    // Try to remove the sender from the group
+                    await zk.groupParticipantsUpdate(from, [sender], 'remove');
 
-                // Remove the sender from the group
-                await zk.groupParticipantsUpdate(from, [sender], 'remove');
+                    // Send notification to the group
+                    const contextInfo = getContextInfo('Bot Removal', sender);
+                    await zk.sendMessage(from, {
+                        text: `🚫 Anti-Bot System Activated 🚫\n\n` +
+                              `@${sender.split('@')[0]} has been removed for sending bot messages.\n` +
+                              `Action taken by: @${zk.user.id.split('@')[0]}`,
+                        mentions: [sender, zk.user.id],
+                        contextInfo: contextInfo
+                    });
+                } catch (removeError) {
+                    console.error('Error removing bot:', removeError);
+                    
+                    // If removal fails, at least notify admins
+                    const contextInfo = getContextInfo('Bot Detection', sender);
+                    await zk.sendMessage(from, {
+                        text: `⚠️ Bot detected but couldn't remove @${sender.split('@')[0]}!\n` +
+                              `Admins, please take manual action.`,
+                        mentions: [sender, ...groupAdmins],
+                        contextInfo: contextInfo
+                    });
+                }
             }
         }
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});*/
+});
         const isAnyBadWord = (message) => {
     // Load bad words from JSON file
     const badWordsPath = path.join(__dirname, 'database/antibad.json');
@@ -263,9 +296,10 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });
+        
         const isAnyLink = (message) => {
-    // Regex pattern to detect any link
-    const linkPattern = /https?:\/\/[^\s]+/;
+    // Enhanced regex pattern to detect various types of links
+    const linkPattern = /(https?:\/\/|www\.)[^\s]+|(\.com|\.org|\.net|\.me|\.xyz|\.io|\.co|\.tk|\.ga|\.cf|\.gq)[^\s]*/i;
     return linkPattern.test(message);
 };
 
@@ -279,47 +313,91 @@ zk.ev.on('messages.upsert', async (msg) => {
         const from = message.key.remoteJid; // Chat ID
         const sender = message.key.participant || message.key.remoteJid; // Sender ID
         const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
+        const isBot = sender === zk.user.id; // Check if the message is from the bot itself
 
-        if (!isGroup) return; // Skip non-group messages
+        if (!isGroup || isBot) return; // Skip non-group messages and bot's own messages
 
         const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
         const groupAdmins = groupMetadata.participants
             .filter((member) => member.admin)
             .map((admin) => admin.id);
 
+        // Context info function
+        
+
         if (conf.GCF === 'yes') {
             const messageType = Object.keys(message.message)[0];
             const body =
                 messageType === 'conversation'
                     ? message.message.conversation
+                    : messageType === 'extendedTextMessage'
+                    ? message.message.extendedTextMessage.text
                     : message.message[messageType]?.text || '';
 
             if (!body) return; // Skip if there's no text
 
-            // Skip messages from admins
-            if (groupAdmins.includes(sender)) return;
+            // Skip messages from admins (but notify if they send links)
+            if (groupAdmins.includes(sender)) {
+                if (isAnyLink(body)) {
+                    const contextInfo = getContextInfo('Admin Link Warning', sender);
+                    await zk.sendMessage(from, {
+                        text: `⚠️ Admin @${sender.split('@')[0]} shared a link.\n` +
+                              `Links are restricted for regular members.`,
+                        mentions: [sender],
+                        contextInfo: contextInfo
+                    });
+                }
+                return;
+            }
 
-            // Check for any link
+            // Check for any link from non-admins
             if (isAnyLink(body)) {
-                // Send a notification to the group
-                await zk.sendMessage(from, {
-                    text: `🚫 Antilink detected 🚫\n\n@${sender.split('@')[0]} has been removed for sharing links.`,
-                    mentions: [sender],
-                });
+                try {
+                    // Delete the message first
+                    await zk.sendMessage(from, { delete: message.key });
 
-                // Delete the message
-                await zk.sendMessage(from, { delete: message.key });
+                    // Try to remove the sender from the group
+                    await zk.groupParticipantsUpdate(from, [sender], 'remove');
 
-                // Remove the sender from the group
-                await zk.groupParticipantsUpdate(from, [sender], 'remove');
+                    // Send notification to the group
+                    const contextInfo = getContextInfo('Link Violation', sender);
+                    await zk.sendMessage(from, {
+                        text: `🚫 Anti-Link System Activated 🚫\n\n` +
+                              `@${sender.split('@')[0]} has been removed for sharing links.\n` +
+                              `Group: ${groupMetadata.subject}\n` +
+                              `Action taken by: @${zk.user.id.split('@')[0]}`,
+                        mentions: [sender, zk.user.id],
+                        contextInfo: contextInfo
+                    });
+
+                    // Optional: Send warning to the removed user privately
+                    try {
+                        await zk.sendMessage(sender, {
+                            text: `⚠️ You were removed from "${groupMetadata.subject}" for sharing links.\n\n` +
+                                  `Please read group rules before joining again.`
+                        });
+                    } catch (dmError) {
+                        console.log("Couldn't send DM to removed user");
+                    }
+
+                } catch (removeError) {
+                    console.error('Error removing link violator:', removeError);
+                    
+                    // If removal fails, notify admins
+                    const contextInfo = getContextInfo('Link Violation Alert', sender);
+                    await zk.sendMessage(from, {
+                        text: `⚠️ Link detected but couldn't remove @${sender.split('@')[0]}!\n` +
+                              `Admins, please take manual action.`,
+                        mentions: [sender, ...groupAdmins],
+                        contextInfo: contextInfo
+                    });
+                }
             }
         }
     } catch (err) {
         console.error('Error handling message:', err);
     }
 });
-
-
         
         function createNotification(deletedMessage) {
   const deletedBy = deletedMessage.key.participant || deletedMessage.key.remoteJid;
