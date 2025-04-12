@@ -189,7 +189,7 @@ const handleAdminLinkWarning = async (from, sender, body) => {
  * @param {object} message - Original message object
  * @param {object} groupMetadata - Group metadata
  */
-const handleLinkViolation = async (from, sender, message, groupMetadata) => {
+/*const handleLinkViolation = async (from, sender, message, groupMetadata) => {
   try {
     // Delete the message first
     await zk.sendMessage(from, { delete: message.key });
@@ -279,7 +279,67 @@ zk.ev.on('messages.upsert', async (msg) => {
   } catch (err) {
     console.error('Error handling message:', err);
   }
+});*/
+        const isAnyLink = (message) => {
+    // Regex pattern to detect any link
+    const linkPattern = /https?:\/\/[^\s]+/;
+    return linkPattern.test(message);
+};
+
+zk.ev.on('messages.upsert', async (msg) => {
+    try {
+        const { messages } = msg;
+        const message = messages[0];
+
+        if (!message.message) return; // Skip empty messages
+
+        const from = message.key.remoteJid; // Chat ID
+        const sender = message.key.participant || message.key.remoteJid; // Sender ID
+        const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
+
+        if (!isGroup) return; // Skip non-group messages
+
+        const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
+        const groupAdmins = groupMetadata.participants
+            .filter((member) => member.admin)
+            .map((admin) => admin.id);
+
+        // Check if ANTI-LINK is enabled for the group
+        if (conf.GCF === 'yes') {
+            const messageType = Object.keys(message.message)[0];
+            const body =
+                messageType === 'conversation'
+                    ? message.message.conversation
+                    : message.message[messageType]?.text || '';
+
+            if (!body) return; // Skip if there's no text
+
+            // Skip messages from admins
+            if (groupAdmins.includes(sender)) return;
+
+            // Check for any link
+            if (isAnyLink(body)) {
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
+
+                // Remove the sender from the group
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
+
+                // Send a notification to the group
+                await zk.sendMessage(
+                    from,
+                    {
+                        text: `🗿antilink detected!\n User @${sender.split('@')[0]} has been removed for sharing a link`,
+                        mentions: [sender],
+                    }
+                );
+            }
+        }
+    } catch (err) {
+        console.error('Error handling message:', err);
+    }
 });
+        
         
     
         
