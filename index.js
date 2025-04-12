@@ -116,6 +116,9 @@ setTimeout(() => {
         const zk = (0, baileys_1.default)(sockOptions);
         store.bind(zk.ev);
         setInterval(() => { store.writeToFile("store.json"); }, 3000);
+       const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+        let lastTextTime = 0;
+        const messageDelay = 5000;  
         //newsletter forwading 
         const getContextInfo = (title = '', userJid = '') => ({
     mentionedJid: [userJid],
