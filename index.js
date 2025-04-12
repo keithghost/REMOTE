@@ -291,7 +291,7 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});*/
+});
         
         zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;
