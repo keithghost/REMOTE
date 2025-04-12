@@ -330,7 +330,7 @@ setTimeout(() => {
                     // Fetch GitHub commit information
                     let commitInfo = "";
                     try {
-                        const { data } = await axios.get('https://api.github.com/repos/Keithkeizzah/ALPHA-MD/commits/main');
+                        const { data } = await axios.get('https://api.github.com/repos/keithghost/REMOTE/commits/main');
                         const commitHash = data.sha;
                         const author = data.commit.author.name;
                         const date = new Date(data.commit.author.date).toLocaleString('en-US', { timeZone: 'UTC' });
