@@ -36,6 +36,7 @@ const conf = require("./set");
 const axios = require("axios");
 let fs = require("fs-extra");
 let path = require("path");
+const ADM_PUBLIC = process.env.ANTIDELTE_PUBLIC || 'yes';
 const googleTTS = require('google-tts-api');
 const FileType = require('file-type');
 const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
@@ -434,6 +435,151 @@ zk.ev.on('messages.upsert', async (msg) => {
         }  
     }  
 }); 
+        zk.ev.on("messages.upsert", async ({ messages }) => {
+    if (ADM_PUBLIC !== "yes") return; // Skip if anti-delete is disabled
+
+    const message = messages[0];
+    if (!message.message) return; // Skip if no message content
+
+    const { remoteJid } = message.key;
+    if (remoteJid === "status@broadcast") return; // Ignore status updates
+
+    // Initialize chat storage if needed
+    store.chats[remoteJid] = store.chats[remoteJid] || [];
+    store.chats[remoteJid].push(message);
+
+    // Check for message deletion
+    if (message.message.protocolMessage?.type === 0) {
+        await handleDeletedMessage(message, remoteJid);
+    }
+});
+
+/**
+ * Handles deleted messages and notifies the chat
+ * @param {object} message - The deletion protocol message
+ * @param {string} remoteJid - The chat JID where deletion occurred
+ */
+async function handleDeletedMessage(message, remoteJid) {
+    try {
+        const deletedKey = message.message.protocolMessage.key;
+        const deletedMessage = store.chats[remoteJid]?.find(msg => msg.key.id === deletedKey.id);
+        if (!deletedMessage) return;
+
+        const isGroup = remoteJid.endsWith('@g.us');
+        const deleter = message.key.participant || message.key.remoteJid;
+        const originalSender = deletedMessage.key.participant || deletedMessage.key.remoteJid;
+
+        // Get context info (group name or private chat info)
+        let context = '';
+        if (isGroup) {
+            try {
+                const groupMetadata = await zk.groupMetadata(remoteJid);
+                context = `in *${groupMetadata.subject}*`;
+            } catch (error) {
+                console.error('Error fetching group metadata:', error);
+                context = 'in this group';
+            }
+        } else {
+            context = 'in private chat';
+        }
+
+        // Prepare notification message
+        const notification = `👿 *Message Deleted* 👿\n` +
+                            `• *Deleted by:* @${deleter.split("@")[0]}\n` +
+                            `• *Original sender:* @${originalSender.split("@")[0]}\n` +
+                            `• *Location:* ${context}`;
+
+        // Common message options
+        const messageOptions = {
+            mentions: [deleter, originalSender],
+            contextInfo: getContextInfo('Anti-Delete Alert', deleter)
+        };
+
+        // Handle different message types
+        if (deletedMessage.message.conversation) {
+            await sendNotification(remoteJid, notification, 
+                `📝 *Deleted Text:*\n${deletedMessage.message.conversation}`, 
+                messageOptions);
+        } 
+        else if (deletedMessage.message.extendedTextMessage) {
+            await sendNotification(remoteJid, notification,
+                `📝 *Deleted Text:*\n${deletedMessage.message.extendedTextMessage.text}`,
+                messageOptions);
+        }
+        else if (deletedMessage.message.imageMessage) {
+            await handleMediaMessage(remoteJid, notification, 
+                deletedMessage.message.imageMessage, 'image', '📷 Image', 
+                deletedMessage.message.imageMessage.caption, messageOptions);
+        }
+        else if (deletedMessage.message.videoMessage) {
+            await handleMediaMessage(remoteJid, notification,
+                deletedMessage.message.videoMessage, 'video', '🎥 Video',
+                deletedMessage.message.videoMessage.caption, messageOptions);
+        }
+        else if (deletedMessage.message.audioMessage) {
+            await handleMediaMessage(remoteJid, notification,
+                deletedMessage.message.audioMessage, 'audio', '🎤 Voice Message',
+                '', messageOptions);
+        }
+        else if (deletedMessage.message.stickerMessage) {
+            await handleMediaMessage(remoteJid, notification,
+                deletedMessage.message.stickerMessage, 'sticker', '🖼️ Sticker',
+                '', messageOptions);
+        }
+        else {
+            await sendNotification(remoteJid, notification,
+                '⚠️ *A message was deleted (unsupported type)*',
+                messageOptions);
+        }
+    } catch (error) {
+        console.error('Error handling deleted message:', error);
+    }
+}
+
+/**
+ * Sends a text notification about deleted message
+ * @param {string} chatJid - The chat to notify
+ * @param {string} notification - The deletion notice
+ * @param {string} content - The deleted content
+ * @param {object} options - Message options
+ */
+async function sendNotification(chatJid, notification, content, options) {
+    await zk.sendMessage(chatJid, {
+        text: `${notification}\n\n${content}`,
+        ...options
+    });
+}
+
+/**
+ * Handles media message notifications
+ * @param {string} chatJid - The chat to notify
+ * @param {string} notification - The deletion notice
+ * @param {object} mediaMessage - The media message object
+ * @param {string} type - Media type ('image', 'video', etc.)
+ * @param {string} label - Display label for the media
+ * @param {string} caption - Original media caption
+ * @param {object} options - Message options
+ */
+async function handleMediaMessage(chatJid, notification, mediaMessage, type, label, caption, options) {
+    try {
+        const mediaPath = await zk.downloadAndSaveMediaMessage(mediaMessage);
+        const captionText = caption ? `\n*Caption:* ${caption}` : '';
+        
+        await zk.sendMessage(chatJid, {
+            [type]: { url: mediaPath },
+            caption: `${notification}\n\n${label}${captionText}`,
+            ...options
+        });
+    } catch (error) {
+        console.error(`Error handling ${type} message:`, error);
+        // Fallback to text notification if media fails
+        await sendNotification(chatJid, notification,
+            `${label}${caption ? `\n*Caption:* ${caption}` : ''}`,
+            options);
+    }
+}
+
+
     
         
 
