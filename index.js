@@ -153,34 +153,7 @@ setTimeout(() => {
     },
   });
         
-/**
- * Checks if a message contains any links
- * @param {string} message - The message text to check
- * @returns {boolean} True if message contains a link
- */
-const isAnyLink = (message) => {
-  // Enhanced regex pattern to detect various types of links
-  const linkPattern = /(https?:\/\/|www\.)[^\s]+|(\.com|\.org|\.net|\.me|\.xyz|\.io|\.co|\.tk|\.ga|\.cf|\.gq)[^\s]*/i;
-  return linkPattern.test(message);
-};
 
-/**
- * Handles admin link warnings
- * @param {string} from - Group JID
- * @param {string} sender - Sender JID
- * @param {string} body - Message body
- */
-const handleAdminLinkWarning = async (from, sender, body) => {
-  if (isAnyLink(body)) {
-    const contextInfo = getContextInfo('Admin Link Warning', sender);
-    await zk.sendMessage(from, {
-      text: `⚠️ Admin @${sender.split('@')[0]} shared a link.\n` +
-            `Links are restricted for regular members.`,
-      mentions: [sender],
-      contextInfo: contextInfo
-    });
-  }
-};
 
 /**
  * Handles link violations by non-admins
