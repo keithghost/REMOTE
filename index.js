@@ -315,7 +315,9 @@ zk.ev.on('messages.upsert', async (msg) => {
 });
         
         
-       zk.ev.on("messages.upsert", async (m) => {  
+        
+
+zk.ev.on("messages.upsert", async (m) => {  
     if (conf.ADM !== "yes") return; // Ensure antidelete is enabled  
 
     const { messages } = m;  
@@ -354,20 +356,21 @@ zk.ev.on('messages.upsert', async (msg) => {
             if (isGroup) {
                 try {
                     const groupMetadata = await zk.groupMetadata(remoteJid);
-                    groupInfo = `\nGroup: ${groupMetadata.subject}`;
+                    groupInfo = `\n• Group: ${groupMetadata.subject} (${remoteJid})`;
                 } catch (e) {
                     console.error('Error fetching group metadata:', e);
+                    groupInfo = `\n• Group: ${remoteJid}`;
                 }
             }
 
-            const notification = `👿 *Message Deleted* 👿\n` +
+            const notification = `🗿 *Alpha antidelete* 🗿\n` +
                                 `• Deleted by: @${deleterJid.split("@")[0]}\n` +
                                 `• Original sender: @${originalSenderJid.split("@")[0]}\n` +
                                 `${groupInfo}\n` +
-                                `• Chat: ${isGroup ? 'Group' : 'Private'}`;
+                                `• Chat type: ${isGroup ? 'Group' : 'Private'}`;
 
             const botOwnerJid = `${conf.NUMERO_OWNER}@s.whatsapp.net`;
-            const contextInfo = getContextInfo('Deleted Message Alert', deleterJid);
+            const contextInfo = getContextInfo(deleterJid);
 
             // Common message options
             const baseMessage = {
@@ -376,55 +379,65 @@ zk.ev.on('messages.upsert', async (msg) => {
             };
 
             // Handle different message types
+            let messageContent = '';
+            let mediaAttachment = null;
+
             if (deletedMessage.message.conversation) {
-                await zk.sendMessage(botOwnerJid, {
-                    text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMessage.message.conversation}`,
-                    ...baseMessage
-                });
+                messageContent = deletedMessage.message.conversation;
             } 
             else if (deletedMessage.message.extendedTextMessage) {
-                await zk.sendMessage(botOwnerJid, {
-                    text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMessage.message.extendedTextMessage.text}`,
-                    ...baseMessage
-                });
+                messageContent = deletedMessage.message.extendedTextMessage.text;
             }
             else if (deletedMessage.message.imageMessage) {
-                const caption = deletedMessage.message.imageMessage.caption || '';
-                const imagePath = await zk.downloadAndSaveMediaMessage(deletedMessage.message.imageMessage);
-                await zk.sendMessage(botOwnerJid, {
-                    image: { url: imagePath },
-                    caption: `${notification}\n\n📷 *Image Caption:*\n${caption}`,
-                    ...baseMessage
-                });
+                messageContent = deletedMessage.message.imageMessage.caption || '';
+                mediaAttachment = {
+                    type: 'image',
+                    data: deletedMessage.message.imageMessage
+                };
             }  
             else if (deletedMessage.message.videoMessage) {
-                const caption = deletedMessage.message.videoMessage.caption || '';
-                const videoPath = await zk.downloadAndSaveMediaMessage(deletedMessage.message.videoMessage);
-                await zk.sendMessage(botOwnerJid, {
-                    video: { url: videoPath },
-                    caption: `${notification}\n\n🎥 *Video Caption:*\n${caption}`,
-                    ...baseMessage
-                });
+                messageContent = deletedMessage.message.videoMessage.caption || '';
+                mediaAttachment = {
+                    type: 'video',
+                    data: deletedMessage.message.videoMessage
+                };
             }  
             else if (deletedMessage.message.audioMessage) {
-                const audioPath = await zk.downloadAndSaveMediaMessage(deletedMessage.message.audioMessage);
-                await zk.sendMessage(botOwnerJid, {
-                    audio: { url: audioPath },
-                    ptt: true,
-                    caption: `${notification}\n\n🎤 *Voice Message Deleted*`,
-                    ...baseMessage
-                });
+                mediaAttachment = {
+                    type: 'audio',
+                    data: deletedMessage.message.audioMessage,
+                    isVoiceNote: deletedMessage.message.audioMessage.ptt
+                };
             }  
             else if (deletedMessage.message.stickerMessage) {
-                const stickerPath = await zk.downloadAndSaveMediaMessage(deletedMessage.message.stickerMessage);
+                mediaAttachment = {
+                    type: 'sticker',
+                    data: deletedMessage.message.stickerMessage
+                };
+            }
+
+            // Send the notification with content
+            if (mediaAttachment) {
+                const mediaPath = await zk.downloadAndSaveMediaMessage(mediaAttachment.data);
+                const mediaOptions = {
+                    [mediaAttachment.type]: { url: mediaPath },
+                    caption: mediaAttachment.type !== 'sticker' ? 
+                        `${notification}\n\n📌 *${mediaAttachment.type.charAt(0).toUpperCase() + mediaAttachment.type.slice(1)} Caption:*\n${messageContent}` : 
+                        notification,
+                    ...baseMessage
+                };
+
+                if (mediaAttachment.type === 'audio' && mediaAttachment.isVoiceNote) {
+                    mediaOptions.ptt = true;
+                }
+
+                await zk.sendMessage(botOwnerJid, mediaOptions);
+            } else if (messageContent) {
                 await zk.sendMessage(botOwnerJid, {
-                    sticker: { url: stickerPath },
-                    caption: notification,
+                    text: `${notification}\n\n📝 *Deleted Content:*\n${messageContent}`,
                     ...baseMessage
                 });
-            }
-            else {
-                // For other message types we don't specifically handle
+            } else {
                 await zk.sendMessage(botOwnerJid, {
                     text: `${notification}\n\n⚠️ *Unsupported message type was deleted*`,
                     ...baseMessage
@@ -434,152 +447,7 @@ zk.ev.on('messages.upsert', async (msg) => {
             console.error('Error handling deleted message:', error);  
         }  
     }  
-}); 
-        zk.ev.on("messages.upsert", async ({ messages }) => {
-    if (ADM_PUBLIC !== "yes") return; // Skip if anti-delete is disabled
-
-    const message = messages[0];
-    if (!message.message) return; // Skip if no message content
-
-    const { remoteJid } = message.key;
-    if (remoteJid === "status@broadcast") return; // Ignore status updates
-
-    // Initialize chat storage if needed
-    store.chats[remoteJid] = store.chats[remoteJid] || [];
-    store.chats[remoteJid].push(message);
-
-    // Check for message deletion
-    if (message.message.protocolMessage?.type === 0) {
-        await handleDeletedMessage(message, remoteJid);
-    }
 });
-
-/**
- * Handles deleted messages and notifies the chat
- * @param {object} message - The deletion protocol message
- * @param {string} remoteJid - The chat JID where deletion occurred
- */
-async function handleDeletedMessage(message, remoteJid) {
-    try {
-        const deletedKey = message.message.protocolMessage.key;
-        const deletedMessage = store.chats[remoteJid]?.find(msg => msg.key.id === deletedKey.id);
-        if (!deletedMessage) return;
-
-        const isGroup = remoteJid.endsWith('@g.us');
-        const deleter = message.key.participant || message.key.remoteJid;
-        const originalSender = deletedMessage.key.participant || deletedMessage.key.remoteJid;
-
-        // Get context info (group name or private chat info)
-        let context = '';
-        if (isGroup) {
-            try {
-                const groupMetadata = await zk.groupMetadata(remoteJid);
-                context = `in *${groupMetadata.subject}*`;
-            } catch (error) {
-                console.error('Error fetching group metadata:', error);
-                context = 'in this group';
-            }
-        } else {
-            context = 'in private chat';
-        }
-
-        // Prepare notification message
-        const notification = `👿 *Message Deleted* 👿\n` +
-                            `• *Deleted by:* @${deleter.split("@")[0]}\n` +
-                            `• *Original sender:* @${originalSender.split("@")[0]}\n` +
-                            `• *Location:* ${context}`;
-
-        // Common message options
-        const messageOptions = {
-            mentions: [deleter, originalSender],
-            contextInfo: getContextInfo('Anti-Delete Alert', deleter)
-        };
-
-        // Handle different message types
-        if (deletedMessage.message.conversation) {
-            await sendNotification(remoteJid, notification, 
-                `📝 *Deleted Text:*\n${deletedMessage.message.conversation}`, 
-                messageOptions);
-        } 
-        else if (deletedMessage.message.extendedTextMessage) {
-            await sendNotification(remoteJid, notification,
-                `📝 *Deleted Text:*\n${deletedMessage.message.extendedTextMessage.text}`,
-                messageOptions);
-        }
-        else if (deletedMessage.message.imageMessage) {
-            await handleMediaMessage(remoteJid, notification, 
-                deletedMessage.message.imageMessage, 'image', '📷 Image', 
-                deletedMessage.message.imageMessage.caption, messageOptions);
-        }
-        else if (deletedMessage.message.videoMessage) {
-            await handleMediaMessage(remoteJid, notification,
-                deletedMessage.message.videoMessage, 'video', '🎥 Video',
-                deletedMessage.message.videoMessage.caption, messageOptions);
-        }
-        else if (deletedMessage.message.audioMessage) {
-            await handleMediaMessage(remoteJid, notification,
-                deletedMessage.message.audioMessage, 'audio', '🎤 Voice Message',
-                '', messageOptions);
-        }
-        else if (deletedMessage.message.stickerMessage) {
-            await handleMediaMessage(remoteJid, notification,
-                deletedMessage.message.stickerMessage, 'sticker', '🖼️ Sticker',
-                '', messageOptions);
-        }
-        else {
-            await sendNotification(remoteJid, notification,
-                '⚠️ *A message was deleted (unsupported type)*',
-                messageOptions);
-        }
-    } catch (error) {
-        console.error('Error handling deleted message:', error);
-    }
-}
-
-/**
- * Sends a text notification about deleted message
- * @param {string} chatJid - The chat to notify
- * @param {string} notification - The deletion notice
- * @param {string} content - The deleted content
- * @param {object} options - Message options
- */
-async function sendNotification(chatJid, notification, content, options) {
-    await zk.sendMessage(chatJid, {
-        text: `${notification}\n\n${content}`,
-        ...options
-    });
-}
-
-/**
- * Handles media message notifications
- * @param {string} chatJid - The chat to notify
- * @param {string} notification - The deletion notice
- * @param {object} mediaMessage - The media message object
- * @param {string} type - Media type ('image', 'video', etc.)
- * @param {string} label - Display label for the media
- * @param {string} caption - Original media caption
- * @param {object} options - Message options
- */
-async function handleMediaMessage(chatJid, notification, mediaMessage, type, label, caption, options) {
-    try {
-        const mediaPath = await zk.downloadAndSaveMediaMessage(mediaMessage);
-        const captionText = caption ? `\n*Caption:* ${caption}` : '';
-        
-        await zk.sendMessage(chatJid, {
-            [type]: { url: mediaPath },
-            caption: `${notification}\n\n${label}${captionText}`,
-            ...options
-        });
-    } catch (error) {
-        console.error(`Error handling ${type} message:`, error);
-        // Fallback to text notification if media fails
-        await sendNotification(chatJid, notification,
-            `${label}${caption ? `\n*Caption:* ${caption}` : ''}`,
-            options);
-    }
-}
-
-
     
         
 
