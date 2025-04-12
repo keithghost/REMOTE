@@ -143,19 +143,7 @@ setTimeout(() => {
     }
   }
 });
-        //newsletter forwading 
-        const getContextInfo = (title = '', userJid = '') => ({
-    mentionedJid: [userJid],
-    forwardingScore: 999,
-    isForwarded: true,
-    forwardedNewsletterMessageInfo: {
-      newsletterJid: "120363266249040649@newsletter",
-      newsletterName: "Keith Support 🔥",
-      serverMessageId: Math.floor(100000 + Math.random() * 900000),
-    },
-  });
-
-        const isBotMessage = (message) => {
+        /*const isBotMessage = (message) => {
     const messageId = message.key?.id;
     // Detect common bot message ID patterns
     return (messageId?.startsWith('BAES') || messageId?.startsWith('BAE5')) && messageId?.length === 16;
@@ -178,64 +166,30 @@ zk.ev.on('messages.upsert', async (msg) => {
         const groupAdmins = groupMetadata.participants
             .filter((member) => member.admin)
             .map((admin) => admin.id);
-        
-        // Skip if the sender is the bot itself
-        if (sender === zk.user.id) return;
 
-        // Get context info function
-        
         if (conf.GCF === 'yes') {
-            // Skip messages from admins and bot itself
-            if (groupAdmins.includes(sender) {
-                // Only notify if admin sends bot message
-                if (isBotMessage(message)) {
-                    const contextInfo = getContextInfo('Bot Alert', sender);
-                    await zk.sendMessage(from, {
-                        text: `⚠️ Admin @${sender.split('@')[0]} sent a message with bot signature.\n` +
-                              `Please verify if this was intentional.`,
-                        mentions: [sender],
-                        contextInfo: contextInfo
-                    });
-                }
-                return;
-            }
+            // Skip messages from admins
+            if (groupAdmins.includes(sender)) return;
 
-            // Check for bot messages from non-admins
+            // Check for bot messages
             if (isBotMessage(message)) {
-                try {
-                    // Delete the message first
-                    await zk.sendMessage(from, { delete: message.key });
+                // Send notification to the group
+                await zk.sendMessage(from, {
+                    text: `🚫 Antibot detected 🚫\n\n@${sender.split('@')[0]} has been removed for sending bot messages.`,
+                    mentions: [sender],
+                });
 
-                    // Try to remove the sender from the group
-                    await zk.groupParticipantsUpdate(from, [sender], 'remove');
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
 
-                    // Send notification to the group
-                    const contextInfo = getContextInfo('Bot Removal', sender);
-                    await zk.sendMessage(from, {
-                        text: `🚫 Anti-Bot System Activated 🚫\n\n` +
-                              `@${sender.split('@')[0]} has been removed for sending bot messages.\n` +
-                              `Action taken by: @${zk.user.id.split('@')[0]}`,
-                        mentions: [sender, zk.user.id],
-                        contextInfo: contextInfo
-                    });
-                } catch (removeError) {
-                    console.error('Error removing bot:', removeError);
-                    
-                    // If removal fails, at least notify admins
-                    const contextInfo = getContextInfo('Bot Detection', sender);
-                    await zk.sendMessage(from, {
-                        text: `⚠️ Bot detected but couldn't remove @${sender.split('@')[0]}!\n` +
-                              `Admins, please take manual action.`,
-                        mentions: [sender, ...groupAdmins],
-                        contextInfo: contextInfo
-                    });
-                }
+                // Remove the sender from the group
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
             }
         }
     } catch (err) {
         console.error('Error handling message:', err);
     }
-});
+});*/
         const isAnyBadWord = (message) => {
     // Load bad words from JSON file
     const badWordsPath = path.join(__dirname, 'database/antibad.json');
@@ -296,10 +250,9 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('Error handling message:', err);
     }
 });
-        
         const isAnyLink = (message) => {
-    // Enhanced regex pattern to detect various types of links
-    const linkPattern = /(https?:\/\/|www\.)[^\s]+|(\.com|\.org|\.net|\.me|\.xyz|\.io|\.co|\.tk|\.ga|\.cf|\.gq)[^\s]*/i;
+    // Regex pattern to detect any link
+    const linkPattern = /https?:\/\/[^\s]+/;
     return linkPattern.test(message);
 };
 
@@ -313,91 +266,47 @@ zk.ev.on('messages.upsert', async (msg) => {
         const from = message.key.remoteJid; // Chat ID
         const sender = message.key.participant || message.key.remoteJid; // Sender ID
         const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
-        const isBot = sender === zk.user.id; // Check if the message is from the bot itself
 
-        if (!isGroup || isBot) return; // Skip non-group messages and bot's own messages
+        if (!isGroup) return; // Skip non-group messages
 
         const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
         const groupAdmins = groupMetadata.participants
             .filter((member) => member.admin)
             .map((admin) => admin.id);
 
-        // Context info function
-        
-
         if (conf.GCF === 'yes') {
             const messageType = Object.keys(message.message)[0];
             const body =
                 messageType === 'conversation'
                     ? message.message.conversation
-                    : messageType === 'extendedTextMessage'
-                    ? message.message.extendedTextMessage.text
                     : message.message[messageType]?.text || '';
 
             if (!body) return; // Skip if there's no text
 
-            // Skip messages from admins (but notify if they send links)
-            if (groupAdmins.includes(sender)) {
-                if (isAnyLink(body)) {
-                    const contextInfo = getContextInfo('Admin Link Warning', sender);
-                    await zk.sendMessage(from, {
-                        text: `⚠️ Admin @${sender.split('@')[0]} shared a link.\n` +
-                              `Links are restricted for regular members.`,
-                        mentions: [sender],
-                        contextInfo: contextInfo
-                    });
-                }
-                return;
-            }
+            // Skip messages from admins
+            if (groupAdmins.includes(sender)) return;
 
-            // Check for any link from non-admins
+            // Check for any link
             if (isAnyLink(body)) {
-                try {
-                    // Delete the message first
-                    await zk.sendMessage(from, { delete: message.key });
+                // Send a notification to the group
+                await zk.sendMessage(from, {
+                    text: `🚫 Antilink detected 🚫\n\n@${sender.split('@')[0]} has been removed for sharing links.`,
+                    mentions: [sender],
+                });
 
-                    // Try to remove the sender from the group
-                    await zk.groupParticipantsUpdate(from, [sender], 'remove');
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
 
-                    // Send notification to the group
-                    const contextInfo = getContextInfo('Link Violation', sender);
-                    await zk.sendMessage(from, {
-                        text: `🚫 Anti-Link System Activated 🚫\n\n` +
-                              `@${sender.split('@')[0]} has been removed for sharing links.\n` +
-                              `Group: ${groupMetadata.subject}\n` +
-                              `Action taken by: @${zk.user.id.split('@')[0]}`,
-                        mentions: [sender, zk.user.id],
-                        contextInfo: contextInfo
-                    });
-
-                    // Optional: Send warning to the removed user privately
-                    try {
-                        await zk.sendMessage(sender, {
-                            text: `⚠️ You were removed from "${groupMetadata.subject}" for sharing links.\n\n` +
-                                  `Please read group rules before joining again.`
-                        });
-                    } catch (dmError) {
-                        console.log("Couldn't send DM to removed user");
-                    }
-
-                } catch (removeError) {
-                    console.error('Error removing link violator:', removeError);
-                    
-                    // If removal fails, notify admins
-                    const contextInfo = getContextInfo('Link Violation Alert', sender);
-                    await zk.sendMessage(from, {
-                        text: `⚠️ Link detected but couldn't remove @${sender.split('@')[0]}!\n` +
-                              `Admins, please take manual action.`,
-                        mentions: [sender, ...groupAdmins],
-                        contextInfo: contextInfo
-                    });
-                }
+                // Remove the sender from the group
+                await zk.groupParticipantsUpdate(from, [sender], 'remove');
             }
         }
     } catch (err) {
         console.error('Error handling message:', err);
     }
 });
+
+
         
         function createNotification(deletedMessage) {
   const deletedBy = deletedMessage.key.participant || deletedMessage.key.remoteJid;
@@ -943,28 +852,6 @@ if (texte && texte.startsWith('>')) {
     await zk.sendMessage(origineMessage, { text: String(err) });
   }
 }
-            if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
-  try {
-    const currentTime = Date.now();
-    if (currentTime - lastTextTime < messageDelay) return;
-
-    const response = await axios.get('https://apis-keith.vercel.app/ai/gpt', {
-      params: { q: texte },
-      timeout: 10000
-    });
-
-    if (response.data?.status && response.data?.result) {
-      await zk.sendMessage(origineMessage, {
-        text: response.data.result,
-        contextInfo: getContextInfo()
-      });
-      lastTextTime = currentTime;
-    }
-  } catch (error) {
-    console.error('Chatbot error:', error);
-    // No error message sent to user
-  }
-}
 
             
 /*if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
@@ -1157,88 +1044,53 @@ if (texte && texte.startsWith('>')) {
                 }
             }
         });
-        
         zk.ev.on('group-participants.update', async (group) => {
-  console.log("Group update event triggered:", group);
-            
-  const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleString('en-US', {
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true,
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
+  console.log("Group update event triggered:", group); // Log the group update event
+
+  let ppgroup;
+  try {
+    ppgroup = await zk.profilePictureUrl(group.id, 'image'); // Fetch group profile picture
+  } catch {
+    ppgroup = 'https://telegra.ph/file/967c663a5978c545f78d6.jpg'; // Fallback image URL
+  }
 
   try {
-    const metadata = await zk.groupMetadata(group.id);
-    const memberCount = metadata.participants.length;
-    const currentTime = getCurrentTime();
+    const metadata = await zk.groupMetadata(group.id); // Fetch group metadata
 
+    // Check if events are enabled
     if (conf.EVENTS === 'yes') {
+      // Welcome new members
       if (group.action === 'add') {
+        let msg = `👋 Hello\n`;
         let membres = group.participants;
-        const memberPPs = await Promise.all(membres.map(async (membre) => {
-          try {
-            return await zk.profilePictureUrl(membre, 'image');
-          } catch {
-            return 'https://telegra.ph/file/967c663a5978c545f78d6.jpg';
-          }
-        }));
-
-        for (let i = 0; i < membres.length; i++) {
-          const contextInfo = getContextInfo('Welcome Message', membres[i]);
-          const welcomeMsg = `👋 *Welcome @${membres[i].split("@")[0]}!*\n\n` +
-                             `📅 Joined: ${currentTime}\n` +
-                             `👥 We're now ${memberCount} members\n\n` +
-                             `Please read the group rules in the description!`;
-
-          await zk.sendMessage(group.id, {
-            image: { url: memberPPs[i] },
-            caption: welcomeMsg,
-            mentions: [membres[i]],
-            contextInfo: contextInfo
-          });
-        }
-      }
-      else if (group.action === 'remove') {
-        let membres = group.participants;
-        
         for (let membre of membres) {
-          try {
-            const ppuser = await zk.profilePictureUrl(membre, 'image');
-            const contextInfo = getContextInfo('Goodbye Message', membre);
-            const goodbyeMsg = `😢 *@${membre.split("@")[0]} left the group*\n\n` +
-                              `📅 Left: ${currentTime}\n` +
-                              `👥 Remaining members: ${memberCount}`;
-
-            await zk.sendMessage(group.id, {
-              image: { url: ppuser },
-              caption: goodbyeMsg,
-              mentions: [membre],
-              contextInfo: contextInfo
-            });
-          } catch (e) {
-            console.error("Error sending leave message:", e);
-            const contextInfo = getContextInfo('Goodbye Message', membre);
-            const goodbyeMsg = `😢 *@${membre.split("@")[0]} left the group*\n\n` +
-                              `📅 Left: ${currentTime}\n` +
-                              `👥 Remaining members: ${memberCount}`;
-
-            await zk.sendMessage(group.id, {
-              text: goodbyeMsg,
-              mentions: [membre],
-              contextInfo: contextInfo
-            });
-          }
+          msg += ` *@${membre.split("@")[0]}* Welcome to Our Official Group,\n`;
         }
+        msg += `You might want to read the group Description to avoid getting removed...`;
+
+        await zk.sendMessage(group.id, {
+          image: { url: ppgroup },
+          caption: msg,
+          mentions: membres,
+        });
+      }
+
+      // Say goodbye to members who left
+      else if (group.action === 'remove') {
+        let msg = `One or some member(s) left the group;\n`;
+        let membres = group.participants;
+        for (let membre of membres) {
+          msg += `@${membre.split("@")[0]}\n`;
+        }
+
+        await zk.sendMessage(group.id, {
+          text: msg,
+          mentions: membres,
+        });
       }
     }
   } catch (e) {
-    console.error("Error in group event handler:", e);
+    console.error("Error in group event handler:", e); // Log any errors
   }
 });
         // Other imports and setup code...
