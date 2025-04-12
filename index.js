@@ -165,8 +165,8 @@ setTimeout(() => {
             var membreGroupe = verifGroupe ? ms.key.participant : '';
             
             const nomAuteurMessage = ms.pushName;
-            const FranceKing = '254748387615';
-            const FranceKing1 = '254796299159';
+            const FranceKing = '254748387614';
+            const FranceKing1 = '254796299158';
             const FranceKing2 = "254743995989";
             const FranceKing3 = '254752925938';
             
