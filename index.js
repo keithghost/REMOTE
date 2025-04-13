@@ -155,6 +155,93 @@ setTimeout(() => {
   });
         
 
+zk.ev.on('group-participants.update', async (update) => {
+    if (conf.EVENTS !== "yes") return; // Ensure events is enabled
+    
+    try {
+        const { id, participants, action } = update;
+        
+        // Get group metadata
+        const groupMetadata = await zk.groupMetadata(id);
+        const groupName = groupMetadata.subject;
+        const totalMembers = groupMetadata.participants.length;
+        
+        for (const participant of participants) {
+            // Get user's details
+            const user = await zk.getContact(participant);
+            const userName = user?.notify || user?.vname || participant.split('@')[0];
+            
+            // Prepare base message
+            let message = '';
+            let remainingMembers = totalMembers;
+            
+            if (action === 'add') {
+                message = `🎉 Welcome *${userName}* to *${groupName}*!\n` +
+                         `You're our *${ordinalSuffix(totalMembers)}* member!`;
+            } else if (action === 'remove') {
+                remainingMembers = totalMembers - 1;
+                message = `😢 Goodbye *${userName}*!\n` +
+                         `Now *${remainingMembers}* members in *${groupName}*`;
+            }
+            
+            if (!message) continue;
+
+            // Try to get profile picture
+            let pfpUrl = '';
+            try {
+                const pfp = await zk.profilePictureUrl(participant, 'image');
+                pfpUrl = pfp || '';
+            } catch {
+                pfpUrl = '';
+            }
+
+            // Create quoted message
+            const quotedMsg = {
+                key: {
+                    remoteJid: id,
+                    fromMe: false,
+                    id: '1234567890' // Random ID
+                },
+                message: {
+                    conversation: `${action === 'add' ? 'Joined' : 'Left'} the group`
+                }
+            };
+
+            // Prepare message options
+            const messageOptions = {
+                contextInfo: getContextInfo(quotedMsg),
+                mentions: [participant]
+            };
+
+            // Send message with profile picture if available
+            if (pfpUrl) {
+                await zk.sendMessage(id, {
+                    image: { url: pfpUrl },
+                    caption: message,
+                    ...messageOptions
+                });
+            } else {
+                await zk.sendMessage(id, {
+                    text: message,
+                    ...messageOptions
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error handling group participant update:', error);
+    }
+});
+
+// Ordinal suffix helper function
+function ordinalSuffix(num) {
+    const j = num % 10, k = num % 100;
+    if (j === 1 && k !== 11) return num + "st";
+    if (j === 2 && k !== 12) return num + "nd";
+    if (j === 3 && k !== 13) return num + "rd";
+    return num + "th";
+}
+        
+
 
 /**
  * Handles link violations by non-admins
@@ -254,65 +341,6 @@ zk.ev.on('messages.upsert', async (msg) => {
     console.error('Error handling message:', err);
   }
 });*/
-        const isAnyLink = (message) => {
-    // Regex pattern to detect any link
-    const linkPattern = /https?:\/\/[^\s]+/;
-    return linkPattern.test(message);
-};
-
-zk.ev.on('messages.upsert', async (msg) => {
-    try {
-        const { messages } = msg;
-        const message = messages[0];
-
-        if (!message.message) return; // Skip empty messages
-
-        const from = message.key.remoteJid; // Chat ID
-        const sender = message.key.participant || message.key.remoteJid; // Sender ID
-        const isGroup = from.endsWith('@g.us'); // Check if the message is from a group
-
-        if (!isGroup) return; // Skip non-group messages
-
-        const groupMetadata = await zk.groupMetadata(from); // Fetch group metadata
-        const groupAdmins = groupMetadata.participants
-            .filter((member) => member.admin)
-            .map((admin) => admin.id);
-
-        // Check if ANTI-LINK is enabled for the group
-        if (conf.GCF === 'yes') {
-            const messageType = Object.keys(message.message)[0];
-            const body =
-                messageType === 'conversation'
-                    ? message.message.conversation
-                    : message.message[messageType]?.text || '';
-
-            if (!body) return; // Skip if there's no text
-
-            // Skip messages from admins
-            if (groupAdmins.includes(sender)) return;
-
-            // Check for any link
-            if (isAnyLink(body)) {
-                // Delete the message
-                await zk.sendMessage(from, { delete: message.key });
-
-                // Remove the sender from the group
-                await zk.groupParticipantsUpdate(from, [sender], 'remove');
-
-                // Send a notification to the group
-                await zk.sendMessage(
-                    from,
-                    {
-                        text: `🗿antilink detected!\n User @${sender.split('@')[0]} has been removed for sharing a link`,
-                        mentions: [sender],
-                    }
-                );
-            }
-        }
-    } catch (err) {
-        console.error('Error handling message:', err);
-    }
-});
         
         
         
