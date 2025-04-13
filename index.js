@@ -154,6 +154,74 @@ setTimeout(() => {
     },
   });
         
+        
+const isAnyLink = (message) => {
+    const linkPattern = /https?:\/\/[^\s]+/;
+    return linkPattern.test(message);
+};
+
+zk.ev.on('messages.upsert', async (msg) => {
+    try {
+        const { messages } = msg;
+        const message = messages[0];
+
+        if (!message.message) return;
+
+        const from = message.key.remoteJid;
+        const sender = message.key.participant || message.key.remoteJid;
+        const isGroup = from.endsWith('@g.us');
+
+        if (!isGroup) return;
+
+        const groupMetadata = await zk.groupMetadata(from);
+        const groupAdmins = groupMetadata.participants
+            .filter((member) => member.admin)
+            .map((admin) => admin.id);
+        
+        // Check if bot is admin
+        const botNumber = `${conf.NUMERO_OWNER}@s.whatsapp.net`;
+        const isBotAdmin = groupAdmins.includes(botNumber);
+
+        if (conf.GCF === 'yes') {
+            const messageType = Object.keys(message.message)[0];
+            const body = messageType === 'conversation'
+                ? message.message.conversation
+                : message.message[messageType]?.text || '';
+
+            if (!body) return;
+
+            // Skip messages from admins
+            if (groupAdmins.includes(sender)) return;
+
+            if (isAnyLink(body)) {
+                // Delete the message
+                await zk.sendMessage(from, { delete: message.key });
+
+                if (isBotAdmin) {
+                    // If bot is admin, remove the sender
+                    await zk.groupParticipantsUpdate(from, [sender], 'remove');
+                    
+                    await zk.sendMessage(from, {
+                        text: `🚨 *Anti-Link Triggered!*\n@${sender.split('@')[0]} has been removed for sending links`,
+                        mentions: [sender],
+                        contextInfo: getContextInfo()
+                    });
+                } else {
+                    // If bot is not admin, request promotion
+                    await zk.sendMessage(from, {
+                        text: `⚠️ *Anti-Link Warning!*\n` +
+                              `Promote me to admin to kick link senders!\n` +
+                              `Detected link from @${sender.split('@')[0]}`,
+                        mentions: [sender],
+                        contextInfo: getContextInfo()
+                    });
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error handling message:', err);
+    }
+});
 
 zk.ev.on('group-participants.update', async (update) => {
     if (conf.EVENTS !== "yes") return; // Ensure events is enabled
