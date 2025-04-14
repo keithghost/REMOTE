@@ -801,7 +801,7 @@ zk.ev.on("messages.upsert", async (m) => {
                     }
                 });
             }
-            if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+            /*if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
   try {
     const currentTime = Date.now();
     if (currentTime - lastTextTime < messageDelay) return;
@@ -822,7 +822,7 @@ zk.ev.on("messages.upsert", async (m) => {
     console.error('Chatbot error:', error);
     // No error message sent to user
   }
-            }
+            }*/
             
             if (verifCom) {
                 const cd = evt.cm.find(keith => keith.nomCom === com || keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
