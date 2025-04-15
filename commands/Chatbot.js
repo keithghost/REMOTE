@@ -2,7 +2,7 @@ const { keith } = require('../keizzah/keith');
 const { initChatbotDB, getChatbotSettings, updateChatbotSettings } = require('../database/chatbot');
 keith({
     nomCom: 'chatbot',
-    categorie: 'Utils',
+    categorie: 'setting',
     reaction: '🤖'
 }, async (dest, zk, commandeOptions) => {
     const { arg, repondre, prefixe, superUser } = commandeOptions;
