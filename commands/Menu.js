@@ -233,7 +233,7 @@ keith({
             "TRADE": ["TRADE"],
             "TTS": ["TTS"],
             "UTILITY": ["SEARCH"],
-            "SETTINGS": ["SETTINGS"],
+            "SETTINGS": ["SETTING"],
             "HEROKU": ["HEROKU-CLIENT"]
         };
 
@@ -251,7 +251,7 @@ keith({
         const menuMessage = `
         ╰► ${toFancyUppercaseFont(greeting)} ${nomAuteurMessage}!*
 ╭───〔  *${toFancyUppercaseFont(settings.BOT)}* 〕──────┈⊷𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭
-| *motivational quote*
+|  *motivational quote*
 > ${randomQuote}
 ├──────────────
 │✵│▸ 𝗣𝗿𝗲𝗳𝗶𝘅: [ ${settings.PREFIXE} ]
