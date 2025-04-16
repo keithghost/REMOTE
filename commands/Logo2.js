@@ -377,7 +377,7 @@ keith({nomCom:"pentakill",categorie:"Modern-Logo",reaction:"🥵"},async(dest,zk
     await zk.sendMessage(dest,{image:{url:img.image},caption:" *Powered by Alpha Md*"},{quoted:ms})
   }catch(e){repondre(e)}
 })
-zokou({nomCom:"halloween1",categorie:"Modern-Logo",reaction:"🥵"},async(dest,zk,commandeOptions)=>{
+keith({nomCom:"halloween1",categorie:"Modern-Logo",reaction:"🥵"},async(dest,zk,commandeOptions)=>{
 
 
   let {ms,arg,prefixe,repondre}=commandeOptions;
