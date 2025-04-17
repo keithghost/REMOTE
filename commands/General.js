@@ -200,3 +200,77 @@ keith({
     await repondre("An error occurred while searching for manga. Please try again later.");
   }
 });
+
+
+keith({
+  nomCom: "download",
+  aliases: ["dl", "unidl", "videodl", "socialdl"],
+  categorie: "Downloader",
+  reaction: "⬇️"
+}, async (dest, zk, commandeOptions) => {
+  const { repondre, arg, ms } = commandeOptions;
+  const videoUrl = arg[0];
+
+  if (!videoUrl) {
+    return repondre("Please provide a valid URL.\nExample: _download https://tiktok.com/@user/video/123456789_");
+  }
+
+  const apiUrl = "https://universaldownloader.com/wp-json/aio-dl/video-data/";
+
+  const headers = {
+    accept: "*/*",
+    "accept-language": "en-US,en;q=0.9",
+    "content-type": "application/x-www-form-urlencoded",
+    "sec-ch-ua": '"Not A(Brand";v="8", "Chromium";v="132"',
+    "sec-ch-ua-mobile": "?1",
+    "sec-ch-ua-platform": '"Android"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    cookie: "PHPSESSID=iidld6j33b2iscdvl8ed85k6in; pll_language=en; _ga_SNFLGC3754=GS1.1.1741305061.1.0.1741305061.0.0.0; _ga=GA1.2.897696689.1741305062; _gid=GA1.2.741064418.1741305065; _gat_gtag_UA_250577925_1=1",
+    Referer: "https://universaldownloader.com/",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  };
+
+  try {
+    const body = `url=${encodeURIComponent(videoUrl)}`;
+    const response = await axios.post(apiUrl, body, { headers });
+    const data = response.data;
+
+    if (!data || data.error) {
+      return repondre("Failed to download the video. The service might be unavailable or the URL is invalid.");
+    }
+
+    // Format the response based on available data
+    let resultMessage = `⬇️ *Video Downloader*\n\n` +
+                      `🔗 *Source:* ${videoUrl}\n` +
+                      `🖥️ *Platform:* ${data.platform || 'Unknown'}\n` +
+                      `📛 *Title:* ${data.title || 'No title available'}\n`;
+
+    // Send video if available
+    if (data.video && data.video.url) {
+      await zk.sendMessage(dest, {
+        video: { url: data.video.url },
+        caption: resultMessage
+      }, { quoted: ms });
+    } 
+    // Send image if video not available but image exists
+    else if (data.image && data.image.url) {
+      await zk.sendMessage(dest, {
+        image: { url: data.image.url },
+        caption: resultMessage
+      }, { quoted: ms });
+    } 
+    // Fallback to text message if no media
+    else {
+      resultMessage += `\n⚠️ *No media found* - Try another URL`;
+      await zk.sendMessage(dest, {
+        text: resultMessage
+      }, { quoted: ms });
+    }
+
+  } catch (error) {
+    console.error('Universal Downloader error:', error);
+    await repondre("An error occurred while processing your request. Please try again later.");
+  }
+});
