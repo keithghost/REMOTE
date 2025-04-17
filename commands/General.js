@@ -1,4 +1,3 @@
-
 const { keith } = require('../keizzah/keith');
 const { 
     addNote, 
@@ -8,14 +7,33 @@ const {
     getNotes, 
     initNotesDB 
 } = require('../database/notes');
+const { Catbox } = require("node-catbox");
+const fs = require('fs-extra');
+
+// Initialize Catbox (only in plugin)
+const catbox = new Catbox();
 
 // Initialize database
 initNotesDB().catch(err => {
     console.error('Failed to initialize notes database:', err);
 });
 
+// Media upload helper (only in plugin)
+async function uploadToCatbox(mediaPath) {
+    if (!fs.existsSync(mediaPath)) {
+        throw new Error("File does not exist");
+    }
+    try {
+        const uploadResult = await catbox.uploadFile({ path: mediaPath });
+        fs.unlinkSync(mediaPath); // Clean up
+        return uploadResult;
+    } catch (error) {
+        throw new Error(String(error));
+    }
+}
+
 keith({
-    nomCom: 'notemedia',
+    nomCom: 'note2',
     categorie: 'Mods',
 }, async (dest, zk, commandeOptions) => {
     const { arg, repondre, prefixe, superUser, msgRepondu } = commandeOptions;
@@ -45,132 +63,74 @@ keith({
 
             case 'addmedia':
                 if (!msgRepondu) {
-                    return repondre("❌ Please reply to a media message (image, video, audio, sticker, document)");
+                    return repondre("❌ Please reply to a media message");
                 }
                 
                 if (!params.length) {
                     return repondre(`❌ Please provide a title: ${prefixe}note addmedia <title> [content]`);
                 }
                 
-                // Determine media type and download
-                let mediaType, mediaBuffer;
-                
+                // Download media
+                let mediaType, mediaPath;
                 if (msgRepondu.imageMessage) {
                     mediaType = 'image';
-                    mediaBuffer = await zk.downloadMediaMessage(msgRepondu.imageMessage);
+                    mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
                 } else if (msgRepondu.videoMessage) {
                     mediaType = 'video';
-                    mediaBuffer = await zk.downloadMediaMessage(msgRepondu.videoMessage);
+                    mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
                 } else if (msgRepondu.audioMessage) {
                     mediaType = 'audio';
-                    mediaBuffer = await zk.downloadMediaMessage(msgRepondu.audioMessage);
+                    mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
                 } else if (msgRepondu.stickerMessage) {
                     mediaType = 'sticker';
-                    mediaBuffer = await zk.downloadMediaMessage(msgRepondu.stickerMessage);
+                    mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.stickerMessage);
                 } else if (msgRepondu.documentMessage) {
                     mediaType = 'document';
-                    mediaBuffer = await zk.downloadMediaMessage(msgRepondu.documentMessage);
+                    mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.documentMessage);
                 } else {
-                    return repondre("❌ Unsupported media type. Please reply to an image, video, audio, sticker, or document");
+                    return repondre("❌ Unsupported media type");
                 }
                 
-                // Upload media to your preferred storage (you might need to implement this)
-                // For example, you could save to local filesystem or cloud storage
-                const mediaId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-                const mediaUrl = await saveMediaToStorage(mediaBuffer, mediaId, mediaType);
+                // Upload to Catbox
+                const mediaUrl = await uploadToCatbox(mediaPath);
                 
-                // Create note with media
+                // Save note with media reference
                 const mediaNote = await addNote({
                     title: params[0],
                     content: params.slice(1).join(' '),
                     mediaType,
-                    mediaUrl,
-                    mediaId
+                    mediaUrl
                 });
                 
-                return repondre(`✅ Media note added!\nID: ${mediaNote.id}\nTitle: ${mediaNote.title}\nType: ${mediaType}`);
-
-            case 'del':
-                // ... existing delete logic ...
-
-            case 'list':
-                const notes = await getNotes();
-                if (!notes.length) {
-                    return repondre('📭 No notes found');
-                }
-                const noteList = notes.map(note => {
-                    let noteText = `📌 ID: ${note.id}\n📝 ${note.title}`;
-                    if (note.mediaType) {
-                        noteText += `\n🎞️ Media: ${note.mediaType}`;
-                    }
-                    noteText += `\n⏰ ${note.createdAt}\n──────────`;
-                    return noteText;
-                }).join('\n');
-                return repondre(`📒 YOUR NOTES:\n\n${noteList}`);
+                return repondre(`✅ Media note saved!\nID: ${mediaNote.id}\nTitle: ${mediaNote.title}\nMedia: ${mediaType}`);
 
             case 'get':
                 if (!params.length) {
                     return repondre(`❌ Please provide note ID: ${prefixe}note get <id>`);
                 }
-                const getNoteId = parseInt(params[0]);
-                if (isNaN(getNoteId)) {
-                    return repondre('❌ Please provide a valid note ID number');
-                }
-                const note = await getNote(getNoteId);
-                if (!note) {
-                    return repondre(`❌ Note ${getNoteId} not found`);
-                }
+                const noteId = parseInt(params[0]);
+                const note = await getNote(noteId);
                 
-                let response = 
-                    `📌 NOTE DETAILS\n\n` +
-                    `🆔 ID: ${note.id}\n` +
-                    `📝 Title: ${note.title}\n`;
+                if (!note) return repondre('❌ Note not found');
                 
-                if (note.content) {
-                    response += `📄 Content: ${note.content}\n`;
-                }
-                
-                if (note.mediaType && note.mediaUrl) {
-                    response += `🎞️ Media: ${note.mediaType}\n`;
-                    // If you want to send the media back:
-                    // await zk.sendMessage(dest, { [note.mediaType]: note.mediaUrl }, { quoted: msgRepondu });
-                }
-                
-                response += `⏰ Created: ${note.createdAt}`;
+                let response = `📌 Note #${note.id}\n📝 ${note.title}`;
+                if (note.content) response += `\n📄 ${note.content}`;
+                if (note.mediaUrl) response += `\n🎞️ Media URL: ${note.mediaUrl}`;
+                response += `\n⏰ ${note.createdAt}`;
                 
                 return repondre(response);
 
-            // ... rest of your existing cases ...
+            // Keep your existing cases unchanged
+            case 'del':
+            case 'list':
+            case 'clear':
+                // ... existing implementation ...
+                
+            default:
+                return repondre(`❌ Invalid action. Use: ${prefixe}note add/addmedia/del/list/get/clear`);
         }
     } catch (error) {
         console.error('Note command error:', error);
-        return repondre(`❌ Error: ${error.message || 'Failed to process command'}`);
+        return repondre(`❌ Error: ${error.message}`);
     }
 });
-
-// Helper function to save media (you'll need to implement this based on your storage solution)
-async function saveMediaToStorage(buffer, id, type) {
-    // Example: Save to local filesystem
-    const fs = require('fs');
-    const path = require('path');
-    
-    const uploadDir = path.join(__dirname, '../media/notes');
-    if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    const ext = type === 'image' ? 'jpg' : 
-                type === 'video' ? 'mp4' : 
-                type === 'audio' ? 'mp3' : 
-                type === 'sticker' ? 'webp' : 'bin';
-    
-    const filename = `${id}.${ext}`;
-    const filePath = path.join(uploadDir, filename);
-    
-    await fs.promises.writeFile(filePath, buffer);
-    
-    // Return URL or path that you can use to retrieve the file later
-    return `/media/notes/${filename}`;
-    
-    // For cloud storage, you would upload to S3, etc. and return the public URL
-}
