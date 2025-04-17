@@ -8,61 +8,34 @@ let { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
 //const { removeSudoNumber, addSudoNumber, issudo } = require("../bdd/sudo");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+//const { keith } = require('../keizzah/keith');
 
-
-keith({ 
-  nomCom: "jid", 
-  categorie: "Mods",
-  reaction: "📱"
+keith({
+    nomCom: 'jid',
+    aliases: ['wajid', 'contact'],
+    categorie: 'Mods',
+    reaction: '👑'
 }, async (dest, zk, commandeOptions) => {
-  const { repondre, superUser, auteurMessage, msgRepondu, ms } = commandeOptions;
+    const { auteurMsgRepondu, repondre, verifGroupe } = commandeOptions;
 
-  if (!superUser) {
-    repondre("Command reserved for the bot owner");
-    return;
-  }
-
-  try {
-    // Determine which JID to use
-    let targetJid;
-    let contextInfo = {};
-    
-    if (msgRepondu) {
-      // If it's a replied message, use the sender's JID from the replied message
-      targetJid = auteurMessage;
-      contextInfo = {
-        quoted: msgRepondu
-      };
-    } else {
-      // If no reply, use the current chat JID
-      targetJid = dest;
+    if (!auteurMsgRepondu) {
+        return repondre('❌ Please mention a user to check');
     }
-    
-    // Extract phone number from JID
-    let phoneNumber = targetJid.split('@')[0];
-    
-    // Format phone number with international prefix
-    if (!phoneNumber.startsWith('+')) {
-      phoneNumber = `+${phoneNumber}`;
-    }
-    
-    // Prepare the response message
-    const responseMessage = {
-      text: `📱 JID Information:\n\n• Full JID: ${targetJid}\n• Phone Number: ${phoneNumber}`,
-      ...contextInfo
-    };
-    
-    // Send the response
-    await repondre(responseMessage);
 
-  } catch (error) {
-    console.error("Error in jid command:", error);
-    await repondre({
-      text: "An error occurred while processing the JID",
-      ...(msgRepondu ? { quoted: msgRepondu } : {})
-    });
-  }
+    try {
+        const username = auteurMsgRepondu.split('@')[0];
+        return repondre(
+            `👑 *Contact Information*\n\n` +
+            `User: ${username}\n` +
+            `JID: ${auteurMsgRepondu}`
+        );
+    } catch (error) {
+        console.error('Error:', error);
+        return repondre('❌ Failed to get contact information');
+    }
 });
+
+
 keith({ nomCom: "crew", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
   const { ms, repondre, arg, auteurMessage, superUser, auteurMsgRepondu, msgRepondu } = commandeOptions;
 
