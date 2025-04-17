@@ -1,5 +1,6 @@
 const { keith } = require("../keizzah/keith");
 const axios = require("axios");
+const conf = require(__dirname + '/../set');
 const cheerio = require("cheerio");
 keith({
   nomCom: "codegen",
@@ -272,5 +273,66 @@ keith({
   } catch (error) {
     console.error('Universal Downloader error:', error);
     await repondre("An error occurred while processing your request. Please try again later.");
+  }
+});
+
+
+
+keith({
+  nomCom: "crime",
+  aliases: ["thriller", "murder", "homicide"],
+  categorie: "download",
+  reaction: "🎥"
+}, async (dest, zk, commandOptions) => {
+  const { ms, repondre } = commandOptions;
+
+  try {
+    // Fetch data from Seegore API
+    const apiUrl = "https://api.siputzx.my.id/api/r/seegore";
+    const response = await axios.get(apiUrl);
+    const data = response.data;
+
+    // Check if API response is valid
+    if (!data.status || !data.data) {
+      return repondre('Failed to fetch video data from Seegore API.');
+    }
+
+    const videoData = data.data;
+    const videos = [videoData.video1, videoData.video2].filter(Boolean); // Get both videos and filter out any null values
+
+    // Check if we have any videos to send
+    if (videos.length === 0) {
+      return repondre('No videos found in the API response.');
+    }
+
+    // Prepare and send each video
+    for (const videoUrl of videos) {
+      const messagePayload = {
+        video: { url: videoUrl },
+        mimetype: 'video/mp4',
+        caption: `*${videoData.title}*\n\n` +
+                 `🔹 *Source:* ${videoData.source}\n` +
+                 `🔹 *Tag:* ${videoData.tag}\n` +
+                 `🔹 *Views:* ${videoData.view}\n` +
+                 `🔹 *Uploaded:* ${videoData.upload}`,
+        contextInfo: {
+          externalAdReply: {
+            title: videoData.title,
+            body: videoData.tag,
+            mediaType: 1,
+            sourceUrl: conf.GURL,
+            thumbnailUrl: videoData.thumb,
+            renderLargerThumbnail: false,
+            showAdAttribution: true,
+          },
+        },
+      };
+
+      await zk.sendMessage(dest, messagePayload, { quoted: ms });
+    }
+
+  } catch (error) {
+    console.error('Error during Seegore download process:', error);
+    return repondre(`Download failed due to an error: ${error.message || error}`);
   }
 });
