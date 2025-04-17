@@ -6,8 +6,6 @@ const { c, cpp, node, python, java } = require('compile-run');
 const { dBinary, eBinary } = require("../keizzah/binary");
 const { default: axios } = require("axios");
 const { writeFile } = require("fs/promises");
-const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
-
 const { mediafireDl } = require("../keizzah/dl/Function");
 keith({
   'nomCom': "run-c++",
@@ -16,8 +14,8 @@ keith({
 }, async (message, args, context) => {
   const {
     ms: messageSentTime,
-    repondre,
     arg: commandArguments,
+    repondre: reply,
     auteurMessage: messageAuthor,
     nomAuteurMessage: authorName,
     msgRepondu: repliedMessage,
@@ -26,7 +24,7 @@ keith({
   try {
     // Check if the user provided a valid code
     if (!commandArguments[0]) {
-      return repondre("Quote a valid and short C++ code to compile.");
+      return reply("Quote a valid and short C++ code to compile.");
     }
 
     // Join the command arguments into a single code string
@@ -37,17 +35,17 @@ keith({
 
     // Handle result
     if (result.error) {
-      repondre(`Error: ${result.error}`);
+      reply(`Error: ${result.error}`);
     } else {
-      repondre(`Output:\n${result.stdout}`);
+      reply(`Output:\n${result.stdout}`);
       if (result.stderr) {
-        repondre(zk, dest, ms, `Error Output:\n${result.stderr}`);
+        reply(`Error Output:\n${result.stderr}`);
       }
     }
   } catch (err) {
     // Handle unexpected errors
     console.error(err);
-    repondre(zk, dest, ms, "An error occurred while trying to run the code.");
+    reply("An error occurred while trying to run the code.");
   }
 });
 keith({
@@ -58,7 +56,7 @@ keith({
   const {
     ms: messageSentTime,
     arg: commandArguments,
-    //repondre: reply,
+    repondre: reply,
     auteurMessage: messageAuthor,
     nomAuteurMessage: authorName,
     msgRepondu: repliedMessage,
@@ -67,7 +65,7 @@ keith({
   try {
     // Check if the user provided a valid code
     if (!commandArguments[0]) {
-      return repondre(zk, dest, ms, "Quote a valid and short C code to compile.");
+      return reply("Quote a valid and short C code to compile.");
     }
 
     // Join the command arguments into a single code string
@@ -78,17 +76,17 @@ keith({
 
     // Handle result
     if (result.error) {
-      repondre(zk, dest, ms, `Error: ${result.error}`);
+      reply(`Error: ${result.error}`);
     } else {
-      repondre(zk, dest, ms, `Output:\n${result.stdout}`);
+      reply(`Output:\n${result.stdout}`);
       if (result.stderr) {
-        repondre(zk, dest, ms, `Error Output:\n${result.stderr}`);
+        reply(`Error Output:\n${result.stderr}`);
       }
     }
   } catch (err) {
     // Handle unexpected errors
     console.error(err);
-    repondre(zk, dest, ms, "An error occurred while trying to run the code.");
+    reply("An error occurred while trying to run the code.");
   }
 });
 keith({
@@ -99,7 +97,7 @@ keith({
   const {
     ms: messageSentTime,
     arg: commandArguments,
-    //repondre: reply,
+    repondre: reply,
     auteurMessage: messageAuthor,
     nomAuteurMessage: authorName,
     msgRepondu: repliedMessage,
@@ -108,7 +106,7 @@ keith({
   try {
     // Check if the user provided a valid code
     if (!commandArguments[0]) {
-      return repondre(zk, dest, ms, "Quote a valid and short java code to compile.");
+      return reply("Quote a valid and short java code to compile.");
     }
 
     // Join the command arguments into a single code string
@@ -119,17 +117,17 @@ keith({
 
     // Handle result
     if (result.error) {
-      repondre(zk, dest, ms, `Error: ${result.error}`);
+      reply(`Error: ${result.error}`);
     } else {
-      repondre(zk, dest, ms, `Output:\n${result.stdout}`);
+      reply(`Output:\n${result.stdout}`);
       if (result.stderr) {
-        repondre(zk, dest, ms, `Error Output:\n${result.stderr}`);
+        reply(`Error Output:\n${result.stderr}`);
       }
     }
   } catch (err) {
     // Handle unexpected errors
     console.error(err);
-    repondre(zk, dest, ms, "An error occurred while trying to run the code.");
+    reply("An error occurred while trying to run the code.");
   }
 });
 keith({
@@ -140,7 +138,7 @@ keith({
   const {
     ms: messageSentTime,
     arg: commandArguments,
-    //repondre: reply,
+    repondre: reply,
     auteurMessage: messageAuthor,
     nomAuteurMessage: authorName,
     msgRepondu: repliedMessage,
@@ -149,7 +147,7 @@ keith({
   try {
     // Check if the user provided a valid code
     if (!commandArguments[0]) {
-      return repondre(zk, dest, ms, "Quote a valid and short javascript code to compile.");
+      return reply("Quote a valid and short javascript code to compile.");
     }
 
     // Join the command arguments into a single code string
@@ -160,17 +158,17 @@ keith({
 
     // Handle result
     if (result.error) {
-      repondre(zk, dest, ms, `Error: ${result.error}`);
+      reply(`Error: ${result.error}`);
     } else {
-      repondre(zk, dest, ms, `Output:\n${result.stdout}`);
+      reply(`Output:\n${result.stdout}`);
       if (result.stderr) {
-        repondre(zk, dest, ms, `Error Output:\n${result.stderr}`);
+        reply(`Error Output:\n${result.stderr}`);
       }
     }
   } catch (err) {
     // Handle unexpected errors
     console.error(err);
-    repondre(zk, dest, ms, "An error occurred while trying to run the code.");
+    reply("An error occurred while trying to run the code.");
   }
 });
 keith({
@@ -181,7 +179,7 @@ keith({
   const {
     ms: messageSentTime,
     arg: commandArguments,
-    //repondre: reply,
+    repondre: reply,
     auteurMessage: messageAuthor,
     nomAuteurMessage: authorName,
     msgRepondu: repliedMessage,
@@ -190,7 +188,7 @@ keith({
   try {
     // Check if the user provided a valid code
     if (!commandArguments[0]) {
-      return repondre(zk, dest, ms, "Quote a valid and short python code to compile.");
+      return reply("Quote a valid and short python code to compile.");
     }
 
     // Join the command arguments into a single code string
@@ -201,17 +199,17 @@ keith({
 
     // Handle result
     if (result.error) {
-      repondre(zk, dest, ms, `Error: ${result.error}`);
+      reply(`Error: ${result.error}`);
     } else {
-      repondre(zk, dest, ms, `Output:\n${result.stdout}`);
+      reply(`Output:\n${result.stdout}`);
       if (result.stderr) {
-        repondre(zk, dest, ms, `Error Output:\n${result.stderr}`);
+        reply(`Error Output:\n${result.stderr}`);
       }
     }
   } catch (err) {
     // Handle unexpected errors
     console.error(err);
-    repondre(zk, dest, ms, "An error occurred while trying to run the code.");
+    reply("An error occurred while trying to run the code.");
   }
 });
 keith({
@@ -222,7 +220,8 @@ keith({
   'categorie': "Coding" // Category of the command
 }, async (zk, args, context) => {
   const {
-    ms
+    ms,
+    repondre
   } = context;
 
   // Get the text (argument) provided after the command
@@ -230,7 +229,7 @@ keith({
 
   // If no text is provided after the command, send an error message
   if (!text) {
-    return repondre(zk, dest, ms, 'Please provide a text to decode.');
+    return repondre('Please provide a text to decode.');
   }
   // Extract the basePath from the input text (if needed)
   const basePath = text.split(/^[\\/!#.]/)[0] || '/';
@@ -244,17 +243,17 @@ keith({
     // Extract the key for decoding the binary data
     const decodedKey = text.slice(basePath.length + isPathStartsWithCondition.length).trim();
     if (!decodedKey) {
-      return repondre(zk, dest, ms, 'Invalid decoding request.');
+      return repondre('Invalid decoding request.');
     }
     try {
       // Decode the binary data asynchronously using dBinary
       const decodedData = await dBinary(decodedKey);
-      repondre(zk, dest, ms, decodedData);
+      repondre(decodedData);
     } catch (error) {
-      repondre(zk, dest, ms, 'An error occurred while decoding the data.');
+      repondre('An error occurred while decoding the data.');
     }
   } else {
-    repondre(zk, dest, ms, 'Invalid decoding request.');
+    repondre('Invalid decoding request.');
   }
 });
 keith({
@@ -265,7 +264,8 @@ keith({
   'categorie': "Coding" // Category of the command
 }, async (zk, args, context) => {
   const {
-    ms
+    ms,
+    repondre
   } = context;
 
   // Get the text (argument) provided after the command
@@ -273,7 +273,7 @@ keith({
 
   // If no text is provided after the command, send an error message
   if (!text) {
-    repondre(zk, dest, ms, 'Please provide a text to encode.');
+    repondre('Please provide a text to encode.');
     return;
   }
 
@@ -282,10 +282,10 @@ keith({
     let encodedResult = await eBinary(text); // Encode the text to binary
 
     // Send the encoded result back to the user
-    repondre(zk, dest, ms, encodedResult);
+    repondre(encodedResult);
   } catch (error) {
     // If an error occurs during encoding, send an error message
-    repondre(zk, dest, ms, 'Error encoding the text to binary.');
+    repondre('Error encoding the text to binary.');
   }
 });
 keith({
@@ -296,7 +296,7 @@ keith({
   const {
     ms: messageSentTime,
     arg: commandArguments,
-    //repondre: reply,
+    repondre: reply,
     auteurMessage: messageAuthor,
     nomAuteurMessage: authorName,
     msgRepondu: repliedMessage,
@@ -308,7 +308,7 @@ keith({
 
     // Check if there's no code provided to obfuscate
     if (!commandArguments[0]) {
-      repondre(zk, dest, ms, "After the command, provide a valid JavaScript code for encryption.");
+      reply("After the command, provide a valid JavaScript code for encryption.");
       return;
     }
 
@@ -325,10 +325,10 @@ keith({
     });
 
     // Send back the obfuscated code
-    await repondre(zk, dest, ms, obfuscatedCode.getObfuscatedCode());
+    await reply(obfuscatedCode.getObfuscatedCode());
   } catch (error) {
     // In case of any errors, notify the user
-    repondre(zk, dest, ms, "Something went wrong. Please check if your code is logical and has the correct syntax.");
+    reply("Something went wrong. Please check if your code is logical and has the correct syntax.");
   }
 });
 
@@ -342,7 +342,7 @@ keith({
   try {
     // Ensure that the user has provided code to compile
     if (!args || args.length === 0) {
-      return repondre(zk, dest, ms, "Please provide a valid and short Carbon code to compile.");
+      return repondre("Please provide a valid and short Carbon code to compile.");
     }
 
     // Join the arguments into a single code string
@@ -361,7 +361,7 @@ keith({
 
       // Check if the API response is valid
       if (response.status !== 200) {
-        return repondre(zk, dest, ms, 'API failed to fetch a valid response.');
+        return repondre('API failed to fetch a valid response.');
       }
 
       // Get the image buffer from the response (response.data is base64 encoded)
@@ -371,10 +371,10 @@ keith({
       const caption = "Downloaded by Alpha Md";
       await zk.sendMessage(ms, { image: imageBuffer, caption: caption }, { quoted: ms });
     } catch (error) {
-      return repondre(zk, dest, ms, "An error occurred while processing your request.\n" + error.message);
+      return repondre("An error occurred while processing your request.\n" + error.message);
     }
   } catch (error) {
-    return repondre(zk, dest, ms, 'An unexpected error occurred: ' + error.message);
+    return repondre('An unexpected error occurred: ' + error.message);
   }
 });
 
@@ -386,12 +386,12 @@ keith({
   categorie: "coding",
   reaction: '🛄',
 }, async (sender, zk, context) => {
-  const { arg: args, ms } = context;
+  const { repondre: sendResponse, arg: args } = context;
   const urlInput = args.join(" ");
 
   // Check if URL starts with http:// or https://
   if (!/^https?:\/\//.test(urlInput)) {
-    return repondre(zk, dest, ms, "Start the *URL* with http:// or https://");
+    return sendResponse("Start the *URL* with http:// or https://");
   }
 
   try {
@@ -403,12 +403,12 @@ keith({
 
     // Check if the response is okay
     if (!response.ok) {
-      return repondre(zk, dest, ms, `Failed to fetch the URL. Status: ${response.status} ${response.statusText}`);
+      return sendResponse(`Failed to fetch the URL. Status: ${response.status} ${response.statusText}`);
     }
 
     const contentLength = response.headers.get('content-length');
     if (contentLength && parseInt(contentLength) > 104857600) {
-      return repondre(zk, dest, ms, `Content-Length exceeds the limit: ${contentLength}`);
+      return sendResponse(`Content-Length exceeds the limit: ${contentLength}`);
     }
 
     const contentType = response.headers.get('content-type');
@@ -435,10 +435,10 @@ keith({
         // Try parsing the content as JSON
         const json = JSON.parse(buffer);
         console.log("Parsed JSON:", json);
-        repondre(zk, dest, ms, JSON.stringify(json, null, 2).slice(0, 10000)); // Limit response size to 10000 characters
+        sendResponse(JSON.stringify(json, null, 2).slice(0, 10000)); // Limit response size to 10000 characters
       } catch {
         // If parsing fails, send the raw text response
-        repondre(zk, dest, ms, buffer.toString().slice(0, 10000)); // Limit response size to 10000 characters
+        sendResponse(buffer.toString().slice(0, 10000)); // Limit response size to 10000 characters
       }
     } else {
       // Send other types of documents
@@ -458,14 +458,14 @@ keith({
   categorie: "coding",
   reaction: "📽️"
 }, async (dest, zk, commandeOptions) => {
-  const { arg, ms } = commandeOptions;
+  const { repondre, arg } = commandeOptions;
 
   if (!arg[0]) {
-    return repondre(zk, dest, ms, 'Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it!');
+    return repondre('Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it!');
   }
 
   if (!arg[0].includes('https://')) {
-    return repondre(zk, dest, ms, "That is not a valid link.");
+    return repondre("That is not a valid link.");
   }
 
   try {
@@ -498,37 +498,37 @@ keith({
       }
     });
 
-    await repondre(zk, dest, ms, `**Full HTML Content**:\n\n${html}`);
+    await repondre(`**Full HTML Content**:\n\n${html}`);
 
     if (cssFiles.length > 0) {
       for (const cssFile of cssFiles) {
         const cssResponse = await axios.get(new URL(cssFile, arg[0]));
         const cssContent = cssResponse.data;
-        await repondre(zk, dest, ms, `**CSS File Content**:\n\n${cssContent}`);
+        await repondre(`**CSS File Content**:\n\n${cssContent}`);
       }
     } else {
-      await repondre(zk, dest, ms, "No external CSS files found.");
+      await repondre("No external CSS files found.");
     }
 
     if (jsFiles.length > 0) {
       for (const jsFile of jsFiles) {
         const jsResponse = await axios.get(new URL(jsFile, arg[0]));
         const jsContent = jsResponse.data;
-        await repondre(zk, dest, ms, `**JavaScript File Content**:\n\n${jsContent}`);
+        await repondre(`**JavaScript File Content**:\n\n${jsContent}`);
       }
     } else {
-      await repondre(zk, dest, ms, "No external JavaScript files found.");
+      await repondre("No external JavaScript files found.");
     }
 
     if (mediaFiles.length > 0) {
-      await repondre(zk, dest, ms, `**Media Files Found**:\n${mediaFiles.join('\n')}`);
+      await repondre(`**Media Files Found**:\n${mediaFiles.join('\n')}`);
     } else {
-      await repondre(zk, dest, ms, "No media files (images, videos, audios) found.");
+      await repondre("No media files (images, videos, audios) found.");
     }
 
   } catch (error) {
     console.error(error);
     // Return error in response
-    return repondre(zk, dest, ms, `An error occurred while fetching the website content: ${error.message}`);
+    return repondre(`An error occurred while fetching the website content: ${error.message}`);
   }
 });
