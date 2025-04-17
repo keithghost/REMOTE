@@ -7,9 +7,6 @@ let { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
 //const { isGroupOnlyAdmin, addGroupToOnlyAdminList, removeGroupFromOnlyAdminList } = require("../bdd/onlyAdmin");
 //const { removeSudoNumber, addSudoNumber, issudo } = require("../bdd/sudo");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-//const { keith } = require('../keizzah/keith');
-
 keith({
     nomCom: 'jid',
     aliases: ['wajid', 'contact'],
@@ -25,16 +22,14 @@ keith({
     try {
         const username = auteurMsgRepondu.split('@')[0];
         return repondre(
-            `👑 *Contact Information*\n\n` +
-            `User: ${username}\n` +
-            `JID: ${auteurMsgRepondu}`
+            `👑 *User Information*\n\n` +
+            `User: ${username}`
         );
     } catch (error) {
         console.error('Error:', error);
-        return repondre('❌ Failed to get contact information');
+        return repondre('❌ Failed to get user information');
     }
 });
-
 
 keith({ nomCom: "crew", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
   const { ms, repondre, arg, auteurMessage, superUser, auteurMsgRepondu, msgRepondu } = commandeOptions;
