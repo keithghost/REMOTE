@@ -2,6 +2,67 @@ const { keith } = require("../keizzah/keith");
 const axios = require("axios");
 const conf = require(__dirname + '/../set');
 const cheerio = require("cheerio");
+const { Catbox } = require("node-catbox");
+const fs = require('fs-extra');
+
+
+
+// Initialize Catbox
+const catbox = new Catbox();
+
+keith({
+  nomCom: "whisper",
+  aliases: ["transcribe"],
+  categorie: "utility",
+  reaction: "🎙️"
+}, async (dest, zk, commandOptions) => {
+  const { msgRepondu, repondre } = commandOptions;
+
+  // Check if the message is quoted and contains audio
+  if (!msgRepondu || !msgRepondu.audioMessage) {
+    return repondre("Please quote an audio message to transcribe.");
+  }
+
+  try {
+    // Download the audio file
+    const audioPath = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
+    
+    // Upload to Catbox
+    const audioUrl = await catbox.uploadFile({ path: audioPath });
+    fs.unlinkSync(audioPath); // Clean up local file
+
+    if (!audioUrl) {
+      return repondre("Failed to upload audio file.");
+    }
+
+    // Send to Whisper API
+    const whisperApiUrl = `https://api.siputzx.my.id/api/cf/whisper?audioUrl=${encodeURIComponent(audioUrl)}`;
+    const response = await axios.get(whisperApiUrl);
+    const result = response.data;
+
+    if (!result.success) {
+      return repondre("Failed to transcribe audio.");
+    }
+
+    // Format the response
+    const transcription = `
+*Transcription Result:*
+📝 *Text:* ${result.data.text}
+🔢 *Word Count:* ${result.data.word_count}
+
+*Timestamps (VTT Format):*
+\`\`\`
+${result.data.vtt}
+\`\`\`
+    `;
+
+    await repondre(transcription);
+
+  } catch (error) {
+    console.error("Error in whisper command:", error);
+    repondre("An error occurred while processing the audio. Please try again.");
+  }
+});
 keith({
   nomCom: "codegen",
   aliases: ["codegenarate", "generatecode", "webscrap"],
