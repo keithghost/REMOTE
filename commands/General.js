@@ -15,7 +15,7 @@ initNotesDB().catch(err => {
 });
 
 keith({
-    nomCom: 'note',
+    nomCom: 'notemedia',
     categorie: 'Mods',
 }, async (dest, zk, commandeOptions) => {
     const { arg, repondre, prefixe, superUser, msgRepondu } = commandeOptions;
