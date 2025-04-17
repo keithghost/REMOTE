@@ -16,6 +16,7 @@ keith({
 }, async (message, args, context) => {
   const {
     ms: messageSentTime,
+    repondre,
     arg: commandArguments,
     auteurMessage: messageAuthor,
     nomAuteurMessage: authorName,
@@ -25,7 +26,7 @@ keith({
   try {
     // Check if the user provided a valid code
     if (!commandArguments[0]) {
-      return repondre(zk, dest, ms, "Quote a valid and short C++ code to compile.");
+      return repondre("Quote a valid and short C++ code to compile.");
     }
 
     // Join the command arguments into a single code string
@@ -36,9 +37,9 @@ keith({
 
     // Handle result
     if (result.error) {
-      repondre(zk, dest, ms, `Error: ${result.error}`);
+      repondre(`Error: ${result.error}`);
     } else {
-      repondre(zk, dest, ms, `Output:\n${result.stdout}`);
+      repondre(`Output:\n${result.stdout}`);
       if (result.stderr) {
         repondre(zk, dest, ms, `Error Output:\n${result.stderr}`);
       }
@@ -385,7 +386,7 @@ keith({
   categorie: "coding",
   reaction: '🛄',
 }, async (sender, zk, context) => {
-  const { arg: args } = context;
+  const { arg: args, ms } = context;
   const urlInput = args.join(" ");
 
   // Check if URL starts with http:// or https://
@@ -457,7 +458,7 @@ keith({
   categorie: "coding",
   reaction: "📽️"
 }, async (dest, zk, commandeOptions) => {
-  const { arg } = commandeOptions;
+  const { arg, ms } = commandeOptions;
 
   if (!arg[0]) {
     return repondre(zk, dest, ms, 'Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it!');
