@@ -338,6 +338,70 @@ keith({
 });
 
 
+keith({
+  nomCom: "yahoo",
+  aliases: ["yahoosearch", "ysearch"],
+  categorie: "Search",
+  reaction: "🔍"
+}, async (dest, zk, commandOptions) => {
+  const { arg, ms, repondre } = commandOptions;
+
+  // Check if a query is provided
+  if (!arg[0]) {
+    return repondre("Please provide a search query.\nExample: !yahoo siapa siputzx");
+  }
+
+  const query = arg.join(" ");
+  
+  try {
+    // Perform Yahoo search via API
+    const apiUrl = `https://api.siputzx.my.id/api/s/yahoo?query=${encodeURIComponent(query)}`;
+    const response = await axios.get(apiUrl);
+    const data = response.data;
+
+    // Check if any results were found
+    if (!data.status || !data.data || data.data.length === 0) {
+      return repondre('No search results found for your query.');
+    }
+
+    // Format the search results
+    let resultsMessage = `🔍 *Yahoo Search Results for "${query}"*\n\n`;
+    
+    // Show top 5 results (or fewer if less available)
+    const maxResults = Math.min(5, data.data.length);
+    for (let i = 0; i < maxResults; i++) {
+      const result = data.data[i];
+      resultsMessage += `*${i+1}. ${result.title.replace(/(http|https):\/\/[^\s]+/g, '').trim()}*\n`;
+      resultsMessage += `${result.description || 'No description available'}\n`;
+      resultsMessage += `🔗 ${result.url}\n\n`;
+    }
+
+    // Add footer if there are more results
+    if (data.data.length > maxResults) {
+      resultsMessage += `...and ${data.data.length - maxResults} more results.`;
+    }
+
+    // Send the search results
+    await zk.sendMessage(dest, { 
+      text: resultsMessage,
+      contextInfo: {
+        externalAdReply: {
+          title: `Yahoo Search: ${query}`,
+          body: `Found ${data.data.length} results`,
+          mediaType: 1,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Yahoo_Logo_2013.svg/1200px-Yahoo_Logo_2013.svg.png",
+          renderLargerThumbnail: false,
+          showAdAttribution: true
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Error during Yahoo search:', error);
+    return repondre(`Search failed: ${error.message || 'Unknown error'}`);
+  }
+});
+
 
 keith({
   nomCom: "capcut",
