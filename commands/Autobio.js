@@ -1,5 +1,6 @@
 //
-const { keith } = require("../keith");
+const {keith} = require("../keizzah/keith");
+//const { keith } = require("../keith");
 const conf = require(__dirname + '/../set');
 
 keith({
