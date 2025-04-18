@@ -340,6 +340,79 @@ keith({
 
 
 keith({
+  nomCom: "pinterest",
+  aliases: ["pin", "pindownload"],
+  categorie: "download",
+  reaction: "📌"
+}, async (dest, zk, commandOptions) => {
+  const { arg, ms, repondre } = commandOptions;
+
+  // Check if a query is provided
+  if (!arg[0]) {
+    return repondre("Please provide a search query for Pinterest.");
+  }
+
+  const query = arg.join(" ");
+
+  try {
+    // Perform a Pinterest search
+    const searchUrl = `https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`;
+    const searchResponse = await axios.get(searchUrl);
+    const searchData = searchResponse.data;
+
+    // Check if any pins were found
+    if (!searchData.status || !searchData.data || searchData.data.length === 0) {
+      return repondre('No pins found for the specified query.');
+    }
+
+    // Get the first pin result
+    const firstPin = searchData.data[0];
+    
+    // Get download link for the pin
+    const downloadUrl = `https://api.siputzx.my.id/api/d/pinterest?url=${encodeURIComponent(firstPin.pin)}`;
+    const downloadResponse = await axios.get(downloadUrl);
+    const downloadData = downloadResponse.data;
+
+    if (!downloadData.status || !downloadData.data || !downloadData.data.url) {
+      return repondre('Failed to retrieve download URL.');
+    }
+
+    // Determine if it's an image or video
+    const isVideo = downloadData.data.url.includes('.mp4');
+    const mediaType = isVideo ? 'video' : 'image';
+
+    // Prepare the message payload
+    const messagePayload = {
+      [mediaType]: { url: downloadData.data.url },
+      mimetype: isVideo ? 'video/mp4' : 'image/jpeg',
+      caption: `📌 *Pinterest Download*\n\n` +
+               `🔹 *Title:* ${firstPin.grid_title || 'No title'}\n` +
+               `🔹 *Created:* ${firstPin.created_at}\n` +
+               `🔹 *Source:* ${firstPin.link || firstPin.pin}`,
+      contextInfo: {
+        externalAdReply: {
+          title: firstPin.grid_title || 'Pinterest Download',
+          body: `Query: ${query}`,
+          mediaType: 1,
+          sourceUrl: conf.GURL,
+          thumbnailUrl: firstPin.images_url,
+          renderLargerThumbnail: true,
+          showAdAttribution: true,
+        },
+      },
+    };
+
+    // Send the media
+    await zk.sendMessage(dest, messagePayload, { quoted: ms });
+
+  } catch (error) {
+    console.error('Error during Pinterest download process:', error);
+    return repondre(`Failed to download pin: ${error.message || error}`);
+  }
+});
+
+
+keith({
   nomCom: "seegore",
   aliases: ["gore", "seegorevideo"],
   categorie: "download",
