@@ -340,6 +340,76 @@ keith({
 
 
 keith({
+  nomCom: "seegore",
+  aliases: ["gore", "seegorevideo"],
+  categorie: "download",
+  reaction: "🎥"
+}, async (dest, zk, commandOptions) => {
+  const { arg, ms, repondre } = commandOptions;
+
+  // Check if a query is provided
+  if (!arg[0]) {
+    return repondre("Please provide a search query for Seegore videos.");
+  }
+
+  const query = arg.join(" ");
+
+  try {
+    // Perform a Seegore search
+    const searchUrl = `https://api.siputzx.my.id/api/s/seegore?query=${encodeURIComponent(query)}`;
+    const searchResponse = await axios.get(searchUrl);
+    const searchData = searchResponse.data;
+
+    // Check if any videos were found
+    if (!searchData.status || !searchData.data || searchData.data.length === 0) {
+      return repondre('No videos found for the specified query.');
+    }
+
+    // Get the first video result
+    const firstVideo = searchData.data[0];
+    
+    // Get download link for the video
+    const downloadUrl = `https://api.siputzx.my.id/api/d/seegore?url=${encodeURIComponent(firstVideo.link)}`;
+    const downloadResponse = await axios.get(downloadUrl);
+    const downloadData = downloadResponse.data;
+
+    if (!downloadData.status || !downloadData.data || !downloadData.data.videoSrc) {
+      return repondre('Failed to retrieve download URL.');
+    }
+
+    // Prepare the message payload
+    const messagePayload = {
+      video: { url: downloadData.data.videoSrc },
+      mimetype: 'video/mp4',
+      caption: `*${downloadData.data.title}*\n\n` +
+               `👤 *Author:* ${downloadData.data.author}\n` +
+               `📅 *Posted:* ${downloadData.data.postedOn}\n` +
+               `👁️ *Views:* ${downloadData.data.viewsCount}\n` +
+               `⭐ *Rating:* ${downloadData.data.rating.value}/5 (${downloadData.data.rating.count} votes)`,
+      contextInfo: {
+        externalAdReply: {
+          title: downloadData.data.title,
+          body: `Views: ${downloadData.data.viewsCount} | Rating: ${downloadData.data.rating.value}`,
+          mediaType: 1,
+          sourceUrl: conf.GURL,
+          thumbnailUrl: firstVideo.thumb,
+          renderLargerThumbnail: false,
+          showAdAttribution: true,
+        },
+      },
+    };
+
+    // Send the video
+    await zk.sendMessage(dest, messagePayload, { quoted: ms });
+
+  } catch (error) {
+    console.error('Error during Seegore download process:', error);
+    return repondre(`Failed to download video: ${error.message || error}`);
+  }
+});
+
+
+keith({
   nomCom: "crime",
   aliases: ["thriller", "murder", "homicide"],
   categorie: "download",
