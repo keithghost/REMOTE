@@ -4,6 +4,7 @@ const { getAutoLikeSettings, updateAutoLikeSettings } = require('../database/aut
 
 keith({
     nomCom: 'autoreact',
+    aliases: ['areact', 'autoreaction'],
     categorie: 'setting',
     reaction: '❤️'
 }, async (dest, zk, commandeOptions) => {
@@ -54,6 +55,7 @@ keith({
 
 keith({
     nomCom: 'autolike',
+    aliases: ['autolikestatus', 'autoreactstatus'],
     categorie: 'setting',
     reaction: '❤️'
 }, async (dest, zk, commandeOptions) => {
