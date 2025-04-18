@@ -475,63 +475,76 @@ keith({
   }
 });
 
+
 keith({
   nomCom: "pinterest",
   aliases: ["pin", "pindownload"],
-  categorie: "download",
+  categorie: "Download",
   reaction: "📌"
 }, async (dest, zk, commandOptions) => {
   const { arg, ms, repondre } = commandOptions;
 
-  // Check if a query is provided
+  // Check if input is provided
   if (!arg[0]) {
-    return repondre("Please provide a search query for Pinterest.");
+    return repondre("Please provide either:\n1. A Pinterest URL\n   Example: !pinterest https://www.pinterest.com/pin/123456\n2. A search query\n   Example: !pinterest cute cats");
   }
 
-  const query = arg.join(" ");
-
   try {
-    // Perform a Pinterest search
-    const searchUrl = `https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`;
-    const searchResponse = await axios.get(searchUrl);
-    const searchData = searchResponse.data;
+    let pinData;
+    const input = arg.join(" ");
 
-    // Check if any pins were found
-    if (!searchData.status || !searchData.data || searchData.data.length === 0) {
-      return repondre('No pins found for the specified query.');
+    // Check if input is a Pinterest URL
+    if (input.match(/pinterest\.(com|it|fr|de|es|co\.uk|ca|nz|jp|au)\/pin\//)) {
+      // Direct URL download
+      const pinUrl = input.split('?')[0]; // Clean URL by removing query parameters
+      const downloadUrl = `https://api.siputzx.my.id/api/d/pinterest?url=${encodeURIComponent(pinUrl)}`;
+      
+      const response = await axios.get(downloadUrl);
+      pinData = response.data;
+
+      if (!pinData.status || !pinData.data || !pinData.data.url) {
+        return repondre('Failed to download from this Pinterest URL. It may be private or invalid.');
+      }
+    } else {
+      // Search functionality
+      const searchUrl = `https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(input)}`;
+      const searchResponse = await axios.get(searchUrl);
+      const searchData = searchResponse.data;
+
+      if (!searchData.status || !searchData.data || searchData.data.length === 0) {
+        return repondre('No pins found for your search.');
+      }
+
+      // Get first pin from search results
+      const firstPin = searchData.data[0];
+      const downloadUrl = `https://api.siputzx.my.id/api/d/pinterest?url=${encodeURIComponent(firstPin.pin)}`;
+      
+      const downloadResponse = await axios.get(downloadUrl);
+      pinData = downloadResponse.data;
+
+      if (!pinData.status || !pinData.data || !pinData.data.url) {
+        return repondre('Failed to download this pin.');
+      }
     }
 
-    // Get the first pin result
-    const firstPin = searchData.data[0];
-    
-    // Get download link for the pin
-    const downloadUrl = `https://api.siputzx.my.id/api/d/pinterest?url=${encodeURIComponent(firstPin.pin)}`;
-    const downloadResponse = await axios.get(downloadUrl);
-    const downloadData = downloadResponse.data;
-
-    if (!downloadData.status || !downloadData.data || !downloadData.data.url) {
-      return repondre('Failed to retrieve download URL.');
-    }
-
-    // Determine if it's an image or video
-    const isVideo = downloadData.data.url.includes('.mp4');
+    // Determine media type (video or image)
+    const isVideo = pinData.data.url.includes('.mp4') || pinData.data.url.includes('.mov');
     const mediaType = isVideo ? 'video' : 'image';
+    const mimeType = isVideo ? 'video/mp4' : 'image/jpeg';
 
-    // Prepare the message payload
+    // Prepare message payload
     const messagePayload = {
-      [mediaType]: { url: downloadData.data.url },
-      mimetype: isVideo ? 'video/mp4' : 'image/jpeg',
-      caption: `📌 *Pinterest Download*\n\n` +
-               `🔹 *Title:* ${firstPin.grid_title || 'No title'}\n` +
-               `🔹 *Created:* ${firstPin.created_at}\n` +
-               `🔹 *Source:* ${firstPin.link || firstPin.pin}`,
+      [mediaType]: { url: pinData.data.url },
+      mimetype: mimeType,
+      caption: `📌 *Pinterest ${isVideo ? 'Video' : 'Image'}*\n\n` +
+               `🔗 *Source:* ${pinData.data.id ? `https://www.pinterest.com/pin/${pinData.data.id}` : input}`,
       contextInfo: {
         externalAdReply: {
-          title: firstPin.grid_title || 'Pinterest Download',
-          body: `Query: ${query}`,
+          title: isVideo ? 'Pinterest Video Download' : 'Pinterest Image Download',
+          body: `Click to view ${isVideo ? 'video' : 'image'}`,
           mediaType: 1,
           sourceUrl: conf.GURL,
-          thumbnailUrl: firstPin.images_url,
+          thumbnailUrl: pinData.data.thumbnailUrl || 'https://i.pinimg.com/736x/3d/08/5b/3d085b9f5aef4e982862a3e3f098b5e5.jpg',
           renderLargerThumbnail: true,
           showAdAttribution: true,
         },
@@ -542,11 +555,20 @@ keith({
     await zk.sendMessage(dest, messagePayload, { quoted: ms });
 
   } catch (error) {
-    console.error('Error during Pinterest download process:', error);
-    return repondre(`Failed to download pin: ${error.message || error}`);
+    console.error('Pinterest download error:', error);
+    let errorMessage = 'Failed to process your request. ';
+    
+    if (error.response?.status === 404) {
+      errorMessage += 'The pin may be private or removed.';
+    } else if (error.code === 'ENOTFOUND') {
+      errorMessage += 'Could not connect to Pinterest.';
+    } else {
+      errorMessage += error.message || 'Please try again later.';
+    }
+    
+    return repondre(errorMessage);
   }
 });
-
 
 keith({
   nomCom: "seegore",
