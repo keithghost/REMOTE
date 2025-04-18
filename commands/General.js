@@ -340,6 +340,78 @@ keith({
 
 
 keith({
+  nomCom: "capcut",
+  aliases: ["cc", "capcutdl"],
+  categorie: "Download",
+  reaction: "✂️"
+}, async (dest, zk, commandOptions) => {
+  const { arg, ms, repondre } = commandOptions;
+
+  // Check if URL is provided
+  if (!arg[0]) {
+    return repondre("Please provide a CapCut video URL.\nExample: !capcut https://www.capcut.com/t/Zs8Sw9wsE");
+  }
+
+  const url = arg[0];
+  
+  // Validate CapCut URL
+  if (!url.includes('capcut.com') && !url.includes('capcut.net')) {
+    return repondre("Invalid CapCut URL. Please provide a valid CapCut video link.");
+  }
+
+  try {
+    // Get download info from API
+    const apiUrl = `https://api.siputzx.my.id/api/d/capcut?url=${encodeURIComponent(url)}`;
+    const response = await axios.get(apiUrl);
+    const data = response.data;
+
+    // Check API response
+    if (!data.status || !data.data || !data.data.contentUrl) {
+      return repondre('Failed to retrieve video information. The link may be invalid or private.');
+    }
+
+    const videoData = data.data;
+    const meta = videoData.meta || {};
+
+    // Prepare the message payload
+    const messagePayload = {
+      video: { 
+        url: videoData.contentUrl 
+      },
+      mimetype: 'video/mp4',
+      caption: `✂️ *CapCut Video*\n\n` +
+               `📌 *Title:* ${meta.title || 'No title'}\n` +
+               `❤️ *Likes:* ${meta.like ? meta.like.toLocaleString() : 'N/A'}\n` +
+               `▶️ *Plays:* ${meta.play ? meta.play.toLocaleString() : 'N/A'}\n` +
+               `⏱️ *Duration:* ${meta.duration ? (meta.duration/1000).toFixed(1)+'s' : 'N/A'}\n` +
+               `👤 *Author:* ${meta.author?.name || 'Unknown'}\n` +
+               `🔗 *Original URL:* ${url}`,
+      contextInfo: {
+        externalAdReply: {
+          title: meta.title || 'CapCut Video',
+          body: `By ${meta.author?.name || 'Unknown'} | ${meta.play ? meta.play.toLocaleString()+' plays' : ''}`,
+          mediaType: 1,
+          sourceUrl: conf.GURL,
+          thumbnailUrl: meta.coverUrl || videoData.thumbnailUrl?.[0],
+          renderLargerThumbnail: true,
+          showAdAttribution: true,
+        },
+      },
+    };
+
+    // Send the video
+    await zk.sendMessage(dest, messagePayload, { quoted: ms });
+
+  } catch (error) {
+    console.error('Error during CapCut download process:', error);
+    if (error.response?.status === 404) {
+      return repondre('Video not found. The link may be invalid or private.');
+    }
+    return repondre(`Failed to download video: ${error.message || error}`);
+  }
+});
+
+keith({
   nomCom: "pinterest",
   aliases: ["pin", "pindownload"],
   categorie: "download",
