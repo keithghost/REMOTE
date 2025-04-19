@@ -4,7 +4,7 @@ const { exec } = require("child_process");
 const path = require("path");
 const axios = require("axios");
 
-keith({
+/*keith({
     nomCom: 'react',
     categorie: 'Video-Edit',
 }, async (dest, zk, commandeOptions) => {
@@ -532,7 +532,7 @@ keith({
             });
         });
     }
-});
+});*/
 
 
 keith({
