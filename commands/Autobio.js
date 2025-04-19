@@ -1,4 +1,44 @@
 const { keith } = require('../keizzah/keith');
+//const { keith } = require('../keizzah/keith');
+const conf = require(__dirname + '/../set');
+
+keith({
+  nomCom: "owner",
+  desc: "to generate owner vcard number",
+  categorie: "owner",
+  reaction: "⚔️"
+}, async (dest, zk, commandeOptions) => {
+  try {
+    const { ms } = commandeOptions;
+
+    // Validate required configuration
+    if (!conf.OWNER_NAME || !conf.NUMERO_OWNER) {
+      throw new Error("Owner configuration is incomplete");
+    }
+
+    const vcard = 
+      'BEGIN:VCARD\n' +
+      'VERSION:3.0\n' +
+      'FN:' + conf.OWNER_NAME + '\n' +
+      'ORG:undefined;\n' +
+      'TEL;type=CELL;type=VOICE;waid=' + conf.NUMERO_OWNER + ':+' + conf.NUMERO_OWNER + '\n' +
+      'END:VCARD';
+
+    await zk.sendMessage(dest, {
+      contacts: {
+        displayName: conf.OWNER_NAME,
+        contacts: [{ vcard }],
+      },
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Error in owner command:", error);
+    // Optionally send an error message to the user
+    await zk.sendMessage(dest, { 
+      text: "❌ An error occurred while processing the owner command." 
+    }, { quoted: ms });
+  }
+});
 keith({
   nomCom: "vcard",
   desc: "to generate owner vcard number",
