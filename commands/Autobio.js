@@ -1,41 +1,43 @@
-//
-const {keith} = require("../keizzah/keith");
-//const { keith } = require("../keith");
-const conf = require(__dirname + '/../set');
-
+const { keith } = require('../keizzah/keith');
 keith({
-  nomCom: "owner3",
+  nomCom: "vcard",
+  desc: "to generate owner vcard number",
   categorie: "owner",
   reaction: "⚔️"
 }, async (dest, zk, commandeOptions) => {
-  const { ms } = commandeOptions;
+  const { ms, auteurMsgRepondu, arg, nomAuteurMessage, auteurMessage } = commandeOptions;
 
-  // Create vcard for owner
-  const vcard = 
+  let targetNumber, targetName;
+
+  if (auteurMsgRepondu) {
+    // If user is mentioned/replied to
+    targetNumber = auteurMsgRepondu.split('@')[0];
+    targetName = nomAuteurMessage || "User";
+  } else if (arg && arg.length > 0) {
+    // If no mention but has argument
+    const possibleNumber = arg[0].replace(/[^0-9]/g, '');
+    if (possibleNumber.length > 5) {
+      targetNumber = possibleNumber;
+      targetName = arg.join(' ').replace(possibleNumber, '').trim() || "User";
+    } else {
+      return repondre('❌ Please provide a valid phone number or mention a user');
+    }
+  } else {
+    return repondre('❌ Please mention a user or provide a phone number and name');
+  }
+
+  const vcard =
     'BEGIN:VCARD\n' +
     'VERSION:3.0\n' +
-    `FN:${conf.OWNER_NAME}\n` +
-    'ORG:Bot Owner;\n' +
-    `TEL;type=CELL;type=VOICE;waid=${conf.OWNER_NUMBER}:${conf.OWNER_NUMBER}\n` +
+    'FN:' + targetName + '\n' +
+    'ORG:undefined;\n' +
+    'TEL;type=CELL;type=VOICE;waid=' + targetNumber + ':+' + targetNumber + '\n' +
     'END:VCARD';
 
-  // Send owner contact
-  await zk.sendMessage(dest, {
-    text: `⚔️ *Bot Owner* ⚔️\n\n` +
-          `Contact ${conf.OWNER_NAME} for any issues or inquiries:`,
+  zk.sendMessage(dest, {
     contacts: {
-      displayName: conf.OWNER_NAME,
-      contacts: [{ vcard }]
+      displayName: targetName,
+      contacts: [{ vcard }],
     },
-    contextInfo: {
-      externalAdReply: {
-        title: "Bot Owner",
-        body: `Contact ${conf.OWNER_NAME}`,
-        mediaType: 1,
-        sourceUrl: conf.GURL,
-        thumbnailUrl: "https://i.imgur.com/3Q5X7zE.png",
-        showAdAttribution: true
-      }
-    }
   }, { quoted: ms });
 });
