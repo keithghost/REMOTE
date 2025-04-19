@@ -436,22 +436,7 @@ keith({
 }, async (dest, zk, commandeOptions) => {
   const { ms, mybotpic } = commandeOptions;
 
-  const ownerjid = conf.NUMERO_OWNER.replace(/[^0-9]/g) + "@s.whatsapp.net";
-  const sudos = await getAllSudoNumbers();
-  const mentionedJid = sudos.concat([ownerjid]);
-  console.log(sudos);
-  console.log(mentionedJid);
 
-  if (await isSudoTableNotEmpty()) {
-    zk.sendMessage(
-      dest,
-      {
-        image: { url: mybotpic() },
-        caption: `Hello @${mentionedJid.join(", ")}`,
-        mentions: mentionedJid
-      }
-    );
-  } else {
     const vcard =
       'BEGIN:VCARD\n' + // metadata of the contact card
       'VERSION:3.0\n' +
