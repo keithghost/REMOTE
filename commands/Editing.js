@@ -4,7 +4,7 @@ const { exec } = require("child_process");
 const path = require("path");
 const axios = require("axios");
 
-/*keith({
+keith({
     nomCom: 'react',
     categorie: 'Video-Edit',
 }, async (dest, zk, commandeOptions) => {
@@ -19,8 +19,8 @@ const axios = require("axios");
         template: 'sidebyside', // sidebyside, pictureinpicture, topbottom
         ratio: '1:1',           // Aspect ratio for split templates
         camSize: '30%',         // Size for PiP template
-        border: '3px',          # Border styling
-        muteOriginal: false     # Mute main video
+        border: '3px',          // Border styling
+        muteOriginal: false     // Mute main video
     };
 
     // Parse arguments
@@ -81,9 +81,10 @@ const axios = require("axios");
 
     // Helper Functions
     async function getVideoDimensions(videoPath) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             exec(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of json "${videoPath}"`,
                 (err, stdout) => {
+                    if (err) return reject(err);
                     const { streams: [ { width, height } ] } = JSON.parse(stdout);
                     resolve({ width, height });
                 });
@@ -267,9 +268,10 @@ keith({
 
     // Helper Functions
     async function getVideoInfo(filePath) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             exec(`ffprobe -v error -show_format -show_streams -of json "${filePath}"`,
                 (err, stdout) => {
+                    if (err) return reject(err);
                     const info = JSON.parse(stdout.toString());
                     resolve({
                         duration: parseFloat(info.format.duration),
@@ -486,9 +488,10 @@ keith({
     }
 
     async function getAudioDuration(audioPath) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             exec(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${audioPath}"`, 
                 (error, stdout) => {
+                    if (error) return reject(error);
                     resolve(parseFloat(stdout) || 30); // Default 30s if cannot determine
                 });
         });
@@ -532,8 +535,7 @@ keith({
             });
         });
     }
-});*/
-
+});
 
 keith({
     nomCom: 'tomp3',
@@ -608,8 +610,6 @@ keith({
     }
 });
 
-
-
 keith({
     nomCom: 'toptt',
     categorie: 'Audio-Edit',
@@ -683,7 +683,6 @@ keith({
     }
 });
 
-
 keith({
     nomCom: 'slowmotion',
     categorie: 'Video-Edit'
@@ -703,7 +702,7 @@ keith({
     // Parse speed factor (default to 2x slower if not specified)
     const speedFactor = arg[0] ? parseFloat(arg[0]) : 2;
     
-    if (isNaN(speedFactor) {
+    if (isNaN(speedFactor)) {
         return repondre('Please provide a valid number for speed factor (e.g., .slowmotion 2)');
     }
 
@@ -859,4 +858,4 @@ keith({
         console.error('Download error:', downloadError);
         repondre('Error processing the video message');
     }
-});            
+});
