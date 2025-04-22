@@ -1,7 +1,5 @@
-
 const { keith } = require('../keizzah/keith');
-const axios = require('axios');
-const yts = require('yt-search');
+const yts = require("yt-search");
 const conf = require(__dirname + '/../set');
 
 keith({
