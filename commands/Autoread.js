@@ -71,7 +71,7 @@ const conf = require(__dirname + '/../set');
 const FormData = require('form-data');
 
 keith({
-  nomCom: "yts",
+  nomCom: "yts5",
   categorie: "Search",
   reaction: "✋"
 }, async (dest, zk, commandeOptions) => {
