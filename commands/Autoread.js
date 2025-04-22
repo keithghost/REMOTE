@@ -1,4 +1,4 @@
-const { keith } = require('../keizzah/keith');
+/*const { keith } = require('../keizzah/keith');
 const { generateWAMessageContent, generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys').default;
 const gis = require('g-i-s');
 
@@ -112,4 +112,88 @@ async function createImageMessage(url) {
     upload: zk.waUploadToServer
   });
   return imageMessage;
-}
+}*/
+const { keith } = require('../keizzah/keith');
+const gis = require('g-i-s');
+const { generateWAMessageContent, generateWAMessageFromContent, proto } = (await import('@whiskeysockets/baileys')).default;
+
+keith({
+  nomCom: "img",
+  categorie: "Search",
+  reaction: "📷"
+},
+async (dest, zk, commandeOptions) => {
+  const { repondre, ms, arg } = commandeOptions;
+
+  if (!arg[0]) {
+    repondre('Which image?');
+    return;
+  }
+
+  const searchTerm = arg.join(" ");
+  gis(searchTerm, async (e, r) => {
+    if (e || !r.length) {
+      repondre("Oops, an error occurred or no results found!");
+      return;
+    }
+
+    let push = [];
+    let images = r.slice(0, 5);
+
+    for (let img of images) {
+      push.push({
+        body: proto.Message.InteractiveMessage.Body.fromObject({
+          text: `🌍 *Image Search Result* \n *Source:* ${img.url}`
+        }),
+        footer: proto.Message.InteractiveMessage.Footer.fromObject({
+          text: ''
+        }),
+        header: proto.Message.InteractiveMessage.Header.fromObject({
+          hasMediaAttachment: true,
+          imageMessage: await generateWAMessageContent({
+            image: { url: img.url }
+          }, {
+            upload: zk.waUploadToServer
+          })
+        }),
+        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
+          buttons: [
+            {
+              "name": "cta_copy",
+              "buttonParamsJson": JSON.stringify({
+                "display_text": "Copy Image Link",
+                "copy_code": img.url
+              })
+            }
+          ]
+        })
+      });
+    }
+
+    const botMessage = generateWAMessageFromContent(dest, {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: proto.Message.InteractiveMessage.fromObject({
+            body: proto.Message.InteractiveMessage.Body.create({
+              text: `📷 *Results for:* ${searchTerm}`
+            }),
+            footer: proto.Message.InteractiveMessage.Footer.create({
+              text: 'Swipe over the results and tap the button to copy the image link!'
+            }),
+            header: proto.Message.InteractiveMessage.Header.create({
+              hasMediaAttachment: false
+            }),
+            carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({
+              cards: [...push]
+            })
+          })
+        }
+      }
+    }, {
+      'quoted': ms
+    });
+
+    await zk.relayMessage(dest, botMessage.message, { messageId: botMessage.key.id });
+  });
+});
+
