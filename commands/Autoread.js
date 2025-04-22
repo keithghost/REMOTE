@@ -1,12 +1,13 @@
-
+const { keith } = require('../keizzah/keith');
 const { generateWAMessageContent, generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys').default;
 const gis = require('g-i-s');
 
-module.exports = {
+keith({
   nomCom: "img4",
   categorie: "Search",
-  reaction: "📷",
-  async run(dest, zk, commandeOptions) {
+  reaction: "📷"
+},
+  async (dest, zk, commandeOptions) {
     const { repondre, ms, arg } = commandeOptions;
 
     if (!arg[0]) {
