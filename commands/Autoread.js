@@ -118,7 +118,7 @@ const gis = require('g-i-s');
 const { generateWAMessageContent, generateWAMessageFromContent, proto } = (await import('@whiskeysockets/baileys')).default;
 
 keith({
-  nomCom: "img",
+  nomCom: "img5",
   categorie: "Search",
   reaction: "📷"
 },
