@@ -115,7 +115,9 @@ async function createImageMessage(url) {
 }*/
 const { keith } = require('../keizzah/keith');
 const gis = require('g-i-s');
-const { generateWAMessageContent, generateWAMessageFromContent, proto } = (await import('@whiskeysockets/baileys')).default;
+//const { keith } = require('../keizzah/keith');
+const { generateWAMessageContent, generateWAMessageFromContent, proto } = require('@whiskeysockets/baileys').default;
+//const gis = require('g-i-s');
 
 keith({
   nomCom: "img5",
