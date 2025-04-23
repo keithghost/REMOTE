@@ -226,7 +226,7 @@ keith({
             "REACTION": ["REACTION"],
             "SCREENSHOTS": ["SCREENSHOTS"],
             "SEARCH": ["SEARCH"],
-            "SOCCER": ["SOCCER"],
+            "SPORTS": ["SPORTS"],
             "STALKER": ["STALKER"],
             "SYSTEM": ["SYSTEM"],
             "MOVIE": ["MOVIE"],
