@@ -3,6 +3,92 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+// Bundesliga Matches Command
+keith({
+  nomCom: "bundesligaresults",
+  aliases: ["bundesligamatches", "blresults", "blmatches"],
+  categorie: "sports",
+  reaction: "🇩🇪"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Bundesliga match results...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Bundesliga Results",
+          body: "Loading recent match results...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/1200px-Bundesliga_logo_%282017%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/bundesliga/matches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.matches?.length) {
+      return repondre(zk, dest, ms, "No match results available at the moment.");
+    }
+
+    const { competition, matches } = data.result;
+
+    // Format the matches data
+    let message = `*🇩🇪 ${competition} Match Results* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    matches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort((a, b) => b - a).forEach(matchday => {
+      message += `📅 Matchday ${matchday}:\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        // Determine result emoji
+        let resultEmoji = "⚖️"; // Default for draw
+        if (match.winner !== "Draw") {
+          resultEmoji = match.winner === match.homeTeam ? "🏠" : "✈️";
+        }
+        
+        message += `${resultEmoji} ${match.homeTeam} ${match.score} ${match.awayTeam}\n`;
+        message += `   🏆 Winner: ${match.winner}\n\n`;
+      });
+    });
+
+    message += "```\n";  // End monospace block
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Bundesliga Results",
+          body: `Recent ${competition} match results`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/1200px-Bundesliga_logo_%282017%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Bundesliga Results command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch match results: ${error.message}`);
+  }
+});
 
 
 // Bundesliga Upcoming Matches Command
