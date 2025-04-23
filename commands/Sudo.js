@@ -3,6 +3,99 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+
+// La Liga Standings Command
+keith({
+  nomCom: "laligastandings",
+  aliases: ["laligatable", "laliga", "laligaleaguetable"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching La Liga standings...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "La Liga Standings",
+          body: "Loading complete league table...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/LaLiga.svg/1200px-LaLiga.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/laliga/standings');
+    const data = response.data;
+
+    if (!data.status || !data.result?.standings?.length) {
+      return repondre(zk, dest, ms, "No standings data available at the moment.");
+    }
+
+    const { competition, standings } = data.result;
+
+    // Format the standings data
+    let message = `*⚽ ${competition} Standings* 🏆\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Pos  Team                   P   W   D   L   GF  GA  GD   Pts\n";
+    message += "-----------------------------------------------------------\n";
+
+    // Add each team's standings
+    standings.forEach(team => {
+      // Add position indicators
+      const positionPrefix = team.position === 1 ? "🥇" : 
+                           (team.position <= 4 ? "🔵" :  // Champions League
+                           (team.position <= 6 ? "🟢" :  // Europa/Conference
+                           (team.position >= 18 ? "🔴" : "  "))); // Relegation
+
+      message += `${team.position.toString().padEnd(3)} ${positionPrefix} `;
+      message += `${team.team.substring(0, 20).padEnd(20)} `;
+      message += `${team.played.toString().padEnd(3)} `;
+      message += `${team.won.toString().padEnd(3)} `;
+      message += `${team.draw.toString().padEnd(3)} `;
+      message += `${team.lost.toString().padEnd(3)} `;
+      message += `${team.goalsFor.toString().padEnd(3)} `;
+      message += `${team.goalsAgainst.toString().padEnd(3)} `;
+      message += `${team.goalDifference.toString().padStart(3)} `;
+      message += `${team.points.toString().padStart(3)}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add league position indicators
+    message += "\n*Key:*\n";
+    message += "🥇 League leader\n";
+    message += "🔵 Champions League spots (1-4)\n";
+    message += "🟢 Europa League spots (5-6)\n";
+    message += "🔴 Relegation zone (18-20)\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "La Liga Standings",
+          body: `Complete ${competition} league table`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/LaLiga.svg/1200px-LaLiga.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('La Liga Standings command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
+  }
+});
 // La Liga Upcoming Matches Command
 keith({
   nomCom: "laligaupcoming",
