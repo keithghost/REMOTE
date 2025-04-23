@@ -4,6 +4,93 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 
+// La Liga Matches Command
+keith({
+  nomCom: "laligamatches",
+  aliases: ["laligaresults", "laligafixures", "laligagames"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching La Liga matches...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "La Liga Matches",
+          body: "Loading recent match results...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/LaLiga.svg/1200px-LaLiga.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/laliga/matches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.matches?.length) {
+      return repondre(zk, dest, ms, "No match data available at the moment.");
+    }
+
+    const { competition, matches } = data.result;
+
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    matches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Format the matches data
+    let message = `*⚽ ${competition} Match Results* 📅\n\n`;
+    
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort().forEach(matchday => {
+      message += `📌 *Matchday ${matchday}*\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        // Determine result emoji
+        let resultEmoji = "⚖️"; // Draw
+        if (match.winner !== "Draw") {
+          resultEmoji = match.winner === match.homeTeam ? "🏠" : "✈️";
+        }
+        
+        message += `${match.homeTeam} vs ${match.awayTeam}\n`;
+        message += `🔹 ${match.score} ${resultEmoji} (${match.status})\n\n`;
+      });
+      
+      message += "\n";
+    });
+
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "La Liga Match Results",
+          body: `Recent ${competition} matches`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/LaLiga.svg/1200px-LaLiga.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('La Liga Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch matches: ${error.message}`);
+  }
+});
+
 // La Liga Standings Command
 keith({
   nomCom: "laligastandings",
