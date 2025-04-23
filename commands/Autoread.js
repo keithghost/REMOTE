@@ -6,6 +6,7 @@ const { mediafireDl } = require("../keizzah/dl/Function");
 const conf = require(__dirname + "/../set");
 
 
+
 keith({
   nomCom: 'apk',
   aliases: ['app', 'playstore'],
@@ -21,43 +22,39 @@ keith({
   }
 
   try {
-    // Fetch app search results from the BK9 API
-    const searchResponse = await axios.get(`https://bk9.fun/search/apk?q=${appName}`);
+    // Fetch app search results from the API
+    const searchResponse = await axios.get(`https://apis-keith.vercel.app/search/apkfab?q=${encodeURIComponent(appName)}`);
     const searchData = searchResponse.data;
 
     // Check if any results were found
-    if (!searchData.BK9 || searchData.BK9.length === 0) {
+    if (!searchData.status || !searchData.result || searchData.result.length === 0) {
       return repondre("No app found with that name, please try again.");
     }
 
-    // Fetch the APK details for the first result
-    const appDetailsResponse = await axios.get(`https://bk9.fun/download/apk?id=${searchData.BK9[0].id}`);
-    const appDetails = appDetailsResponse.data;
+    // Get the first result
+    const firstResult = searchData.result[0];
+    
+    // Send the app details as a message with image
+    await client.sendMessage(groupId, {
+      image: { url: firstResult.image },
+      caption: `*${firstResult.title}*\n\n⭐ Rating: ${firstResult.rating || 'N/A'}\n📝 Reviews: ${firstResult.review || 'N/A'}\n\n_Downloading APK..._`
+    }, { quoted: ms });
+
+    // Fetch the APK download link
+    const downloadResponse = await axios.get(`https://apis-keith.vercel.app/download/apkfab?url=${encodeURIComponent(firstResult.link)}`);
+    const downloadData = downloadResponse.data;
 
     // Check if download link is available
-    if (!appDetails.BK9 || !appDetails.BK9.dllink) {
+    if (!downloadData.status || !downloadData.result || !downloadData.result.link) {
       return repondre("Unable to find the download link for this app.");
     }
 
-    const thumb = appDetails.BK9.thumbnail || conf.URL; // Fallback to conf.URL if thumbnail is not provided
-
-    // Send the APK file to the group with thumbnail
+    // Send the APK file to the group
     await client.sendMessage(groupId, {
-      document: { url: appDetails.BK9.dllink },
-      fileName: `${appDetails.BK9.name}.apk`,
+      document: { url: downloadData.result.link },
+      fileName: `${firstResult.title}.apk`,
       mimetype: "application/vnd.android.package-archive",
-      caption: `Downloaded by ${conf.OWNER_NAME}`,
-      contextInfo: {
-        externalAdReply: {
-          mediaUrl: thumb,
-          mediaType: 1,
-          thumbnailUrl: thumb,
-          title: "Alpha APK Download",
-          body: appDetails.BK9.name,
-          sourceUrl: conf.GURL, // Using configured source URL
-          showAdAttribution: true
-        }
-      }
+      caption: `*${firstResult.title}*\n\nDownloaded by ${conf.OWNER_NAME}`
     }, { quoted: ms });
 
   } catch (error) {
