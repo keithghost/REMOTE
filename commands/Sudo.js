@@ -4,7 +4,7 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 // EPL Matches Command
 keith({
-  nomCom: "epl",
+  nomCom: "eplmatches",
   aliases: ["premierleague", "football"],
   categorie: "sports",
   reaction: "⚽"
