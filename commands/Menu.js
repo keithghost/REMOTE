@@ -229,6 +229,7 @@ keith({
             "SOCCER": ["SOCCER"],
             "STALKER": ["STALKER"],
             "SYSTEM": ["SYSTEM"],
+            "MOVIE": ["MOVIE"],
             "TOOLS": ["TOOLS"],
             "TRADE": ["TRADE"],
             "TTS": ["TTS"],
