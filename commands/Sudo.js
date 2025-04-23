@@ -3,6 +3,108 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+// La Liga Upcoming Matches Command
+keith({
+  nomCom: "laligaupcoming",
+  aliases: ["laligafixtures", "laligaupcomingmatch", "llmatches"],
+  categorie: "sports",
+  reaction: "🇪🇸"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching La Liga upcoming matches...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "La Liga Fixtures",
+          body: "Loading upcoming matches...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/LaLiga.svg/1200px-LaLiga.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/laliga/upcomingmatches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.upcomingMatches?.length) {
+      return repondre(zk, dest, ms, "No upcoming matches data available at the moment.");
+    }
+
+    const { competition, upcomingMatches } = data.result;
+
+    // Format the matches data
+    let message = `*🇪🇸 ${competition} Upcoming Matches* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    upcomingMatches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort().forEach(matchday => {
+      message += `📅 Matchday ${matchday}:\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        const matchDate = new Date(match.date);
+        const formattedDate = matchDate.toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'UTC'
+        });
+        
+        // Highlight big teams with emojis
+        const homeTeam = match.homeTeam.includes('Real Madrid') ? '👑 ' + match.homeTeam :
+                        match.homeTeam.includes('Barcelona') ? '🔵🔴 ' + match.homeTeam :
+                        match.homeTeam.includes('Atlético') ? '🔴⚪ ' + match.homeTeam :
+                        match.homeTeam;
+        
+        const awayTeam = match.awayTeam.includes('Real Madrid') ? '👑 ' + match.awayTeam :
+                        match.awayTeam.includes('Barcelona') ? '🔵🔴 ' + match.awayTeam :
+                        match.awayTeam.includes('Atlético') ? '🔴⚪ ' + match.awayTeam :
+                        match.awayTeam;
+
+        message += `⏰ ${formattedDate} UTC\n`;
+        message += `🏠 ${homeTeam}\n`;
+        message += `🆚 ${awayTeam}\n\n`;
+      });
+    });
+
+    message += "```\n";  // End monospace block
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "La Liga Fixtures",
+          body: `Upcoming ${competition} matches`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/LaLiga.svg/1200px-LaLiga.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('La Liga Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch upcoming matches: ${error.message}`);
+  }
+});
 // EPL Standings Command
 keith({
   nomCom: "eplstandings",
