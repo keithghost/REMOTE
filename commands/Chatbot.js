@@ -2,6 +2,100 @@ const { keith } = require('../keizzah/keith');
 const axios = require('axios');
 const conf = require(__dirname + "/../set");
 
+
+keith({
+  nomCom: "zoom",
+  aliases: ["zoommovie", "zmovie"],
+  categorie: "Search",
+  reaction: "🎬"
+}, async (dest, zk, commandOptions) => {
+  const { arg, ms, repondre } = commandOptions;
+
+  // Check if a query is provided
+  if (!arg[0]) {
+    return repondre("Please provide a movie name to search on Zoom.lk");
+  }
+
+  const query = arg.join(" ");
+
+  try {
+    // First search for the movie
+    const searchUrl = `https://apis-keith.vercel.app/movie/zoom/search?text=${encodeURIComponent(query)}`;
+    const searchResponse = await axios.get(searchUrl);
+    
+    if (!searchResponse.data.status || !searchResponse.data.result.data.length) {
+      return repondre('No movies found for the specified query.');
+    }
+
+    const movies = searchResponse.data.result.data;
+    
+    // Format the search results for user selection
+    let searchResultsMessage = "🎬 *Zoom.lk Search Results*\n\n";
+    movies.slice(0, 5).forEach((movie, index) => {
+      searchResultsMessage += `${index + 1}. ${movie.title}\n`;
+    });
+    searchResultsMessage += "\nReply with the number of the movie you want to download.";
+
+    await repondre(searchResultsMessage);
+
+    // Wait for user response
+    const collected = await zk.awaitMessages(dest, {
+      filter: (msg) => !msg.key.fromMe && msg.key.remoteJid === dest,
+      max: 1,
+      time: 60000
+    });
+
+    if (!collected || !collected.length) {
+      return repondre("Selection timed out. Please try again.");
+    }
+
+    const selectedNumber = parseInt(collected[0].message.conversation);
+    if (isNaN(selectedNumber) {
+      return repondre("Invalid selection. Please reply with a number.");
+    }
+
+    if (selectedNumber < 1 || selectedNumber > movies.length) {
+      return repondre("Invalid selection number. Please try again.");
+    }
+
+    const selectedMovie = movies[selectedNumber - 1];
+    
+    // Get download link for the selected movie
+    const downloadUrl = `https://apis-keith.vercel.app/movie/zoom/movie?url=${encodeURIComponent(selectedMovie.link)}`;
+    const downloadResponse = await axios.get(downloadUrl);
+    
+    if (!downloadResponse.data.status || !downloadResponse.data.result.data.dl_link) {
+      return repondre('Failed to retrieve download link for the selected movie.');
+    }
+
+    const movieData = downloadResponse.data.result.data;
+    
+    // Prepare the message payload to send as document
+    const messagePayload = {
+      document: { url: movieData.dl_link },
+      mimetype: 'application/zip',
+      fileName: `${movieData.title}.zip`,
+      contextInfo: {
+        externalAdReply: {
+          title: movieData.title,
+          body: `Size: ${movieData.size}\nViews: ${movieData.view}`,
+          mediaType: 1,
+          sourceUrl: conf.GURL,
+          thumbnailUrl: "https://i.ibb.co/2qY7dY3/zoom-lk.jpg", // You can replace with actual thumbnail if available
+          renderLargerThumbnail: false,
+          showAdAttribution: true,
+        },
+      },
+    };
+
+    // Send the movie as a document
+    await zk.sendMessage(dest, messagePayload, { quoted: ms });
+
+  } catch (error) {
+    console.error('Error during Zoom movie download process:', error);
+    return repondre(`Download failed due to an error: ${error.message || error}`);
+  }
+});
 keith({
   nomCom: "movie",
   aliases: ["movies", "sinhalasub"],
