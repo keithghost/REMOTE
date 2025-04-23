@@ -233,7 +233,7 @@ keith({
       message += `${player.penalties}\n`;
     });
 
-    message += "```\n";  // End monospace block
+    message += "```\n\n";  // End monospace block
     message += `\n_Last updated: ${new Date().toLocaleString()}_`;
 
     // Send the formatted message
