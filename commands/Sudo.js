@@ -3,6 +3,99 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+// Bundesliga Standings Command
+keith({
+  nomCom: "bundesligastandings",
+  aliases: ["bundesligatable", "blstandings", "bltable"],
+  categorie: "sports",
+  reaction: "🇩🇪"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Bundesliga standings...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Bundesliga Standings",
+          body: "Loading current league table...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/1200px-Bundesliga_logo_%282017%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/bundesliga/standings');
+    const data = response.data;
+
+    if (!data.status || !data.result?.standings?.length) {
+      return repondre(zk, dest, ms, "No standings data available at the moment.");
+    }
+
+    const { competition, standings } = data.result;
+
+    // Format the standings data
+    let message = `*🇩🇪 ${competition} Standings* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Pos  Team                   P   W   D   L   GF  GA  GD   Pts\n";
+    message += "-----------------------------------------------------------\n";
+
+    // Add each team's standings
+    standings.forEach(team => {
+      // Add trophy emoji for top position
+      const positionPrefix = team.position === 1 ? "🥇" : 
+                           (team.position <= 4 ? "🏆" : 
+                           (team.position <= 6 ? "🟢" : 
+                           (team.position >= 16 ? "🔴" : "  ")));
+      
+      message += `${team.position.toString().padEnd(3)} ${positionPrefix} `;
+      message += `${team.team.substring(0, 20).padEnd(20)} `;
+      message += `${team.played.toString().padEnd(3)} `;
+      message += `${team.won.toString().padEnd(3)} `;
+      message += `${team.draw.toString().padEnd(3)} `;
+      message += `${team.lost.toString().padEnd(3)} `;
+      message += `${team.goalsFor.toString().padEnd(3)} `;
+      message += `${team.goalsAgainst.toString().padEnd(3)} `;
+      message += `${team.goalDifference.toString().padStart(3)} `;
+      message += `${team.points.toString().padStart(3)}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add league position indicators
+    message += "\n*Key:*\n";
+    message += "🥇 League leader\n";
+    message += "🏆 Champions League spots\n";
+    message += "🟢 Europa League/Conference spots\n";
+    message += "🔴 Relegation zone\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Bundesliga Standings",
+          body: `Current ${competition} league table`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/1200px-Bundesliga_logo_%282017%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Bundesliga Standings command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
+  }
+});
+
 // Bundesliga Matches Command
 keith({
   nomCom: "bundesligaresults",
