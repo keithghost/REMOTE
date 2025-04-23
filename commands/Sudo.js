@@ -2,6 +2,85 @@ const { keith } = require("../keizzah/keith");
 const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
+
+// EPL Standings Command
+keith({
+  nomCom: "eplstandings",
+  aliases: ["epltable", "standings", "leaguetable"],
+  categorie: "sports",
+  reaction: "🏆"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Premier League standings...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "EPL Standings",
+          body: "Loading current league table...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/1200px-Premier_League_Logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/epl/standings');
+    const data = response.data;
+
+    if (!data.status || !data.result?.standings?.length) {
+      return repondre(zk, dest, ms, "No standings data available at the moment.");
+    }
+
+    const { competition, standings } = data.result;
+
+    // Format the standings data
+    let message = `*🏆 ${competition} Standings* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Pos  Team                  P   W   D   L   GF  GA  GD  Pts\n";
+    message += "---------------------------------------------------------\n";
+
+    // Add each team's standings
+    standings.forEach(team => {
+      message += `${team.position.toString().padEnd(4)} `;
+      message += `${team.team.substring(0, 20).padEnd(20)} `;
+      message += `${team.played.toString().padEnd(3)} `;
+      message += `${team.won.toString().padEnd(3)} `;
+      message += `${team.draw.toString().padEnd(3)} `;
+      message += `${team.lost.toString().padEnd(3)} `;
+      message += `${team.goalsFor.toString().padEnd(3)} `;
+      message += `${team.goalsAgainst.toString().padEnd(3)} `;
+      message += `${team.goalDifference.toString().padStart(3)} `;
+      message += `${team.points.toString().padStart(3)}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Premier League Standings",
+          body: `Current ${competition} league table`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/1200px-Premier_League_Logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('EPL Standings command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
+  }
+});
 // EPL Matches Command
 keith({
   nomCom: "eplmatches",
