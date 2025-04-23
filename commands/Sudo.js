@@ -3,6 +3,96 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+
+// Bundesliga Top Scorers Command
+keith({
+  nomCom: "bundesligascorers",
+  aliases: ["bundesligagoals", "blscorers", "bltopscorers", "goldenboot"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Bundesliga top scorers...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Bundesliga Top Scorers",
+          body: "Loading golden boot race...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/1200px-Bundesliga_logo_%282017%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/bundesliga/scorers');
+    const data = response.data;
+
+    if (!data.status || !data.result?.topScorers?.length) {
+      return repondre(zk, dest, ms, "No top scorers data available at the moment.");
+    }
+
+    const { competition, topScorers } = data.result;
+
+    // Format the top scorers data
+    let message = `*⚽ ${competition} Top Scorers* 🥇\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Rank Player                Team                Goals Assists Pens\n";
+    message += "--------------------------------------------------------\n";
+
+    // Add each player's stats
+    topScorers.forEach(player => {
+      // Handle "N/A" values
+      const assists = player.assists === "N/A" ? "-" : player.assists;
+      const penalties = player.penalties === "N/A" ? "-" : player.penalties;
+      
+      // Add golden boot emoji for top scorer
+      const rankPrefix = player.rank === 1 ? "🥇" : 
+                       (player.rank <= 3 ? "🏅" : "  ");
+      
+      message += `${player.rank.toString().padEnd(3)} ${rankPrefix} `;
+      message += `${player.player.substring(0, 18).padEnd(18)} `;
+      message += `${player.team.substring(0, 18).padEnd(18)} `;
+      message += `${player.goals.toString().padEnd(5)} `;
+      message += `${assists.toString().padEnd(7)} `;
+      message += `${penalties}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add key explanation
+    message += "\n*Key:*\n";
+    message += "🥇 Current top scorer\n";
+    message += "🏅 Top 3 scorers\n";
+    message += "Pens = Penalty goals\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Bundesliga Top Scorers",
+          body: `Current ${competition} golden boot race`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/1200px-Bundesliga_logo_%282017%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Bundesliga Top Scorers command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch top scorers: ${error.message}`);
+  }
+});
 // Bundesliga Standings Command
 keith({
   nomCom: "bundesligastandings",
@@ -350,83 +440,7 @@ keith({
 });
 
 // EPL Standings Command
-keith({
-  nomCom: "eplstandings",
-  aliases: ["epltable", "standings", "leaguetable"],
-  categorie: "sports",
-  reaction: "🏆"
-}, async (dest, zk, commandOptions) => {
-  const { ms, userJid } = commandOptions;
 
-  try {
-    // Send initial loading message
-    await zk.sendMessage(dest, {
-      text: "⏳ Fetching Premier League standings...",
-      contextInfo: {
-        mentionedJid: [userJid],
-        externalAdReply: {
-          title: "EPL Standings",
-          body: "Loading current league table...",
-          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/1200px-Premier_League_Logo.svg.png",
-          mediaType: 1
-        }
-      }
-    }, { quoted: ms });
-
-    // Fetch data from API
-    const response = await axios.get('https://apis-keith.vercel.app/epl/standings');
-    const data = response.data;
-
-    if (!data.status || !data.result?.standings?.length) {
-      return repondre(zk, dest, ms, "No standings data available at the moment.");
-    }
-
-    const { competition, standings } = data.result;
-
-    // Format the standings data
-    let message = `*🏆 ${competition} Standings* ⚽\n\n`;
-    message += "```\n";  // Start monospace block for alignment
-    
-    // Table header
-    message += "Pos  Team                  P   W   D   L   GF  GA  GD  Pts\n";
-    message += "---------------------------------------------------------\n";
-
-    // Add each team's standings
-    standings.forEach(team => {
-      message += `${team.position.toString().padEnd(4)} `;
-      message += `${team.team.substring(0, 20).padEnd(20)} `;
-      message += `${team.played.toString().padEnd(3)} `;
-      message += `${team.won.toString().padEnd(3)} `;
-      message += `${team.draw.toString().padEnd(3)} `;
-      message += `${team.lost.toString().padEnd(3)} `;
-      message += `${team.goalsFor.toString().padEnd(3)} `;
-      message += `${team.goalsAgainst.toString().padEnd(3)} `;
-      message += `${team.goalDifference.toString().padStart(3)} `;
-      message += `${team.points.toString().padStart(3)}\n`;
-    });
-
-    message += "```\n";  // End monospace block
-    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
-
-    // Send the formatted message
-    await zk.sendMessage(dest, {
-      text: message,
-      contextInfo: {
-        mentionedJid: [userJid],
-        externalAdReply: {
-          title: "Premier League Standings",
-          body: `Current ${competition} league table`,
-          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/1200px-Premier_League_Logo.svg.png",
-          mediaType: 1
-        }
-      }
-    }, { quoted: ms });
-
-  } catch (error) {
-    console.error('EPL Standings command error:', error);
-    repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
-  }
-});
 // EPL Matches Command
 keith({
   nomCom: "eplmatches",
