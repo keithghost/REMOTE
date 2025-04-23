@@ -4,7 +4,7 @@ const conf = require(__dirname + "/../set");
 
 keith({
   nomCom: "movie",
-  aliases: ["sinhalasub", "film", "cinema"],
+  aliases: ["sinhalamovie", "filmsub"],
   categorie: "Download",
   reaction: "🎬"
 }, async (dest, zk, commandeOptions) => {
@@ -24,14 +24,14 @@ keith({
     const searchData = searchResponse.data;
 
     if (!searchData.status || !searchData.result?.data || searchData.result.data.length === 0) {
-      return repondre("No movies found matching your search. Try a different query.");
+      return repondre("No movies found with that name. Try a different search term.");
     }
 
     const movies = searchData.result.data.slice(0, 10); // Get top 10 results
 
     // Prepare search results list
     let resultsList = `*${conf.BOT || 'Movie Search Results'}*\n`;
-    resultsList += `Query: "${query}"\n\n`;
+    resultsList += `Search: "${query}"\n\n`;
     resultsList += movies.map((movie, index) => 
       `${index+1}. ${movie.title}`
     ).join('\n\n');
@@ -55,7 +55,7 @@ keith({
 
     const messageId = message.key.id;
 
-    // Set up reply handler for quality selection
+    // Set up reply handler
     const replyHandler = async (update) => {
       try {
         const messageContent = update.messages[0];
@@ -79,6 +79,11 @@ keith({
 
         const selectedMovie = movies[selectedIndex];
 
+        // Send loading reaction
+        await zk.sendMessage(dest, {
+          react: { text: '⬇️', key: messageContent.key },
+        });
+
         // Get movie details
         const movieUrl = `https://apis-keith.vercel.app/movie/sinhalasub/movie?url=${encodeURIComponent(selectedMovie.link)}`;
         const movieResponse = await axios.get(movieUrl);
@@ -95,45 +100,50 @@ keith({
 
         // Prepare quality options
         let qualityOptions = `*${movieInfo.title || selectedMovie.title}*\n\n`;
-        qualityOptions += `📅 ${movieInfo.date || 'Unknown date'}\n`;
-        qualityOptions += `🌍 ${movieInfo.country || 'Unknown country'}\n`;
-        qualityOptions += `⭐ TMDB: ${movieInfo.tmdbRate || 'N/A'} | SinhalaSub: ${movieInfo.sinhalasubVote || 'N/A'}\n\n`;
+        qualityOptions += `📅 ${movieInfo.date || 'Unknown'} | 🌍 ${movieInfo.country || 'Unknown'}\n`;
+        qualityOptions += `⭐ TMDB: ${movieInfo.tmdbRate || 'N/A'} | SinhalaSub: ${movieInfo.sinhalasubVote || 'N/A'}\n`;
+        qualityOptions += `🎭 ${movieInfo.category?.join(', ') || 'Unknown'}\n\n`;
         qualityOptions += `*Available Qualities:*\n\n`;
 
-        // Add download options from all sources
-        const allQualities = [
-          ...(movieInfo.pixeldrain_dl || []).map(q => ({...q, source: 'PixelDrain'})),
-          ...(movieInfo.ddl_dl || []).map(q => ({...q, source: 'DDL'})),
-          ...(movieInfo.meda_dl || []).map(q => ({...q, source: 'MEGA'}))
-        ];
-
-        // Group by quality and show available sources
-        const qualityGroups = {};
-        allQualities.forEach(item => {
-          if (!qualityGroups[item.quality]) {
-            qualityGroups[item.quality] = [];
-          }
-          qualityGroups[item.quality].push(item);
-        });
-
-        Object.entries(qualityGroups).forEach(([quality, options], index) => {
-          qualityOptions += `${index+1}. ${quality} (${options[0].size})\n`;
-          options.forEach((opt, optIndex) => {
-            qualityOptions += `   ${optIndex+1}) ${opt.source}\n`;
+        // Add pixel drain options if available
+        if (movieInfo.pixeldrain_dl?.length > 0) {
+          qualityOptions += `*PixelDrain Links:*\n`;
+          movieInfo.pixeldrain_dl.forEach((quality, index) => {
+            qualityOptions += `${index+1}. ${quality.quality} (${quality.size})\n`;
           });
           qualityOptions += '\n';
-        });
+        }
 
-        qualityOptions += '\nReply with the quality number and source (e.g., "1 1" for first quality from first source)';
+        // Add DDL options if available
+        if (movieInfo.ddl_dl?.length > 0) {
+          qualityOptions += `*DDL Links:*\n`;
+          movieInfo.ddl_dl.forEach((quality, index) => {
+            const offset = movieInfo.pixeldrain_dl?.length || 0;
+            qualityOptions += `${offset + index + 1}. ${quality.quality} (${quality.size})\n`;
+          });
+          qualityOptions += '\n';
+        }
 
-        // Send quality options
-        const qualityMessage = await zk.sendMessage(dest, {
-          text: qualityOptions,
+        // Add Mega options if available
+        if (movieInfo.meda_dl?.length > 0) {
+          qualityOptions += `*Mega Links:*\n`;
+          const offset = (movieInfo.pixeldrain_dl?.length || 0) + (movieInfo.ddl_dl?.length || 0);
+          movieInfo.meda_dl.forEach((quality, index) => {
+            qualityOptions += `${offset + index + 1}. ${quality.quality} (${quality.size})\n`;
+          });
+        }
+
+        qualityOptions += '\nReply with the number of the quality you want to download';
+
+        // Send movie details with quality options
+        await zk.sendMessage(dest, {
+          image: { url: movieInfo.image || '' },
+          caption: qualityOptions,
           contextInfo: {
             externalAdReply: {
               showAdAttribution: true,
               title: movieInfo.title || selectedMovie.title,
-              body: `Select quality for download`,
+              body: `Available in ${(movieInfo.pixeldrain_dl?.length || 0) + (movieInfo.ddl_dl?.length || 0) + (movieInfo.meda_dl?.length || 0)} qualities`,
               thumbnailUrl: movieInfo.image || conf.URL || '',
               sourceUrl: conf.GURL || '',
               mediaType: 1,
@@ -142,72 +152,65 @@ keith({
           }
         }, { quoted: messageContent });
 
-        const qualityMessageId = qualityMessage.key.id;
+        // Store all download options in an array for easy access
+        const allDownloads = [
+          ...(movieInfo.pixeldrain_dl || []),
+          ...(movieInfo.ddl_dl || []),
+          ...(movieInfo.meda_dl || [])
+        ];
 
         // Set up quality selection handler
-        const qualityHandler = async (update) => {
+        const qualityHandler = async (qualityUpdate) => {
           try {
-            const qualityContent = update.messages[0];
-            if (!qualityContent.message) return;
+            const qualityMessage = qualityUpdate.messages[0];
+            if (!qualityMessage.message) return;
 
-            // Check if this is a reply to our quality selection
-            const isQualityReply = qualityContent.message.extendedTextMessage?.contextInfo?.stanzaId === qualityMessageId;
+            // Check if this is a reply to our quality options
+            const isQualityReply = qualityMessage.message.extendedTextMessage?.contextInfo?.stanzaId === messageContent.key.id;
             if (!isQualityReply) return;
 
-            const qualityResponse = qualityContent.message.conversation || 
-                                  qualityContent.message.extendedTextMessage?.text;
+            const qualityResponse = qualityMessage.message.conversation || 
+                                  qualityMessage.message.extendedTextMessage?.text;
 
-            // Parse quality and source selection
-            const [qualityNum, sourceNum] = qualityResponse.trim().split(/\s+/).map(Number);
-            const qualities = Object.entries(qualityGroups);
-            
-            if (isNaN(qualityNum) {
+            // Validate quality selection
+            const selectedQualityIndex = parseInt(qualityResponse) - 1;
+            if (isNaN(selectedQualityIndex) || selectedQualityIndex < 0 || selectedQualityIndex >= allDownloads.length) {
               return await zk.sendMessage(dest, {
-                text: 'Please reply with numbers (e.g., "1 1" for first quality from first source)',
-                quoted: qualityContent
+                text: `Please reply with a number between 1-${allDownloads.length}.`,
+                quoted: qualityMessage
               });
             }
 
-            if (qualityNum < 1 || qualityNum > qualities.length) {
-              return await zk.sendMessage(dest, {
-                text: `Please select a quality between 1-${qualities.length}.`,
-                quoted: qualityContent
-              });
-            }
-
-            const selectedQuality = qualities[qualityNum - 1][1];
-            const selectedSource = sourceNum ? (selectedQuality[sourceNum - 1] || selectedQuality[0]) : selectedQuality[0];
+            const selectedQuality = allDownloads[selectedQualityIndex];
 
             // Send the download link
             await zk.sendMessage(dest, {
               text: `*${movieInfo.title || selectedMovie.title}*\n\n` +
-                    `📦 Quality: ${selectedQuality[0].quality}\n` +
-                    `💾 Size: ${selectedQuality[0].size}\n` +
-                    `🔗 Source: ${selectedSource.source}\n\n` +
-                    `Download Link: ${selectedSource.link}\n\n` +
-                    `Enjoy your movie! 🍿`,
+                    `📦 *Quality:* ${selectedQuality.quality}\n` +
+                    `📏 *Size:* ${selectedQuality.size}\n\n` +
+                    `🔗 *Download Link:* ${selectedQuality.link}\n\n` +
+                    `ℹ️ Copy this link and paste in your browser to download`,
               contextInfo: {
                 externalAdReply: {
                   showAdAttribution: true,
-                  title: movieInfo.title || selectedMovie.title,
-                  body: `${selectedQuality[0].quality} | ${selectedSource.source}`,
+                  title: `${selectedQuality.quality} Download`,
+                  body: movieInfo.title || selectedMovie.title,
                   thumbnailUrl: movieInfo.image || conf.URL || '',
                   sourceUrl: conf.GURL || '',
                   mediaType: 1,
                   renderLargerThumbnail: true
                 }
               }
-            }, { quoted: qualityContent });
+            }, { quoted: qualityMessage });
 
-            // Remove listeners after successful selection
-            zk.ev.off("messages.upsert", replyHandler);
+            // Remove quality listener after successful selection
             zk.ev.off("messages.upsert", qualityHandler);
 
           } catch (error) {
             console.error("Error handling quality selection:", error);
             await zk.sendMessage(dest, {
-              text: "An error occurred while processing your selection. Please try again.",
-              quoted: qualityContent
+              text: "An error occurred while processing your quality selection. Please try again.",
+              quoted: messageContent
             });
           }
         };
@@ -215,10 +218,13 @@ keith({
         // Add event listener for quality selection
         zk.ev.on("messages.upsert", qualityHandler);
 
-        // Remove listener after 5 minutes to prevent memory leaks
+        // Remove quality listener after 5 minutes to prevent memory leaks
         setTimeout(() => {
           zk.ev.off("messages.upsert", qualityHandler);
         }, 300000);
+
+        // Remove initial reply handler after successful movie selection
+        zk.ev.off("messages.upsert", replyHandler);
 
       } catch (error) {
         console.error("Error handling movie download:", error);
@@ -239,6 +245,6 @@ keith({
 
   } catch (error) {
     console.error("Movie search error:", error);
-    repondre(`Failed to process movie request. Error: ${error.message}`);
+    repondre(`Failed to process movie search. Error: ${error.message}`);
   }
 });
