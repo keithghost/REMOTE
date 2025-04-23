@@ -10,7 +10,6 @@ keith({
 }, async (dest, zk, commandOptions) => {
   const { arg, ms, repondre } = commandOptions;
 
-  // Check if a query is provided
   if (!arg[0]) {
     return repondre("Please provide a movie name to search on Zoom.lk");
   }
@@ -18,7 +17,6 @@ keith({
   const query = arg.join(" ");
 
   try {
-    // First search for the movie
     const searchUrl = `https://apis-keith.vercel.app/movie/zoom/search?text=${encodeURIComponent(query)}`;
     const searchResponse = await axios.get(searchUrl);
     
@@ -27,8 +25,6 @@ keith({
     }
 
     const movies = searchResponse.data.result.data;
-    
-    // Format the search results for user selection
     let searchResultsMessage = "🎬 *Zoom.lk Search Results*\n\n";
     movies.slice(0, 5).forEach((movie, index) => {
       searchResultsMessage += `${index + 1}. ${movie.title}\n`;
@@ -37,7 +33,6 @@ keith({
 
     await repondre(searchResultsMessage);
 
-    // Wait for user response
     const collected = await zk.awaitMessages(dest, {
       filter: (msg) => !msg.key.fromMe && msg.key.remoteJid === dest,
       max: 1,
@@ -49,7 +44,7 @@ keith({
     }
 
     const selectedNumber = parseInt(collected[0].message.conversation);
-    if (isNaN(selectedNumber) {
+    if (isNaN(selectedNumber)) {
       return repondre("Invalid selection. Please reply with a number.");
     }
 
@@ -58,8 +53,6 @@ keith({
     }
 
     const selectedMovie = movies[selectedNumber - 1];
-    
-    // Get download link for the selected movie
     const downloadUrl = `https://apis-keith.vercel.app/movie/zoom/movie?url=${encodeURIComponent(selectedMovie.link)}`;
     const downloadResponse = await axios.get(downloadUrl);
     
@@ -68,8 +61,6 @@ keith({
     }
 
     const movieData = downloadResponse.data.result.data;
-    
-    // Prepare the message payload to send as document
     const messagePayload = {
       document: { url: movieData.dl_link },
       mimetype: 'application/zip',
@@ -80,14 +71,13 @@ keith({
           body: `Size: ${movieData.size}\nViews: ${movieData.view}`,
           mediaType: 1,
           sourceUrl: conf.GURL,
-          thumbnailUrl: "https://i.ibb.co/2qY7dY3/zoom-lk.jpg", // You can replace with actual thumbnail if available
+          thumbnailUrl: "https://i.ibb.co/2qY7dY3/zoom-lk.jpg",
           renderLargerThumbnail: false,
           showAdAttribution: true,
         },
       },
     };
 
-    // Send the movie as a document
     await zk.sendMessage(dest, messagePayload, { quoted: ms });
 
   } catch (error) {
@@ -104,7 +94,6 @@ keith({
 }, async (dest, zk, commandeOptions) => {
   const { repondre, ms, arg } = commandeOptions;
 
-  // Validate input
   if (!arg || !arg[0]) {
     return repondre('Please provide a movie name to search!\nExample: .movie Avengers');
   }
@@ -112,7 +101,6 @@ keith({
   const query = arg.join(' ').trim();
 
   try {
-    // Search for movies
     const searchUrl = `https://apis-keith.vercel.app/movie/sinhalasub/search?text=${encodeURIComponent(query)}`;
     const searchResponse = await axios.get(searchUrl);
     const searchData = searchResponse.data;
@@ -121,9 +109,7 @@ keith({
       return repondre("No movies found with that name. Try a different search term.");
     }
 
-    const movies = searchData.result.data.slice(0, 5); // Get top 5 results
-
-    // Prepare search results list
+    const movies = searchData.result.data.slice(0, 5);
     let resultsList = `*${conf.BOT || 'Movie Search Results'}*\n`;
     resultsList += `Query: "${query}"\n\n`;
     resultsList += movies.map((movie, index) => 
@@ -131,7 +117,6 @@ keith({
     ).join('\n\n');
     resultsList += '\n\nReply with the number of the movie you want to download';
 
-    // Send search results
     const message = await zk.sendMessage(dest, {
       text: resultsList,
       contextInfo: {
@@ -149,20 +134,17 @@ keith({
 
     const messageId = message.key.id;
 
-    // Set up reply handler for movie selection
     const movieSelectionHandler = async (update) => {
       try {
         const messageContent = update.messages[0];
         if (!messageContent.message) return;
 
-        // Check if this is a reply to our search results
         const isReply = messageContent.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
         if (!isReply) return;
 
         const responseText = messageContent.message.conversation || 
                            messageContent.message.extendedTextMessage?.text;
 
-        // Validate response
         const selectedIndex = parseInt(responseText) - 1;
         if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= movies.length) {
           return await zk.sendMessage(dest, {
@@ -172,13 +154,10 @@ keith({
         }
 
         const selectedMovie = movies[selectedIndex];
-
-        // Send loading reaction
         await zk.sendMessage(dest, {
           react: { text: '⬇️', key: messageContent.key },
         });
 
-        // Get movie details
         const movieUrl = `https://apis-keith.vercel.app/movie/sinhalasub/movie?url=${encodeURIComponent(selectedMovie.link)}`;
         const movieResponse = await axios.get(movieUrl);
         const movieData = movieResponse.data;
@@ -191,8 +170,6 @@ keith({
         }
 
         const movieInfo = movieData.result.data;
-
-        // Prepare quality options
         const qualityOptions = [];
         
         if (movieInfo.pixeldrain_dl?.length > 0) {
@@ -214,7 +191,6 @@ keith({
           });
         }
 
-        // Prepare quality selection message
         let qualityList = `*${movieInfo.title || selectedMovie.title}*\n\n`;
         qualityList += `📅 ${movieInfo.date || 'Unknown date'}\n`;
         qualityList += `🌍 ${movieInfo.country || 'Unknown country'}\n`;
@@ -225,7 +201,6 @@ keith({
         ).join('\n');
         qualityList += '\n\nReply with the number of the quality you want to download';
 
-        // Send quality options
         const qualityMessage = await zk.sendMessage(dest, {
           text: qualityList,
           contextInfo: {
@@ -243,20 +218,17 @@ keith({
 
         const qualityMessageId = qualityMessage.key.id;
 
-        // Set up reply handler for quality selection
         const qualitySelectionHandler = async (update) => {
           try {
             const qualityContent = update.messages[0];
             if (!qualityContent.message) return;
 
-            // Check if this is a reply to our quality selection
             const isQualityReply = qualityContent.message.extendedTextMessage?.contextInfo?.stanzaId === qualityMessageId;
             if (!isQualityReply) return;
 
             const qualityResponse = qualityContent.message.conversation || 
                                   qualityContent.message.extendedTextMessage?.text;
 
-            // Validate response
             const selectedQualityIndex = parseInt(qualityResponse) - 1;
             if (isNaN(selectedQualityIndex) || selectedQualityIndex < 0 || selectedQualityIndex >= qualityOptions.length) {
               return await zk.sendMessage(dest, {
@@ -266,13 +238,10 @@ keith({
             }
 
             const selectedQuality = qualityOptions[selectedQualityIndex];
-
-            // Send loading reaction
             await zk.sendMessage(dest, {
               react: { text: '⏳', key: qualityContent.key },
             });
 
-            // Send the download link
             await zk.sendMessage(dest, {
               text: `*${movieInfo.title || selectedMovie.title}*\n\n` +
                     `📦 *Quality:* ${selectedQuality.quality}\n` +
@@ -292,7 +261,6 @@ keith({
               }
             }, { quoted: qualityContent });
 
-            // Remove both handlers after successful selection
             zk.ev.off("messages.upsert", movieSelectionHandler);
             zk.ev.off("messages.upsert", qualitySelectionHandler);
 
@@ -305,15 +273,11 @@ keith({
           }
         };
 
-        // Add event listener for quality replies
         zk.ev.on("messages.upsert", qualitySelectionHandler);
-
-        // Remove listener after 5 minutes to prevent memory leaks
         setTimeout(() => {
           zk.ev.off("messages.upsert", qualitySelectionHandler);
         }, 300000);
 
-        // Remove the movie selection handler since we're now handling quality
         zk.ev.off("messages.upsert", movieSelectionHandler);
 
       } catch (error) {
@@ -325,10 +289,7 @@ keith({
       }
     };
 
-    // Add event listener for movie selection replies
     zk.ev.on("messages.upsert", movieSelectionHandler);
-
-    // Remove listener after 5 minutes to prevent memory leaks
     setTimeout(() => {
       zk.ev.off("messages.upsert", movieSelectionHandler);
     }, 300000);
