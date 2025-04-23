@@ -4,6 +4,96 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 
+// Ligue 1 Upcoming Matches Command
+keith({
+  nomCom: "ligue1upcoming",
+  aliases: ["ligue1fixtures", "ligue1upcomingmatch", "ligue1games"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Ligue 1 upcoming matches...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Matches",
+          body: "Loading upcoming fixtures...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ligue1/upcomingmatches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.upcomingMatches?.length) {
+      return repondre(zk, dest, ms, "No upcoming matches data available at the moment.");
+    }
+
+    const { competition, upcomingMatches } = data.result;
+
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    upcomingMatches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Format the matches data
+    let message = `*⚽ ${competition} Upcoming Matches* 📅\n\n`;
+    
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort().forEach(matchday => {
+      message += `📌 *Matchday ${matchday}*\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        const matchDate = new Date(match.date);
+        const formattedDate = matchDate.toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        message += `🏠 ${match.homeTeam}\n`;
+        message += `✈️ ${match.awayTeam}\n`;
+        message += `⏰ ${formattedDate}\n\n`;
+      });
+      
+      message += "\n";
+    });
+
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Upcoming Matches",
+          body: `Next ${competition} fixtures`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Ligue 1 Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch upcoming matches: ${error.message}`);
+  }
+});
 
 // La Liga Top Scorers Command
 keith({
