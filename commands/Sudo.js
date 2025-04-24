@@ -3,14 +3,17 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+
 // UCL Top Scorers Command
-/*keith({
+keith({
   nomCom: "uclscorers",
-  aliases: ["ucltopscorers", "uclgoals", "uclgoldenboot"],
+  aliases: ["ucltopscorers", "uclgoldenboot", "championsleaguescorers"],
   categorie: "sports",
-  reaction: "⚽"
+  reaction: "⚽",
+  arg: ["text"]
 }, async (dest, zk, commandOptions) => {
-  const { ms, userJid } = commandOptions;
+  const { ms, userJid, arg } = commandOptions;
+  const searchPlayer = arg.join(" ").trim().toLowerCase();
 
   try {
     // Send initial loading message
@@ -20,8 +23,8 @@ const { repondre } = require(__dirname + "/../keizzah/context");
         mentionedJid: [userJid],
         externalAdReply: {
           title: "UCL Top Scorers",
-          body: "Loading golden boot race data...",
-          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo.svg/1200px-UEFA_Champions_League_logo.svg.png",
+          body: "Loading Champions League golden boot race...",
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/league/badge/4ahedm1580808421.png",
           mediaType: 1
         }
       }
@@ -37,24 +40,40 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
     const { competition, topScorers } = data.result;
 
+    // Filter if search term provided
+    let filteredScorers = topScorers;
+    if (searchPlayer) {
+      filteredScorers = topScorers.filter(player => 
+        player.player.toLowerCase().includes(searchPlayer) ||
+        player.team.toLowerCase().includes(searchPlayer)
+      );
+      
+      if (filteredScorers.length === 0) {
+        return repondre(zk, dest, ms, `No UCL scorers found matching "${searchPlayer}".`);
+      }
+    }
+
     // Format the top scorers data
-    let message = `*⚽ ${competition} Top Scorers (Golden Boot Race)* 🥇\n\n`;
+    let message = `*⚽ ${competition} Top Scorers*\n`;
+    message += `🏆 Golden Boot Race\n\n`;
     message += "```\n";  // Start monospace block for alignment
     
     // Table header
     message += "Rank Player                  Team            Goals Assists Pens\n";
     message += "------------------------------------------------------------\n";
 
-    // Add each scorer's data
-    topScorers.forEach(scorer => {
-      // Highlight current golden boot leader
+    // Add each scorer's data (show all if filtered, top 10 otherwise)
+    const scorersToShow = searchPlayer ? filteredScorers : filteredScorers.slice(0, 10);
+    
+    scorersToShow.forEach(scorer => {
+      // Highlight current leader
       const rankPrefix = scorer.rank === 1 ? "🥇" : `${scorer.rank}.`;
       
       // Shorten long team names
       const teamName = scorer.team
         .replace("FC Internazionale Milano", "Inter")
         .replace("Manchester City FC", "Man City")
-        .replace("FC Bayern München", "Bayern Munich");
+        .replace("FC Bayern München", "Bayern");
       
       message += `${rankPrefix.padEnd(4)} `;
       message += `${scorer.player.substring(0, 20).padEnd(20)} `;
@@ -70,39 +89,32 @@ const { repondre } = require(__dirname + "/../keizzah/context");
     message += "\n*Key:*\n";
     message += "🥇 Current golden boot leader\n";
     message += "Pens: Penalty goals scored\n";
-    message += "N/A values are shown as 0 in table\n";
+    message += "N/A values are shown as 0\n";
     
-    // Add interesting facts about top scorers
-    const topScorer = topScorers[0];
-    message += `\n*Top Scorer Spotlight:* ${topScorer.player} (${topScorer.team.replace("FC Internazionale Milano", "Inter") leads with ${topScorer.goals} goals`;
-    if (topScorer.penalties !== "N/A" && topScorer.penalties > 0) {
-      message += ` (${topScorer.penalties} from penalties)`;
-    }
-    message += "!";
-
-    // Add assist leader
-    const assistLeader = [...topScorers].sort((a, b) => {
-      const aAssists = a.assists === "N/A" ? 0 : a.assists;
-      const bAssists = b.assists === "N/A" ? 0 : b.assists;
-      return bAssists - aAssists;
-    })[0];
-    
-    if (assistLeader.assists !== "N/A" && assistLeader.assists > 0) {
-      message += `\n\n*Top Playmaker:* ${assistLeader.player} leads in assists (${assistLeader.assists})`;
+    // Add interesting facts
+    const topScorer = filteredScorers[0];
+    if (topScorer) {
+      message += `\n*Top Scorer:* ${topScorer.player} (${topScorer.team}) with ${topScorer.goals} goals`;
+      if (topScorer.penalties !== "N/A" && topScorer.penalties > 0) {
+        message += ` (${topScorer.penalties} from penalties)`;
+      }
+      message += "\n";
     }
 
-    // Add club with most players in top 10
-    const clubCounts = {};
-    topScorers.forEach(scorer => {
-      clubCounts[scorer.team] = (clubCounts[scorer.team] || 0) + 1;
-    });
-    const [topClub, count] = Object.entries(clubCounts).sort((a, b) => b[1] - a[1])[0];
-    
-    if (count > 1) {
-      message += `\n\n*Club Dominance:* ${topClub.replace("FC Internazionale Milano", "Inter") has ${count} players in the top 10`;
+    // Add assist leader if not searching
+    if (!searchPlayer) {
+      const assistLeader = [...topScorers].sort((a, b) => {
+        const aAssists = a.assists === "N/A" ? 0 : a.assists;
+        const bAssists = b.assists === "N/A" ? 0 : b.assists;
+        return bAssists - aAssists;
+      })[0];
+      
+      if (assistLeader.assists !== "N/A" && assistLeader.assists > 0) {
+        message += `*Top Playmaker:* ${assistLeader.player} with ${assistLeader.assists} assists\n`;
+      }
     }
 
-    message += `\n\n_Last updated: ${new Date().toLocaleString()}_`;
+    message += `\n_Data provided by UEFA Champions League_`;
 
     // Send the formatted message
     await zk.sendMessage(dest, {
@@ -111,19 +123,18 @@ const { repondre } = require(__dirname + "/../keizzah/context");
         mentionedJid: [userJid],
         externalAdReply: {
           title: "UCL Top Scorers",
-          body: `Current ${competition} golden boot race`,
-          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo.svg/1200px-UEFA_Champions_League_logo.svg.png",
+          body: `${competition} golden boot race`,
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/league/badge/4ahedm1580808421.png",
           mediaType: 1
         }
       }
     }, { quoted: ms });
 
   } catch (error) {
-    console.error('UCL Top Scorers command error:', error);
-    repondre(zk, dest, ms, `Failed to fetch top scorers: ${error.message}`);
+    console.error('UCL Scorers command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch UCL scorers: ${error.message}`);
   }
-});*/
-
+});
 // UCL Standings Command
 keith({
   nomCom: "uclstandings",
