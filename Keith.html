@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEITH-MD Remote Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .command-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .command-link {
+            display: block;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #0066cc;
+            transition: background 0.3s;
+        }
+        .command-link:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <h1>KEITH-MD Command Repository</h1>
+    
+    <div class="command-list">
+        <!-- AI Commands -->
+        <a href="https://raw.githubusercontent.com/Keithkeizzah/REMOTE/main/commands/AI/GEMINI.js" class="command-link">GEMINI</a>
+        <a href="https://raw.githubusercontent.com/Keithkeizzah/REMOTE/main/commands/AI/GPT.js" class="command-link">GPT</a>
+        
+        <!-- Other Commands -->
+        <a href="https://raw.githubusercontent.com/Keithkeizzah/REMOTE/main/commands/FUN.js" class="command-link">FUN</a>
+        <a href="https://raw.githubusercontent.com/Keithkeizzah/REMOTE/main/commands/GROUP.js" class="command-link">GROUP</a>
+        <a href="https://raw.githubusercontent.com/Keithkeizzah/REMOTE/main/commands/OWNER.js" class="command-link">OWNER</a>
+        
+        <!-- Add more commands here following the same pattern -->
+    </div>
+</body>
+</html>
