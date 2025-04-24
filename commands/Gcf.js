@@ -5,7 +5,7 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 // Soccer Odds Command
 keith({
-  nomCom: "soccerodds",
+  nomCom: "odds",
   aliases: ["footballodds", "matchodds", "bettingodds"],
   categorie: "sports",
   reaction: "💰"
