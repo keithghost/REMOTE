@@ -4,7 +4,7 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 // UCL Top Scorers Command
-keith({
+/*keith({
   nomCom: "uclscorers",
   aliases: ["ucltopscorers", "uclgoals", "uclgoldenboot"],
   categorie: "sports",
@@ -474,7 +474,7 @@ keith({
     console.error('UCL Matches command error:', error);
     repondre(zk, dest, ms, `Failed to fetch fixtures: ${error.message}`);
   }
-});
+});*/
 
 // Serie A Top Scorers Command
 keith({
