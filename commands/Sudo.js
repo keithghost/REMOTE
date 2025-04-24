@@ -3,6 +3,229 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+// UCL Top Scorers Command
+keith({
+  nomCom: "uclscorers",
+  aliases: ["ucltopscorers", "uclgoals", "uclgoldenboot"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching UCL top scorers...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "UCL Top Scorers",
+          body: "Loading golden boot race data...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo.svg/1200px-UEFA_Champions_League_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ucl/scorers');
+    const data = response.data;
+
+    if (!data.status || !data.result?.topScorers?.length) {
+      return repondre(zk, dest, ms, "No top scorers data available at the moment.");
+    }
+
+    const { competition, topScorers } = data.result;
+
+    // Format the top scorers data
+    let message = `*⚽ ${competition} Top Scorers (Golden Boot Race)* 🥇\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Rank Player                  Team            Goals Assists Pens\n";
+    message += "------------------------------------------------------------\n";
+
+    // Add each scorer's data
+    topScorers.forEach(scorer => {
+      // Highlight current golden boot leader
+      const rankPrefix = scorer.rank === 1 ? "🥇" : `${scorer.rank}.`;
+      
+      // Shorten long team names
+      const teamName = scorer.team
+        .replace("FC Internazionale Milano", "Inter")
+        .replace("Manchester City FC", "Man City")
+        .replace("FC Bayern München", "Bayern Munich");
+      
+      message += `${rankPrefix.padEnd(4)} `;
+      message += `${scorer.player.substring(0, 20).padEnd(20)} `;
+      message += `${teamName.substring(0, 15).padEnd(15)} `;
+      message += `${scorer.goals.toString().padEnd(5)} `;
+      message += `${(scorer.assists === "N/A" ? "0" : scorer.assists).toString().padEnd(7)} `;
+      message += `${(scorer.penalties === "N/A" ? "0" : scorer.penalties).toString()}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add key information
+    message += "\n*Key:*\n";
+    message += "🥇 Current golden boot leader\n";
+    message += "Pens: Penalty goals scored\n";
+    message += "N/A values are shown as 0 in table\n";
+    
+    // Add interesting facts about top scorers
+    const topScorer = topScorers[0];
+    message += `\n*Top Scorer Spotlight:* ${topScorer.player} (${topScorer.team.replace("FC Internazionale Milano", "Inter") leads with ${topScorer.goals} goals`;
+    if (topScorer.penalties !== "N/A" && topScorer.penalties > 0) {
+      message += ` (${topScorer.penalties} from penalties)`;
+    }
+    message += "!";
+
+    // Add assist leader
+    const assistLeader = [...topScorers].sort((a, b) => {
+      const aAssists = a.assists === "N/A" ? 0 : a.assists;
+      const bAssists = b.assists === "N/A" ? 0 : b.assists;
+      return bAssists - aAssists;
+    })[0];
+    
+    if (assistLeader.assists !== "N/A" && assistLeader.assists > 0) {
+      message += `\n\n*Top Playmaker:* ${assistLeader.player} leads in assists (${assistLeader.assists})`;
+    }
+
+    // Add club with most players in top 10
+    const clubCounts = {};
+    topScorers.forEach(scorer => {
+      clubCounts[scorer.team] = (clubCounts[scorer.team] || 0) + 1;
+    });
+    const [topClub, count] = Object.entries(clubCounts).sort((a, b) => b[1] - a[1])[0];
+    
+    if (count > 1) {
+      message += `\n\n*Club Dominance:* ${topClub.replace("FC Internazionale Milano", "Inter") has ${count} players in the top 10`;
+    }
+
+    message += `\n\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "UCL Top Scorers",
+          body: `Current ${competition} golden boot race`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo.svg/1200px-UEFA_Champions_League_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('UCL Top Scorers command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch top scorers: ${error.message}`);
+  }
+});
+
+// UCL Standings Command
+keith({
+  nomCom: "uclstandings",
+  aliases: ["ucltable", "championsleaguestandings", "uclranking"],
+  categorie: "sports",
+  reaction: "🏆"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Champions League standings...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "UCL Standings",
+          body: "Loading current rankings...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2021.svg/1200px-UEFA_Champions_League_logo_2021.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ucl/standings');
+    const data = response.data;
+
+    if (!data.status || !data.result?.standings?.length) {
+      return repondre(zk, dest, ms, "No standings data available at the moment.");
+    }
+
+    const { competition, standings } = data.result;
+
+    // Format the standings data
+    let message = `*🏆 ${competition} Standings* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Pos  Team                   P   W   D   L   GF  GA  GD   Pts\n";
+    message += "-----------------------------------------------------------\n";
+
+    // Add each team's standings
+    standings.forEach(team => {
+      // Add position indicators
+      const positionPrefix = team.position === 1 ? "🌟" :  // Top team
+                          (team.position <= 4 ? "🔵" :  // Strong contenders
+                          (team.position <= 8 ? "🟢" : "  ")); // Other teams
+
+      // Highlight big clubs with emojis
+      const teamName = team.team.includes('Barcelona') ? '🔵🔴 ' + team.team :
+                      team.team.includes('Liverpool') ? '🔴 ' + team.team :
+                      team.team.includes('Inter') ? '⚫🔵 ' + team.team :
+                      team.team.includes('Arsenal') ? '🔴⚪ ' + team.team :
+                      team.team.includes('Atlético') ? '🔴⚪ ' + team.team :
+                      team.team.includes('Leverkusen') ? '⚫🔴 ' + team.team :
+                      team.team;
+
+      message += `${team.position.toString().padEnd(3)} ${positionPrefix} `;
+      message += `${teamName.substring(0, 20).padEnd(20)} `;
+      message += `${team.played.toString().padEnd(3)} `;
+      message += `${team.won.toString().padEnd(3)} `;
+      message += `${team.draw.toString().padEnd(3)} `;
+      message += `${team.lost.toString().padEnd(3)} `;
+      message += `${team.goalsFor.toString().padEnd(3)} `;
+      message += `${team.goalsAgainst.toString().padEnd(3)} `;
+      message += `${team.goalDifference.toString().padStart(3)} `;
+      message += `${team.points.toString().padStart(3)}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add league position indicators
+    message += "\n*Key:*\n";
+    message += "🌟 Current leader\n";
+    message += "🔵 Top contenders\n";
+    message += "🟢 Other qualified teams\n";
+    message += "🔵🔴 Barcelona | 🔴 Liverpool\n";
+    message += "⚫🔵 Inter | 🔴⚪ Arsenal/Atlético\n";
+    message += "⚫🔴 Leverkusen\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Champions League Standings",
+          body: `Current ${competition} rankings`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2021.svg/1200px-UEFA_Champions_League_logo_2021.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('UCL Standings command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
+  }
+});
 
 // UEFA Champions League Matches Command
 keith({
