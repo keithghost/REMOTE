@@ -2,6 +2,103 @@ const { keith } = require("../keizzah/keith");
 const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
+// Player Search Command
+keith({
+  nomCom: "playersearch",
+  aliases: ["searchplayer", "playerinfo", "player"],
+  categorie: "sports",
+  reaction: "🔍",
+  arg: ["text"]
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid, arg } = commandOptions;
+  const searchPlayer = arg.join(" ").trim();
+
+  if (!searchPlayer) {
+    return repondre(zk, dest, ms, "Please specify a player name to search for.");
+  }
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: `⏳ Searching for ${searchPlayer}...`,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Player Search",
+          body: `Looking up ${searchPlayer} information...`,
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/player/thumb/football.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p=${encodeURIComponent(searchPlayer)}`);
+    const data = response.data;
+
+    if (!data.player || data.player.length === 0) {
+      return repondre(zk, dest, ms, `No player found with name "${searchPlayer}". Try a different name.`);
+    }
+
+    // Filter for soccer players only and sort by relevance
+    const soccerPlayers = data.player
+      .filter(p => p.strSport === "Soccer")
+      .sort((a, b) => parseFloat(b.relevance) - parseFloat(a.relevance));
+
+    if (soccerPlayers.length === 0) {
+      return repondre(zk, dest, ms, `No football players found with name "${searchPlayer}".`);
+    }
+
+    const player = soccerPlayers[0]; // Get most relevant soccer player
+
+    // Format the player data
+    let message = `*🔍 ${player.strPlayer}*\n`;
+    message += `⚽ *Position:* ${player.strPosition || 'N/A'}\n`;
+    message += `🏴 *Nationality:* ${player.strNationality || 'N/A'}\n`;
+    message += `🏟️ *Team:* ${player.strTeam || 'N/A'}\n`;
+    message += `🎂 *Born:* ${player.dateBorn ? new Date(player.dateBorn).toLocaleDateString() : 'N/A'}\n`;
+    message += `📊 *Status:* ${player.strStatus || 'N/A'}\n\n`;
+
+    // Add player image if available
+    let imageUrl = null;
+    if (player.strCutout) {
+      imageUrl = player.strCutout;
+    } else if (player.strThumb) {
+      imageUrl = player.strThumb;
+    }
+
+    // Send the formatted message
+    const messageOptions = {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: `${player.strPlayer} Info`,
+          body: `${player.strTeam || 'Professional Footballer'}`,
+          thumbnailUrl: imageUrl || "https://www.thesportsdb.com/images/media/player/thumb/football.png",
+          mediaType: 1
+        }
+      }
+    };
+
+    await zk.sendMessage(dest, messageOptions, { quoted: ms });
+
+    // If there are more results, mention them
+    if (soccerPlayers.length > 1) {
+      const otherPlayers = soccerPlayers.slice(1, 4).map(p => `- ${p.strPlayer} (${p.strTeam})`).join('\n');
+      const moreText = soccerPlayers.length > 4 ? `and ${soccerPlayers.length - 4} more...` : '';
+      
+      await zk.sendMessage(dest, {
+        text: `*Other players found:*\n${otherPlayers}\n${moreText}\n\nUse a more specific name for better results.`,
+        contextInfo: { mentionedJid: [userJid] }
+      }, { quoted: ms });
+    }
+
+  } catch (error) {
+    console.error('Player Search command error:', error);
+    repondre(zk, dest, ms, `Failed to search for player: ${error.message}`);
+  }
+});
 // Team Search Command
 keith({
   nomCom: "teamsearch",
