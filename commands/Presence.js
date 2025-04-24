@@ -3,6 +3,125 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+// Match History Command
+keith({
+  nomCom: "matchhistory",
+  aliases: ["h2h", "headtohead", "fixturehistory"],
+  categorie: "sports",
+  reaction: "📊",
+  arg: ["text"]
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid, arg } = commandOptions;
+  const teams = arg.join(" ").trim();
+
+  if (!teams || !teams.includes(" vs ")) {
+    return repondre(zk, dest, ms, "Please specify two teams in format: Team1 vs Team2");
+  }
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: `⏳ Fetching match history for ${teams}...`,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Match History Search",
+          body: `Looking up ${teams} encounters...`,
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/league/badge/football.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Format team names for API
+    const [team1, team2] = teams.split(" vs ").map(t => t.trim());
+    const apiQuery = `${team1}_vs_${team2}`;
+
+    // Fetch data from API
+    const response = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${encodeURIComponent(apiQuery)}`);
+    const data = response.data;
+
+    if (!data.event || data.event.length === 0) {
+      return repondre(zk, dest, ms, `No match history found for ${teams}. Try different team names.`);
+    }
+
+    // Filter for completed matches only
+    const completedMatches = data.event.filter(match => match.strStatus === "Match Finished");
+    
+    if (completedMatches.length === 0) {
+      return repondre(zk, dest, ms, `No completed matches found for ${teams}.`);
+    }
+
+    // Sort matches by date (newest first)
+    completedMatches.sort((a, b) => new Date(b.dateEvent) - new Date(a.dateEvent));
+
+    // Get team badges (use first match with badges)
+    const homeBadge = completedMatches.find(m => m.strHomeTeamBadge)?.strHomeTeamBadge;
+    const awayBadge = completedMatches.find(m => m.strAwayTeamBadge)?.strAwayTeamBadge;
+
+    // Format the match history data
+    let message = `*⚽ ${team1} vs ${team2} Head-to-Head*\n`;
+    message += `📊 Total Matches: ${completedMatches.length}\n\n`;
+    message += "*Recent Matches:*\n";
+
+    // Add last 5 matches (or fewer if not available)
+    const recentMatches = completedMatches.slice(0, 5);
+    recentMatches.forEach(match => {
+      const matchDate = new Date(match.dateEvent).toLocaleDateString();
+      const competition = match.strLeague === "Club Friendlies" ? "Friendly" : match.strLeague;
+      
+      message += `📅 ${matchDate} (${competition})\n`;
+      message += `🏠 ${match.strHomeTeam} ${match.intHomeScore} - ${match.intAwayScore} ${match.strAwayTeam} ✈️\n`;
+      
+      if (match.strVideo) {
+        message += `▶️ Highlights: ${match.strVideo}\n`;
+      }
+      
+      message += "\n";
+    });
+
+    // Calculate win/loss/draw stats
+    let team1Wins = 0, team2Wins = 0, draws = 0;
+    completedMatches.forEach(match => {
+      if (match.intHomeScore > match.intAwayScore) {
+        match.strHomeTeam.includes(team1) ? team1Wins++ : team2Wins++;
+      } else if (match.intHomeScore < match.intAwayScore) {
+        match.strHomeTeam.includes(team1) ? team2Wins++ : team1Wins++;
+      } else {
+        draws++;
+      }
+    });
+
+    message += `*Overall Stats*\n`;
+    message += `✅ ${team1} Wins: ${team1Wins}\n`;
+    message += `✅ ${team2} Wins: ${team2Wins}\n`;
+    message += `⚖️ Draws: ${draws}\n\n`;
+    message += `_Data provided by TheSportsDB.com_`;
+
+    // Prepare team badges for message
+    const badges = [];
+    if (homeBadge) badges.push(homeBadge);
+    if (awayBadge) badges.push(awayBadge);
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: `${team1} vs ${team2} History`,
+          body: `${completedMatches.length} matches recorded`,
+          thumbnailUrl: badges.length > 0 ? badges[0] : "https://www.thesportsdb.com/images/media/league/badge/football.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Match History command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch match history: ${error.message}`);
+  }
+});
 // Team Roster Command
 keith({
   nomCom: "teamroster",
