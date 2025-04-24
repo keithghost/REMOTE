@@ -4,6 +4,232 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 
+// Ligue 1 Standings Command
+keith({
+  nomCom: "ligue1standings",
+  aliases: ["ligue1table", "l1standings", "l1table"],
+  categorie: "sports",
+  reaction: "🇫🇷"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Ligue 1 standings...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Standings",
+          body: "Loading complete league table...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ligue1/standings');
+    const data = response.data;
+
+    if (!data.status || !data.result?.standings?.length) {
+      return repondre(zk, dest, ms, "No standings data available at the moment.");
+    }
+
+    const { competition, standings } = data.result;
+
+    // Format the standings data
+    let message = `*🇫🇷 ${competition} Standings* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Pos  Team                   P   W   D   L   GF  GA  GD   Pts\n";
+    message += "-----------------------------------------------------------\n";
+
+    // Add each team's standings
+    standings.forEach(team => {
+      // Add position indicators
+      const positionPrefix = team.position === 1 ? "🥇" : 
+                          (team.position <= 3 ? "🔵" :  // Champions League
+                          (team.position === 4 ? "🟢" :  // UCL Qualifiers
+                          (team.position === 5 ? "🟡" :  // Europa League
+                          (team.position === 6 ? "🟠" :  // Conference League
+                          (team.position >= 16 ? "🔴" : "  "))))); // Relegation
+
+      // Highlight PSG with special emoji
+      const teamName = team.team.includes('Paris Saint-Germain') ? '💎 ' + team.team :
+                      team.team.includes('Olympique de Marseille') ? '🔵 ' + team.team :
+                      team.team.includes('Olympique Lyonnais') ? '🔴🔵 ' + team.team :
+                      team.team;
+
+      message += `${team.position.toString().padEnd(3)} ${positionPrefix} `;
+      message += `${teamName.substring(0, 20).padEnd(20)} `;
+      message += `${team.played.toString().padEnd(3)} `;
+      message += `${team.won.toString().padEnd(3)} `;
+      message += `${team.draw.toString().padEnd(3)} `;
+      message += `${team.lost.toString().padEnd(3)} `;
+      message += `${team.goalsFor.toString().padEnd(3)} `;
+      message += `${team.goalsAgainst.toString().padEnd(3)} `;
+      message += `${team.goalDifference.toString().padStart(3)} `;
+      message += `${team.points.toString().padStart(3)}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add league position indicators
+    message += "\n*Key:*\n";
+    message += "🥇 League leader\n";
+    message += "🔵 Champions League (1-3)\n";
+    message += "🟢 UCL Qualifiers (4th)\n";
+    message += "🟡 Europa League (5th)\n";
+    message += "🟠 Conference League (6th)\n";
+    message += "🔴 Relegation playoff (16th) & Relegation (17-18)\n";
+    message += "💎 PSG | 🔵 Marseille | 🔴🔵 Lyon\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Standings",
+          body: `Complete ${competition} league table`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Ligue 1 Standings command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
+  }
+});
+
+// Ligue 1 Matches Command
+keith({
+  nomCom: "ligue1matches",
+  aliases: ["ligue1results", "ligue1fixtures", "ligue1games"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Ligue 1 matches...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Matches",
+          body: "Loading match results and fixtures...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ligue1/matches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.matches?.length) {
+      return repondre(zk, dest, ms, "No match data available at the moment.");
+    }
+
+    const { competition, matches } = data.result;
+
+    // Separate finished and upcoming matches
+    const finishedMatches = matches.filter(match => match.status === "FINISHED");
+    const upcomingMatches = matches.filter(match => match.status !== "FINISHED");
+
+    // Group matches by matchday
+    const groupByMatchday = (matchesArray) => {
+      const grouped = {};
+      matchesArray.forEach(match => {
+        if (!grouped[match.matchday]) {
+          grouped[match.matchday] = [];
+        }
+        grouped[match.matchday].push(match);
+      });
+      return grouped;
+    };
+
+    const finishedByMatchday = groupByMatchday(finishedMatches);
+    const upcomingByMatchday = groupByMatchday(upcomingMatches);
+
+    // Format the matches data
+    let message = `*⚽ ${competition} Match Results & Fixtures* 📅\n\n`;
+
+    // Add finished matches section if they exist
+    if (Object.keys(finishedByMatchday).length > 0) {
+      message += `*📌 Completed Matches*\n`;
+      message += "--------------------------------\n";
+      
+      Object.keys(finishedByMatchday).sort().forEach(matchday => {
+        message += `🔹 *Matchday ${matchday}*\n`;
+        
+        finishedByMatchday[matchday].forEach(match => {
+          const resultEmoji = match.winner === "Draw" ? "⚖️" : 
+                           (match.winner === match.homeTeam ? "🏠" : "✈️");
+          
+          message += `${match.homeTeam} ${match.score} ${match.awayTeam} ${resultEmoji}\n`;
+        });
+        message += "\n";
+      });
+    }
+
+    // Add upcoming matches section if they exist
+    if (Object.keys(upcomingByMatchday).length > 0) {
+      message += `*📌 Upcoming Matches*\n`;
+      message += "--------------------------------\n";
+      
+      Object.keys(upcomingByMatchday).sort().forEach(matchday => {
+        message += `🔹 *Matchday ${matchday}*\n`;
+        
+        upcomingByMatchday[matchday].forEach(match => {
+          message += `🏠 ${match.homeTeam} vs ${match.awayTeam}\n`;
+          if (match.date) {
+            const matchDate = new Date(match.date);
+            const formattedDate = matchDate.toLocaleString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            message += `⏰ ${formattedDate}\n`;
+          }
+          message += "\n";
+        });
+      });
+    }
+
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Matches",
+          body: `Recent results and upcoming fixtures`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Ligue 1 Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch matches: ${error.message}`);
+  }
+});
+
 // Ligue 1 Upcoming Matches Command
 keith({
   nomCom: "ligue1upcoming",
