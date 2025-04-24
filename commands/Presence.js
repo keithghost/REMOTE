@@ -3,6 +3,108 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+// Venue Search Command
+keith({
+  nomCom: "venuesearch",
+  aliases: ["stadium", "arena", "venueinfo"],
+  categorie: "sports",
+  reaction: "🏟️",
+  arg: ["text"]
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid, arg } = commandOptions;
+  const venueName = arg.join(" ").trim();
+
+  if (!venueName) {
+    return repondre(zk, dest, ms, "Please specify a venue name to search for.");
+  }
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: `⏳ Searching for ${venueName}...`,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Venue Search",
+          body: `Looking up ${venueName} information...`,
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/venue/thumb/stadium.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/searchvenues.php?t=${encodeURIComponent(venueName)}`);
+    const data = response.data;
+
+    if (!data.venues || data.venues.length === 0) {
+      return repondre(zk, dest, ms, `No venues found with name "${venueName}". Try a different name.`);
+    }
+
+    // Filter for soccer venues first, then other sports
+    const soccerVenues = data.venues.filter(v => v.strSport === "Soccer");
+    const otherVenues = data.venues.filter(v => v.strSport !== "Soccer");
+    const sortedVenues = [...soccerVenues, ...otherVenues];
+
+    // Format the venue data
+    let message = `*🏟️ Venue Search Results*\n\n`;
+
+    // Show top 3 venues to avoid message length issues
+    const venuesToShow = sortedVenues.slice(0, 3);
+    
+    venuesToShow.forEach((venue, index) => {
+      message += `*${index + 1}. ${venue.strVenue}*\n`;
+      message += `📍 ${venue.strLocation || 'N/A'}\n`;
+      message += `⚽ Sport: ${venue.strSport || 'N/A'}\n`;
+      message += `🪑 Capacity: ${venue.intCapacity || 'N/A'}\n`;
+      message += `🏛️ Built: ${venue.intFormedYear || 'N/A'}\n`;
+      
+      if (venue.strDescriptionEN && venue.strDescriptionEN.length > 0) {
+        const shortDesc = venue.strDescriptionEN.length > 150 
+          ? venue.strDescriptionEN.substring(0, 150) + '...' 
+          : venue.strDescriptionEN;
+        message += `📝 ${shortDesc}\n`;
+      }
+      
+      if (venue.strWebsite) {
+        message += `🌐 ${venue.strWebsite}\n`;
+      }
+      
+      message += "\n";
+    });
+
+    // Mention if there are more results
+    if (sortedVenues.length > 3) {
+      message += `ℹ️ ${sortedVenues.length - 3} more venues found. Try a more specific search.\n\n`;
+    }
+
+    message += `_Data provided by TheSportsDB.com_`;
+
+    // Get thumbnail for first venue
+    const firstVenueThumb = sortedVenues[0].strThumb || 
+                           sortedVenues[0].strLogo || 
+                           "https://www.thesportsdb.com/images/media/venue/thumb/stadium.png";
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: `${venueName} Venues`,
+          body: `${sortedVenues.length} venues found`,
+          thumbnailUrl: firstVenueThumb,
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Venue Search command error:', error);
+    repondre(zk, dest, ms, `Failed to search for venue: ${error.message}`);
+  }
+});
+
 // Match History Command
 keith({
   nomCom: "matchhistory",
