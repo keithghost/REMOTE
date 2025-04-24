@@ -122,7 +122,7 @@ const { repondre } = require(__dirname + "/../keizzah/context");
     console.error('UCL Top Scorers command error:', error);
     repondre(zk, dest, ms, `Failed to fetch top scorers: ${error.message}`);
   }
-});
+});*/
 
 // UCL Standings Command
 keith({
@@ -225,7 +225,7 @@ keith({
     console.error('UCL Standings command error:', error);
     repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
   }
-});*/
+});
 
 // UEFA Champions League Matches Command
 keith({
