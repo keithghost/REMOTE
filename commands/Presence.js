@@ -2,6 +2,105 @@ const { keith } = require("../keizzah/keith");
 const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
+
+// Team Roster Command
+keith({
+  nomCom: "teamroster",
+  aliases: ["squad", "teamplayers", "rostersearch"],
+  categorie: "sports",
+  reaction: "👥",
+  arg: ["text"]
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid, arg } = commandOptions;
+  const teamName = arg.join(" ").trim();
+
+  if (!teamName) {
+    return repondre(zk, dest, ms, "Please specify a team name to search for.");
+  }
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: `⏳ Fetching ${teamName} roster...`,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Team Roster Search",
+          body: `Looking up ${teamName} players...`,
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/team/badge/football.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?t=${encodeURIComponent(teamName)}`);
+    const data = response.data;
+
+    if (!data.player || data.player.length === 0) {
+      return repondre(zk, dest, ms, `No players found for team "${teamName}". Try a different team name.`);
+    }
+
+    // Filter for soccer players only
+    const players = data.player.filter(p => p.strSport === "Soccer");
+    
+    if (players.length === 0) {
+      return repondre(zk, dest, ms, `No football players found for team "${teamName}".`);
+    }
+
+    // Group players by position
+    const playersByPosition = {};
+    players.forEach(player => {
+      const position = player.strPosition || "Other";
+      if (!playersByPosition[position]) {
+        playersByPosition[position] = [];
+      }
+      playersByPosition[position].push(player);
+    });
+
+    // Format the roster data
+    let message = `*👥 ${teamName} Roster*\n`;
+    message += `📊 Total Players: ${players.length}\n\n`;
+
+    // Add players by position
+    Object.keys(playersByPosition).sort().forEach(position => {
+      message += `*${position} (${playersByPosition[position].length})*\n`;
+      
+      playersByPosition[position].forEach(player => {
+        message += `- ${player.strPlayer} (${player.strNationality || 'N/A'})\n`;
+      });
+      
+      message += "\n";
+    });
+
+    // Add manager if exists
+    const manager = players.find(p => p.strPosition === "Manager");
+    if (manager) {
+      message += `*Manager*\n`;
+      message += `- ${manager.strPlayer} (${manager.strNationality || 'N/A'})\n\n`;
+    }
+
+    message += `_Data provided by TheSportsDB.com_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: `${teamName} Roster`,
+          body: `${players.length} players listed`,
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/team/badge/football.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Team Roster command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch team roster: ${error.message}`);
+  }
+});
 // Player Search Command
 keith({
   nomCom: "playersearch",
