@@ -4,6 +4,365 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 
+// UEFA Champions League Matches Command
+keith({
+  nomCom: "uclmatches",
+  aliases: ["uclresults", "uclfixtures", "uclgames"],
+  categorie: "sports",
+  reaction: "🏆"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Champions League matches...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "UCL Matches",
+          body: "Loading match results...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo.svg/1200px-UEFA_Champions_League_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ucl/matches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.matches?.length) {
+      return repondre(zk, dest, ms, "No match data available at the moment.");
+    }
+
+    const { competition, matches } = data.result;
+
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    matches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Format the matches data
+    let message = `*🏆 ${competition} Match Results* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort().forEach(matchday => {
+      message += `📌 Matchday ${matchday}\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        // Shorten long team names
+        const homeTeam = match.homeTeam
+          .replace("FC Internazionale Milano", "Inter Milan")
+          .replace("Sporting Clube de Portugal", "Sporting CP")
+          .replace("Sport Lisboa e Benfica", "Benfica")
+          .replace("GNK Dinamo Zagreb", "Dinamo Zagreb")
+          .replace("FK Shakhtar Donetsk", "Shakhtar")
+          .replace("FK Crvena Zvezda", "Red Star");
+        
+        const awayTeam = match.awayTeam
+          .replace("FC Internazionale Milano", "Inter Milan")
+          .replace("Sporting Clube de Portugal", "Sporting CP")
+          .replace("Sport Lisboa e Benfica", "Benfica")
+          .replace("GNK Dinamo Zagreb", "Dinamo Zagreb")
+          .replace("FK Shakhtar Donetsk", "Shakhtar")
+          .replace("FK Crvena Zvezda", "Red Star");
+
+        // Determine result emoji
+        let resultEmoji = "⚖️"; // Draw
+        if (match.winner !== "Draw") {
+          resultEmoji = match.winner === match.homeTeam ? "🏠" : "✈️";
+        }
+        
+        message += `${homeTeam.padEnd(20)} ${match.score.padEnd(7)} ${awayTeam.padEnd(20)} ${resultEmoji}\n`;
+      });
+      
+      message += "\n";
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add key information
+    message += "\n*Key:*\n";
+    message += "🏠 Home win\n";
+    message += "✈️ Away win\n";
+    message += "⚖️ Draw\n";
+    
+    // Add interesting facts about the matchday
+    const lastMatchday = Object.keys(matchesByMatchday).sort().pop();
+    const lastMatchdayMatches = matchesByMatchday[lastMatchday];
+    const homeWins = lastMatchdayMatches.filter(match => match.winner === match.homeTeam).length;
+    const awayWins = lastMatchdayMatches.filter(match => match.winner === match.awayTeam).length;
+    message += `\n*Matchday ${lastMatchday} Stats:* ${homeWins} home wins, ${awayWins} away wins, ${lastMatchdayMatches.length - homeWins - awayWins} draws`;
+
+    // Find highest scoring game
+    const highestScoringGame = matches.reduce((highest, match) => {
+      const [home, away] = match.score.split(' - ').map(Number);
+      const total = home + away;
+      return total > highest.total ? { match, total } : highest;
+    }, { total: 0 });
+    
+    if (highestScoringGame.total > 0) {
+      message += `\n\n*Highest Scoring Game:* ${highestScoringGame.match.homeTeam} ${highestScoringGame.match.score} ${highestScoringGame.match.awayTeam}`;
+    }
+
+    message += `\n\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "UCL Match Results",
+          body: `Latest ${competition} results`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo.svg/1200px-UEFA_Champions_League_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('UCL Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch matches: ${error.message}`);
+  }
+});
+// UCL Upcoming Matches Command
+keith({
+  nomCom: "uclupcoming",
+  aliases: ["uclfixtures", "championsleague", "uclupcoming"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Champions League fixtures...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "UCL Fixtures",
+          body: "Loading upcoming matches...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2021.svg/1200px-UEFA_Champions_League_logo_2021.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ucl/upcomingmatches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.upcomingMatches?.length) {
+      return repondre(zk, dest, ms, "No upcoming matches data available at the moment.");
+    }
+
+    const { competition, upcomingMatches } = data.result;
+
+    // Filter out invalid matches
+    const validMatches = upcomingMatches.filter(match => 
+      match.homeTeam && match.awayTeam && match.matchday !== "N/A"
+    );
+
+    if (validMatches.length === 0) {
+      return repondre(zk, dest, ms, "No valid upcoming matches found.");
+    }
+
+    // Format the matches data
+    let message = `*🏆 ${competition} Fixtures* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    validMatches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort().forEach(matchday => {
+      message += `📅 Matchday ${matchday}:\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        const matchDate = new Date(match.date);
+        const formattedDate = matchDate.toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'UTC'
+        });
+        
+        // Highlight big clubs with emojis
+        const homeTeam = match.homeTeam.includes('Barcelona') ? '🔵🔴 ' + match.homeTeam :
+                        match.homeTeam.includes('Paris') ? '💎 ' + match.homeTeam :
+                        match.homeTeam.includes('Inter') ? '⚫🔵 ' + match.homeTeam :
+                        match.homeTeam.includes('Arsenal') ? '🔴 ' + match.homeTeam :
+                        match.homeTeam;
+
+        const awayTeam = match.awayTeam.includes('Barcelona') ? '🔵🔴 ' + match.awayTeam :
+                        match.awayTeam.includes('Paris') ? '💎 ' + match.awayTeam :
+                        match.awayTeam.includes('Inter') ? '⚫🔵 ' + match.awayTeam :
+                        match.awayTeam.includes('Arsenal') ? '🔴 ' + match.awayTeam :
+                        match.awayTeam;
+
+        message += `⏰ ${formattedDate} UTC\n`;
+        message += `🏠 ${homeTeam}\n`;
+        message += `🆚 ${awayTeam}\n\n`;
+      });
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add team emoji legend
+    message += "\n*Club Icons:*\n";
+    message += "🔵🔴 Barcelona | 💎 PSG\n";
+    message += "⚫🔵 Inter | 🔴 Arsenal\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Champions League Fixtures",
+          body: `Upcoming ${competition} matches`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2021.svg/1200px-UEFA_Champions_League_logo_2021.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('UCL Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch fixtures: ${error.message}`);
+  }
+});
+
+// Serie A Top Scorers Command
+keith({
+  nomCom: "serieascorers",
+  aliases: ["serieatopscorers", "serieagoals", "capocannoniere"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Serie A top scorers...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Top Scorers",
+          body: "Loading Capocannoniere race data...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/seriea/scorers');
+    const data = response.data;
+
+    if (!data.status || !data.result?.topScorers?.length) {
+      return repondre(zk, dest, ms, "No top scorers data available at the moment.");
+    }
+
+    const { competition, topScorers } = data.result;
+
+    // Format the top scorers data
+    let message = `*⚽ ${competition} Top Scorers (Capocannoniere Race)* 🥇\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Rank Player                  Team            Goals Assists Pens\n";
+    message += "------------------------------------------------------------\n";
+
+    // Add each scorer's data
+    topScorers.forEach(scorer => {
+      // Highlight current Capocannoniere leader
+      const rankPrefix = scorer.rank === 1 ? "🥇" : `${scorer.rank}.`;
+      
+      // Shorten long team names
+      const teamName = scorer.team
+        .replace("FC Internazionale Milano", "Inter")
+        .replace("ACF Fiorentina", "Fiorentina")
+        .replace("Bologna FC 1909", "Bologna");
+      
+      message += `${rankPrefix.padEnd(4)} `;
+      message += `${scorer.player.substring(0, 20).padEnd(20)} `;
+      message += `${teamName.substring(0, 15).padEnd(15)} `;
+      message += `${scorer.goals.toString().padEnd(5)} `;
+      message += `${(scorer.assists === "N/A" ? "0" : scorer.assists).toString().padEnd(7)} `;
+      message += `${(scorer.penalties === "N/A" ? "0" : scorer.penalties).toString()}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add key information
+    message += "\n*Key:*\n";
+    message += "🥇 Current Capocannoniere leader\n";
+    message += "Pens: Penalty goals scored\n";
+    message += "N/A values are shown as 0 in table\n";
+    
+    // Add interesting facts about top scorers
+    const topScorer = topScorers[0];
+    message += `\n*Did you know?* ${topScorer.player} (${topScorer.team.replace("FC Internazionale Milano", "Inter")}) leads the race with ${topScorer.goals} goals`;
+    if (topScorer.penalties !== "N/A" && topScorer.penalties > 0) {
+      message += ` (${topScorer.penalties} from penalties)`;
+    }
+    message += "!";
+
+    // Add assist leader
+    const assistLeader = [...topScorers].sort((a, b) => {
+      const aAssists = a.assists === "N/A" ? 0 : a.assists;
+      const bAssists = b.assists === "N/A" ? 0 : b.assists;
+      return bAssists - aAssists;
+    })[0];
+    
+    if (assistLeader.assists !== "N/A" && assistLeader.assists > 0) {
+      message += `\n\n*Top Playmaker:* ${assistLeader.player} leads in assists (${assistLeader.assists})`;
+    }
+
+    message += `\n\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Top Scorers",
+          body: `Current ${competition} Capocannoniere race`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Serie A Top Scorers command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch top scorers: ${error.message}`);
+  }
+});
+
 // Serie A Standings Command
 keith({
   nomCom: "serieastandings",
