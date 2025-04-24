@@ -225,7 +225,7 @@ keith({
     console.error('UCL Standings command error:', error);
     repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
   }
-});
+});*/
 
 // UEFA Champions League Matches Command
 keith({
@@ -355,7 +355,7 @@ keith({
     console.error('UCL Matches command error:', error);
     repondre(zk, dest, ms, `Failed to fetch matches: ${error.message}`);
   }
-});*/
+});
 // UCL Upcoming Matches Command
 keith({
   nomCom: "uclupcoming",
