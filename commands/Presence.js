@@ -4,7 +4,7 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 // All Leagues Command
-keith({
+/*keith({
   nomCom: "leagues",
   aliases: ["allleagues", "listleagues", "sportsleagues"],
   categorie: "sports",
@@ -98,7 +98,7 @@ keith({
     console.error('Leagues command error:', error);
     repondre(zk, dest, ms, `Failed to fetch leagues: ${error.message}`);
   }
-});
+});*/
 
 // Venue Search Command
 keith({
