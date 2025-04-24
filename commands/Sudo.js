@@ -355,7 +355,7 @@ keith({
     console.error('UCL Matches command error:', error);
     repondre(zk, dest, ms, `Failed to fetch matches: ${error.message}`);
   }
-});
+});*/
 // UCL Upcoming Matches Command
 keith({
   nomCom: "uclupcoming",
@@ -474,7 +474,7 @@ keith({
     console.error('UCL Matches command error:', error);
     repondre(zk, dest, ms, `Failed to fetch fixtures: ${error.message}`);
   }
-});*/
+});
 
 // Serie A Top Scorers Command
 keith({
