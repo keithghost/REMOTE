@@ -4,6 +4,337 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 
+// Serie A Standings Command
+keith({
+  nomCom: "serieastandings",
+  aliases: ["serieatable", "sastandings", "satable"],
+  categorie: "sports",
+  reaction: "🇮🇹"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Serie A standings...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Standings",
+          body: "Loading complete league table...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/seriea/standings');
+    const data = response.data;
+
+    if (!data.status || !data.result?.standings?.length) {
+      return repondre(zk, dest, ms, "No standings data available at the moment.");
+    }
+
+    const { competition, standings } = data.result;
+
+    // Format the standings data
+    let message = `*🇮🇹 ${competition} Standings* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Pos  Team                   P   W   D   L   GF  GA  GD   Pts\n";
+    message += "-----------------------------------------------------------\n";
+
+    // Add each team's standings
+    standings.forEach(team => {
+      // Add position indicators
+      const positionPrefix = team.position === 1 ? "🏆" : 
+                          (team.position <= 4 ? "🔵" :  // Champions League
+                          (team.position === 5 ? "🟢" :  // Europa League
+                          (team.position === 6 ? "🟡" :  // Conference League
+                          (team.position >= 18 ? "🔴" : "  ")))); // Relegation
+
+      // Highlight big clubs
+      const teamName = team.team.includes('Inter') ? '⚫🔵 ' + team.team :
+                      team.team.includes('Juventus') ? '⚪⚫ ' + team.team :
+                      team.team.includes('Milan') ? '🔴⚫ ' + team.team :
+                      team.team.includes('Roma') ? '🔴🟡 ' + team.team :
+                      team.team.includes('Napoli') ? '🔵 ' + team.team :
+                      team.team;
+
+      message += `${team.position.toString().padEnd(3)} ${positionPrefix} `;
+      message += `${teamName.substring(0, 20).padEnd(20)} `;
+      message += `${team.played.toString().padEnd(3)} `;
+      message += `${team.won.toString().padEnd(3)} `;
+      message += `${team.draw.toString().padEnd(3)} `;
+      message += `${team.lost.toString().padEnd(3)} `;
+      message += `${team.goalsFor.toString().padEnd(3)} `;
+      message += `${team.goalsAgainst.toString().padEnd(3)} `;
+      message += `${team.goalDifference.toString().padStart(3)} `;
+      message += `${team.points.toString().padStart(3)}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add league position indicators
+    message += "\n*Key:*\n";
+    message += "🏆 League leader\n";
+    message += "🔵 Champions League (1-4)\n";
+    message += "🟢 Europa League (5th)\n";
+    message += "🟡 Conference League (6th)\n";
+    message += "🔴 Relegation zone (18-20)\n";
+    message += "⚫🔵 Inter | ⚪⚫ Juventus\n";
+    message += "🔴⚫ Milan | 🔴🟡 Roma\n";
+    message += "🔵 Napoli\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Standings",
+          body: `Complete ${competition} league table`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Serie A Standings command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch standings: ${error.message}`);
+  }
+});
+// Serie A Matches Command
+keith({
+  nomCom: "serieamatches",
+  aliases: ["seriearesults", "serieafixtures", "serieagames"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Serie A matches...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Matches",
+          body: "Loading match results and fixtures...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/seriea/matches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.matches?.length) {
+      return repondre(zk, dest, ms, "No match data available at the moment.");
+    }
+
+    const { competition, matches } = data.result;
+
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    matches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Format the matches data
+    let message = `*⚽ ${competition} Match Results* 📅\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort().forEach(matchday => {
+      message += `📌 Matchday ${matchday}\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        // Determine result emoji
+        let resultEmoji = "⚖️"; // Draw
+        if (match.winner !== "Draw") {
+          resultEmoji = match.winner === match.homeTeam ? "🏠" : "✈️";
+        }
+        
+        // Shorten long team names
+        const homeTeam = match.homeTeam
+          .replace("FC Internazionale Milano", "Inter Milan")
+          .replace("ACF Fiorentina", "Fiorentina")
+          .replace("Parma Calcio 1913", "Parma");
+        
+        const awayTeam = match.awayTeam
+          .replace("FC Internazionale Milano", "Inter Milan")
+          .replace("ACF Fiorentina", "Fiorentina")
+          .replace("Parma Calcio 1913", "Parma");
+
+        message += `${homeTeam.padEnd(20)} ${match.score.padEnd(7)} ${awayTeam.padEnd(20)} ${resultEmoji}\n`;
+      });
+      
+      message += "\n";
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add key information
+    message += "\n*Key:*\n";
+    message += "🏠 Home win\n";
+    message += "✈️ Away win\n";
+    message += "⚖️ Draw\n";
+    
+    // Add interesting fact about most recent matchday
+    const lastMatchday = Object.keys(matchesByMatchday).sort().pop();
+    const lastMatchdayMatches = matchesByMatchday[lastMatchday];
+    const draws = lastMatchdayMatches.filter(match => match.winner === "Draw").length;
+    message += `\n*Did you know?* Matchday ${lastMatchday} had ${draws} draws out of ${lastMatchdayMatches.length} matches!`;
+
+    message += `\n\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Match Results",
+          body: `Recent ${competition} results`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Serie A Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch matches: ${error.message}`);
+  }
+});
+
+// Serie A Upcoming Matches Command
+keith({
+  nomCom: "serieaupcoming",
+  aliases: ["serieafixtures", "saupcoming", "samatches"],
+  categorie: "sports",
+  reaction: "🇮🇹"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Serie A upcoming matches...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Fixtures",
+          body: "Loading upcoming matches...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/seriea/upcomingmatches');
+    const data = response.data;
+
+    if (!data.status || !data.result?.upcomingMatches?.length) {
+      return repondre(zk, dest, ms, "No upcoming matches data available at the moment.");
+    }
+
+    const { competition, upcomingMatches } = data.result;
+
+    // Format the matches data
+    let message = `*🇮🇹 ${competition} Upcoming Matches* ⚽\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Group matches by matchday
+    const matchesByMatchday = {};
+    upcomingMatches.forEach(match => {
+      if (!matchesByMatchday[match.matchday]) {
+        matchesByMatchday[match.matchday] = [];
+      }
+      matchesByMatchday[match.matchday].push(match);
+    });
+
+    // Add matches for each matchday
+    Object.keys(matchesByMatchday).sort().forEach(matchday => {
+      message += `📅 Matchday ${matchday}:\n`;
+      message += "--------------------------------\n";
+      
+      matchesByMatchday[matchday].forEach(match => {
+        const matchDate = new Date(match.date);
+        const formattedDate = matchDate.toLocaleString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Europe/Rome'
+        });
+        
+        // Highlight big teams with emojis
+        const homeTeam = match.homeTeam.includes('Inter') ? '⚫🔵 ' + match.homeTeam :
+                        match.homeTeam.includes('Juventus') ? '⚪⚫ ' + match.homeTeam :
+                        match.homeTeam.includes('Milan') ? '🔴⚫ ' + match.homeTeam :
+                        match.homeTeam.includes('Roma') ? '🔴🟡 ' + match.homeTeam :
+                        match.homeTeam.includes('Napoli') ? '🔵 ' + match.homeTeam :
+                        match.homeTeam;
+
+        const awayTeam = match.awayTeam.includes('Inter') ? '⚫🔵 ' + match.awayTeam :
+                        match.awayTeam.includes('Juventus') ? '⚪⚫ ' + match.awayTeam :
+                        match.awayTeam.includes('Milan') ? '🔴⚫ ' + match.awayTeam :
+                        match.awayTeam.includes('Roma') ? '🔴🟡 ' + match.awayTeam :
+                        match.awayTeam.includes('Napoli') ? '🔵 ' + match.awayTeam :
+                        match.awayTeam;
+
+        message += `⏰ ${formattedDate} CET\n`;
+        message += `🏠 ${homeTeam}\n`;
+        message += `🆚 ${awayTeam}\n\n`;
+      });
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add team emoji legend
+    message += "\n*Club Colors:*\n";
+    message += "⚫🔵 Inter | ⚪⚫ Juventus\n";
+    message += "🔴⚫ Milan | 🔴🟡 Roma\n";
+    message += "🔵 Napoli\n";
+    
+    message += `\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Serie A Fixtures",
+          body: `Upcoming ${competition} matches`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282019%29.svg/1200px-Serie_A_logo_%282019%29.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Serie A Matches command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch upcoming matches: ${error.message}`);
+  }
+});
+
 // Ligue 1 Top Scorers Command
 keith({
   nomCom: "ligue1scorers",
