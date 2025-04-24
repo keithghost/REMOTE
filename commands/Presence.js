@@ -5,7 +5,7 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 // Sports Leagues Command
-keith({
+/*keith({
   nomCom: "leagues",
   aliases: ["sportsleagues", "availableleagues", "listleagues"],
   categorie: "sports",
@@ -162,7 +162,7 @@ keith({
     console.error('Leagueinfo command error:', error);
     repondre(zk, dest, ms, `Failed to fetch league info: ${error.message}`);
   }
-});
+});*/
 
 // Venue Search Command
 keith({
@@ -267,7 +267,7 @@ keith({
 });
 
 // Match History Command
-/*keith({
+keith({
   nomCom: "matchhistory",
   aliases: ["h2h", "headtohead", "fixturehistory"],
   categorie: "sports",
@@ -482,7 +482,7 @@ keith({
     console.error('Team Roster command error:', error);
     repondre(zk, dest, ms, `Failed to fetch team roster: ${error.message}`);
   }
-});*/
+});
 // Player Search Command
 keith({
   nomCom: "playersearch",
