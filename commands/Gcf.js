@@ -1,5 +1,121 @@
-
 const { keith } = require("../keizzah/keith");
+const axios = require('axios');
+const cheerio = require('cheerio');
+const { repondre } = require(__dirname + "/../keizzah/context");
+
+// Soccer Odds Command
+keith({
+  nomCom: "soccerodds",
+  aliases: ["footballodds", "matchodds", "bettingodds"],
+  categorie: "sports",
+  reaction: "💰"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching latest soccer odds...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Soccer Odds",
+          body: "Loading betting odds from top matches...",
+          thumbnailUrl: "https://www.oddsportal.com/images/logo-oddsportal.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Scrape data from OddsPortal
+    const url = 'https://www.oddsportal.com/matches/soccer/';
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    };
+
+    const response = await axios.get(url, { headers });
+    const $ = cheerio.load(response.data);
+
+    const matches = [];
+    $('.table-main tbody tr:not(.center)').each((i, row) => {
+      const teams = $(row).find('.name').text().trim() || 'N/A';
+      const oddsElements = $(row).find('.odds');
+      const homeOdds = $(oddsElements[0]).text().trim() || 'N/A';
+      const drawOdds = $(oddsElements[1]).text().trim() || 'N/A';
+      const awayOdds = $(oddsElements[2]).text().trim() || 'N/A';
+      
+      if (teams !== 'N/A') {
+        matches.push({
+          teams,
+          odds: {
+            home: homeOdds,
+            draw: drawOdds,
+            away: awayOdds
+          }
+        });
+      }
+    });
+
+    // Filter out invalid matches and limit to top 10
+    const validMatches = matches.filter(match => 
+      match.teams !== 'N/A' && 
+      match.odds.home !== 'N/A' && 
+      match.odds.draw !== 'N/A' && 
+      match.odds.away !== 'N/A'
+    ).slice(0, 10);
+
+    if (validMatches.length === 0) {
+      return repondre(zk, dest, ms, "No valid odds data available at the moment.");
+    }
+
+    // Format the odds data
+    let message = `*⚽ Top Soccer Match Odds* 💰\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Match                      Home   Draw   Away\n";
+    message += "--------------------------------------------\n";
+
+    // Add each match's odds
+    validMatches.forEach(match => {
+      // Shorten long team names
+      const shortenedMatch = match.teams.length > 25 
+        ? match.teams.substring(0, 22) + '...' 
+        : match.teams;
+      
+      message += `${shortenedMatch.padEnd(25)} `;
+      message += `${match.odds.home.padEnd(6)} `;
+      message += `${match.odds.draw.padEnd(6)} `;
+      message += `${match.odds.away}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add disclaimer
+    message += "\n*Note:* Odds are subject to change. Always gamble responsibly.\n";
+    message += `_Data sourced from OddsPortal | ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Soccer Betting Odds",
+          body: "Latest odds from top matches",
+          thumbnailUrl: "https://www.oddsportal.com/images/logo-oddsportal.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Odds command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch odds: ${error.message}`);
+  }
+});
+
+/*const { keith } = require("../keizzah/keith");
 const axios = require('axios');
 const cheerio = require('cheerio');
 const { repondre } = require(__dirname + "/../keizzah/context");
@@ -105,4 +221,4 @@ keith({
     console.error('AEW Roster command error:', error);
     repondre(zk, dest, ms, `Failed to fetch AEW roster: ${error.message}`);
   }
-});
+});*/
