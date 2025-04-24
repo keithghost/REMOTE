@@ -3,6 +3,103 @@ const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 
+// All Leagues Command
+keith({
+  nomCom: "leagues",
+  aliases: ["allleagues", "listleagues", "sportsleagues"],
+  categorie: "sports",
+  reaction: "🏆",
+  arg: ["text"]
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid, arg } = commandOptions;
+  const sportFilter = arg.join(" ").trim().toLowerCase();
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching leagues list...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Sports Leagues",
+          body: "Loading all available leagues...",
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/league/badge/football.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://www.thesportsdb.com/api/v1/json/3/all_leagues.php');
+    const data = response.data;
+
+    if (!data.leagues || data.leagues.length === 0) {
+      return repondre(zk, dest, ms, "No leagues data available at the moment.");
+    }
+
+    // Filter leagues by sport if specified
+    let leagues = data.leagues;
+    if (sportFilter) {
+      leagues = leagues.filter(league => 
+        league.strSport.toLowerCase().includes(sportFilter) ||
+        league.strLeague.toLowerCase().includes(sportFilter)
+    }
+
+    if (leagues.length === 0) {
+      return repondre(zk, dest, ms, `No leagues found for "${sportFilter}". Try a different sport.`);
+    }
+
+    // Group leagues by sport
+    const leaguesBySport = {};
+    leagues.forEach(league => {
+      if (!leaguesBySport[league.strSport]) {
+        leaguesBySport[league.strSport] = [];
+      }
+      leaguesBySport[league.strSport].push(league);
+    });
+
+    // Format the leagues data
+    let message = `*🏆 Available Leagues${sportFilter ? ` (${sportFilter})` : ''}*\n\n`;
+
+    // Add leagues by sport category
+    Object.keys(leaguesBySport).sort().forEach(sport => {
+      message += `*${sport}*\n`;
+      
+      leaguesBySport[sport].forEach(league => {
+        message += `- ${league.strLeague}`;
+        if (league.strLeagueAlternate) {
+          message += ` (${league.strLeagueAlternate.split(',').shift().trim()})`;
+        }
+        message += `\n`;
+      });
+      
+      message += "\n";
+    });
+
+    message += `ℹ️ Total Leagues: ${leagues.length}\n`;
+    message += `🔍 Use "!leagues [sport]" to filter (e.g. "!leagues soccer")\n\n`;
+    message += `_Data provided by TheSportsDB.com_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Sports Leagues",
+          body: `${leagues.length} leagues available${sportFilter ? ` in ${sportFilter}` : ''}`,
+          thumbnailUrl: "https://www.thesportsdb.com/images/media/league/badge/football.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Leagues command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch leagues: ${error.message}`);
+  }
+});
+
 // Venue Search Command
 keith({
   nomCom: "venuesearch",
