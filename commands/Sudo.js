@@ -4,6 +4,99 @@ const { repondre } = require(__dirname + "/../keizzah/context");
 
 
 
+// Ligue 1 Top Scorers Command
+keith({
+  nomCom: "ligue1scorers",
+  aliases: ["ligue1topscorers", "ligue1goals", "ligue1goldenboot"],
+  categorie: "sports",
+  reaction: "⚽"
+}, async (dest, zk, commandOptions) => {
+  const { ms, userJid } = commandOptions;
+
+  try {
+    // Send initial loading message
+    await zk.sendMessage(dest, {
+      text: "⏳ Fetching Ligue 1 top scorers...",
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Top Scorers",
+          body: "Loading golden boot race data...",
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+    // Fetch data from API
+    const response = await axios.get('https://apis-keith.vercel.app/ligue1/scorers');
+    const data = response.data;
+
+    if (!data.status || !data.result?.topScorers?.length) {
+      return repondre(zk, dest, ms, "No top scorers data available at the moment.");
+    }
+
+    const { competition, topScorers } = data.result;
+
+    // Format the top scorers data
+    let message = `*⚽ ${competition} Top Scorers (Golden Boot Race)* 🥇\n\n`;
+    message += "```\n";  // Start monospace block for alignment
+    
+    // Table header
+    message += "Rank Player                  Team            Goals Assists Pens\n";
+    message += "------------------------------------------------------------\n";
+
+    // Add each scorer's data
+    topScorers.forEach(scorer => {
+      // Highlight current golden boot leader
+      const rankPrefix = scorer.rank === 1 ? "🥇" : `${scorer.rank}.`;
+      
+      message += `${rankPrefix.padEnd(4)} `;
+      message += `${scorer.player.substring(0, 20).padEnd(20)} `;
+      message += `${scorer.team.substring(0, 15).padEnd(15)} `;
+      message += `${scorer.goals.toString().padEnd(5)} `;
+      message += `${(scorer.assists === "N/A" ? "0" : scorer.assists).toString().padEnd(7)} `;
+      message += `${(scorer.penalties === "N/A" ? "0" : scorer.penalties).toString()}\n`;
+    });
+
+    message += "```\n";  // End monospace block
+    
+    // Add key information
+    message += "\n*Key:*\n";
+    message += "🥇 Current golden boot leader\n";
+    message += "Pens: Penalty goals scored\n";
+    message += "N/A values are shown as 0 in table\n";
+    
+    // Add interesting facts about top scorers
+    const topScorer = topScorers[0];
+    message += `\n*Did you know?* ${topScorer.player} (${topScorer.team}) leads the race with ${topScorer.goals} goals`;
+    if (topScorer.penalties !== "N/A" && topScorer.penalties > 0) {
+      message += ` (${topScorer.penalties} from penalties)`;
+    }
+    message += "!";
+
+    message += `\n\n_Last updated: ${new Date().toLocaleString()}_`;
+
+    // Send the formatted message
+    await zk.sendMessage(dest, {
+      text: message,
+      contextInfo: {
+        mentionedJid: [userJid],
+        externalAdReply: {
+          title: "Ligue 1 Top Scorers",
+          body: `Current ${competition} golden boot race`,
+          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Ligue_1_Uber_Eats_logo.svg/1200px-Ligue_1_Uber_Eats_logo.svg.png",
+          mediaType: 1
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error('Ligue 1 Top Scorers command error:', error);
+    repondre(zk, dest, ms, `Failed to fetch top scorers: ${error.message}`);
+  }
+});
+
 // Ligue 1 Standings Command
 keith({
   nomCom: "ligue1standings",
