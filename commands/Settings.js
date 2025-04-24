@@ -37,7 +37,7 @@ keith({
 // Cricket Command
 keith({
   nomCom: "cricket",
-  categorie: "soccer",
+  categorie: "sports",
   desc: "Sends info of given query from Google Search.",
   reaction: "🏏",
 }, async (dest, zk, commandeOptions) => {
