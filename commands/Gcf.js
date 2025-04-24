@@ -2,7 +2,7 @@ const { keith } = require("../keizzah/keith");
 const axios = require('axios');
 const { repondre } = require(__dirname + "/../keizzah/context");
 
-// Sports Leagues Command
+// Sports Leagues Command,,
 keith({
   nomCom: "leagues",
   aliases: ["sportsleagues", "availableleagues", "listleagues"],
