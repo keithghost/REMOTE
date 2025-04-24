@@ -267,7 +267,7 @@ keith({
 });
 
 // Match History Command
-keith({
+/*keith({
   nomCom: "matchhistory",
   aliases: ["h2h", "headtohead", "fixturehistory"],
   categorie: "sports",
@@ -482,7 +482,7 @@ keith({
     console.error('Team Roster command error:', error);
     repondre(zk, dest, ms, `Failed to fetch team roster: ${error.message}`);
   }
-});
+});*/
 // Player Search Command
 keith({
   nomCom: "playersearch",
