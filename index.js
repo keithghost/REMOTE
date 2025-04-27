@@ -1,3 +1,13 @@
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 8000;
+app.get("/", (req, res) => {
+  res.send("ALPHA MD IS ALIVE ✅");
+  });
+// Add port listening
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -19,7 +29,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
     if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
+    __setModuleDefault(result,mod);
     return result;
 };
 var __importDefault = (this && this.__importDefault) || function (mod) {
