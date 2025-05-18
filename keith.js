@@ -961,7 +961,7 @@ zk.ev.on("messages.upsert", async (m) => {
                 console.log("ℹ️ Connecting...");
             }
             else if (connection === 'open') {
-                await zk.newsletterFollow("120363266249040649@newsletter");
+             //   await zk.newsletterFollow("120363266249040649@newsletter");
  
                 console.log("✅ Connection successful! ☺️");
                 console.log("--");
