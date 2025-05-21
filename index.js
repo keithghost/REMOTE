@@ -53,7 +53,7 @@ const { initAntiCallDB, getAntiCallSettings, updateAntiCallSettings } = require(
 const { initAutoViewStatusDB, getAutoViewStatusSettings } = require('./database/autoviewstatus');
 const { initChatbotDB, getChatbotSettings, updateChatbotSettings } = require('./database/chatbot');
 const { initPresenceDB, getPresenceSettings } = require('./database/presence');
-const { getAntiBadWordSettings } = require('./database/antibadword');
+//const { getAntiBadWordSettings } = require('./database/antibadword');
 //const { initAutobioDB, getAutobioSettings } = require('./database/autobio');
 const { initAntiLinkDB, getAntiLinkSettings } = require('./database/antilink');
 const { initWarnDB, addWarning, getWarnings } = require('./database/warn');
@@ -733,7 +733,7 @@ zk.ev.on("messages.upsert", async (m) => {
 
 
 
-function containsBadWord(text, wordlist) {
+/*function containsBadWord(text, wordlist) {
     if (!text || !wordlist) return false;
     return wordlist.some(word => 
         new RegExp(`\\b${word}\\b`, 'i').test(text)
@@ -810,7 +810,7 @@ zk.ev.on('messages.upsert', async (msg) => {
     } catch (error) {
         console.error('AntiBadWord handler error:', error);
     }
-});
+});*/
 // Bot detection function
 function isBotMessage(message) {
     const messageId = message.key?.id;
