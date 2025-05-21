@@ -1,9 +1,9 @@
 const axios = require("axios");
 const {keith} = require("../keizzah/keith");
-const traduire = require("../keizzah/traduction");
+//const traduire = require("../keizzah/traduction");
 const { repondre, sendMessage } = require('../keizzah/context');
 const {Sticker ,StickerTypes}= require('wa-sticker-formatter');
-keith({
+/*keith({
   nomCom: "google",
   categorie: "Search"
 }, async (dest, zk, commandeOptions) => {
@@ -42,7 +42,7 @@ keith({
     console.error("Error during Google search:", error);
     await repondre(zk, dest, ms, "An error occurred during Google search.");
   }
-});
+});*/
 
 keith({
   nomCom: "movie",
