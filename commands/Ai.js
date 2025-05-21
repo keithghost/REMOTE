@@ -1,5 +1,5 @@
 const { keith } = require("../keizzah/keith");
-const ai = require('unlimited-ai');
+//const ai = require('unlimited-ai');
 const { repondre, sendMessage } = require('../keizzah/context');
 const axios = require('axios');
 const wiki = require('wikipedia');
