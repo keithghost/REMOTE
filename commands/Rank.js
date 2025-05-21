@@ -4,7 +4,7 @@ const acrcloud = require("acrcloud");
 const { Catbox } = require("node-catbox");
 const fs = require('fs-extra');
 const yts = require("yt-search");
-const ytdl = require("ytdl-core");
+//const ytdl = require("ytdl-core");
 const { repondre } = require(__dirname + "/../keizzah/context");
 
 // Initialize Catbox
