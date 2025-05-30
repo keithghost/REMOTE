@@ -92,9 +92,9 @@ async function authentification() {
 }
 authentification();
 
-const store = (0, baileys_1.makeInMemoryStore)({
+/*const store = (0, baileys_1.makeInMemoryStore)({
     logger: pino().child({ level: "silent", stream: "store" }),
-});
+});*/
 
 
 setTimeout(() => {
@@ -128,8 +128,8 @@ setTimeout(() => {
             }
         };
         const zk = (0, baileys_1.default)(sockOptions);
-        store.bind(zk.ev);
-        setInterval(() => { store.writeToFile("store.json"); }, 3000);
+        /*store.bind(zk.ev);
+        setInterval(() => { store.writeToFile("store.json"); }, 3000);*/
        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         let lastTextTime = 0;
         const messageDelay = 5000;  
