@@ -93,14 +93,10 @@ async function authentification() {
 authentification();
 
 const store = (0, baileys_1.makeInMemoryStore)({
-/*const store = {
-    chats: {},
-    contacts: {},
-    messages: {},
-    // ... other store properties
-}*/
     logger: pino().child({ level: "silent", stream: "store" }),
 });
+
+
 setTimeout(() => {
     async function main() {
         const { version, isLatest } = await (0, baileys_1.fetchLatestBaileysVersion)();
