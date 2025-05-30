@@ -92,7 +92,7 @@ async function authentification() {
 }
 authentification();
 
-const store = (0, baileys_1.makeCache)({
+const store = (0, baileys_1.makeInMemoryStore)({
 /*const store = {
     chats: {},
     contacts: {},
