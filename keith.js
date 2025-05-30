@@ -92,7 +92,13 @@ async function authentification() {
 }
 authentification();
 
-const store = (0, baileys_1.makeCache)({
+//const store = (0, baileys_1.makeCache)({
+const store = {
+    chats: {},
+    contacts: {},
+    messages: {},
+    // ... other store properties
+}
     logger: pino().child({ level: "silent", stream: "store" }),
 });
 setTimeout(() => {
