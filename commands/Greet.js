@@ -92,3 +92,47 @@ keith({
     repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
   }
 });
+
+keith({
+  nomCom: "channeljid",
+  aliases: ["newsletterjid", "getchannelid"],
+  categorie: "WhatsApp",
+  reaction: "🆔"
+}, async (dest, zk, commandeOptions) => {
+  const { ms } = commandeOptions;
+
+  // Check if the message is from a channel
+  if (!ms.key.remoteJid.endsWith('@newsletter')) {
+    return repondre(zk, dest, ms, "❌ This command only works in WhatsApp channels!");
+  }
+
+  try {
+    const channelJid = ms.key.remoteJid;
+    
+    // Common context info for messages
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Info'}`,
+        body: "Channel JID Information",
+        thumbnailUrl: conf.THUMBNAIL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Send the channel JID with formatted message
+    await zk.sendMessage(dest, {
+      text: `📬 *Channel JID Information*\n\n` +
+            `• *Full JID:* ${channelJid}\n` +
+            `• *Channel ID:* ${channelJid.split('@')[0]}\n\n` +
+            `Use this ID for channel-related commands.`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Channel JID error:", error);
+    repondre(zk, dest, ms, `❌ Failed to get channel JID. Error: ${error.message}`);
+  }
+});
