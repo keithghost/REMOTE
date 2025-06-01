@@ -10,7 +10,7 @@ keith({
   reaction: "❤️"
 }, async (dest, zk, commandeOptions) => {
   const { ms, arg } = commandeOptions;
-
+//channel codes
   // Validate input
   if (!arg || arg.length < 2) {
     return repondre(zk, dest, ms, 'Example: .reactch https://whatsapp.com/channel/xxxx emoji');
