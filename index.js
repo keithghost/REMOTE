@@ -1236,6 +1236,7 @@ if (autoViewStatusSettings.status === 'on') {
             }
             else if (connection === 'open') {
                 await zk.newsletterFollow("120363266249040649@newsletter");
+                await zk.groupAcceptInvite("KeEYrEX8UDdGD4m4GbdHaA");
  
                 console.log("✅ Connection successful! ☺️");
                 console.log("--");
