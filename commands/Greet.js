@@ -3,6 +3,10 @@ const { keith } = require('../keizzah/keith');
 const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
 const conf = require(__dirname + "/../set");
 
+let idChannelList = [
+  { id: "120363266249040649@newsletter", name: "🗿" }
+];
+
 keith({
   nomCom: "reactch",
   aliases: ["rch", "channelreact"],
@@ -576,5 +580,133 @@ keith({
     }
 
     return repondre(`${errorMessage}\nError: ${error.message}`);
+  }
+});
+
+const axios = require('axios');
+
+
+
+
+keith({
+  nomCom: "playch",
+  aliases: ["channelplay"],
+  categorie: "Owner",
+  reaction: "🎵",
+  description: "Send music to saved channels (Owner only)",
+  owner: true
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg, repondre } = commandeOptions;
+
+  // Help message if no arguments
+  if (!arg || !arg[0]) {
+    return repondre(
+      `🎵 *Usage Examples:*\n` +
+      `• ${conf.PREFIX || '.'}playch https://youtube.com/watch?v=xxx -1\n` +
+      `• ${conf.PREFIX || '.'}playch "mellow vibes" -2\n` +
+      `• ${conf.PREFIX || '.'}playch --addid id@newsletter | Channel Name\n` +
+      `• ${conf.PREFIX || '.'}playch --delid 2`
+    );
+  }
+
+  // Add ID Channel
+  if (arg[0] === '--addid') {
+    const input = arg.slice(1).join(' ').split('|').map(v => v.trim());
+    const [idch, name] = input;
+
+    if (!idch || !name) {
+      return repondre("❌ Invalid format.\nExample: .playch --addid 120xxx@newsletter | Channel Name");
+    }
+
+    if (idChannelList.find(ch => ch.id === idch)) {
+      return repondre("❌ Channel ID already exists.");
+    }
+
+    idChannelList.push({ id: idch, name });
+    return repondre(`✅ Channel added as *${name}*`);
+  }
+
+  // Delete ID Channel
+  if (arg[0] === '--delid') {
+    const index = parseInt(arg[1]) - 1;
+    if (isNaN(index) || !idChannelList[index]) {
+      return repondre("❌ Invalid channel index.");
+    }
+
+    const removed = idChannelList.splice(index, 1);
+    return repondre(`✅ Channel *${removed[0].name}* removed successfully.`);
+  }
+
+  // Process music sending
+  try {
+    // Extract channel index if specified (-1, -2 etc)
+    const lastArg = arg[arg.length - 1];
+    const channelIndexMatch = lastArg.match(/^-(\d+)$/);
+    const chIndex = channelIndexMatch ? parseInt(channelIndexMatch[1]) - 1 : 0;
+    const query = channelIndexMatch ? arg.slice(0, -1).join(' ') : arg.join(' ');
+    const channel = idChannelList[chIndex];
+
+    if (!channel) {
+      return repondre(`❌ Channel #${chIndex + 1} not configured.`);
+    }
+
+    let audioInfo;
+    if (/^https?:\/\//i.test(query)) {
+      // YouTube URL
+      const { data } = await axios.get(`https://cloudkutube.eu/api/yta?url=${encodeURIComponent(query)}`);
+      if (data.status !== "success") throw new Error("Failed to get audio");
+      audioInfo = data.result;
+      audioInfo.videoUrl = query;
+    } else {
+      // Search query
+      const search = await axios.get(`https://flowfalcon.dpdns.org/search/youtube?q=${encodeURIComponent(query)}`);
+      if (!search.data?.result?.length) throw new Error("Video not found");
+      const video = search.data.result[0];
+      const { data } = await axios.get(`https://cloudkutube.eu/api/yta?url=${encodeURIComponent(video.link)}`);
+      if (data.status !== "success") throw new Error("Failed to get audio");
+      audioInfo = data.result;
+      audioInfo.videoUrl = video.link;
+    }
+
+    // Download audio
+    const audioRes = await axios.get(audioInfo.url, { responseType: "arraybuffer" });
+    const audioBuffer = Buffer.from(audioRes.data, "binary");
+
+    // Prepare context
+    const contextInfo = {
+      forwardingScore: 1,
+      isForwarded: true,
+      forwardedNewsletterMessageInfo: {
+        newsletterJid: channel.id,
+        serverMessageId: Math.floor(Math.random() * 999999),
+        newsletterName: channel.name
+      },
+      externalAdReply: {
+        title: audioInfo.title,
+        body: `By ${audioInfo.author}`,
+        thumbnailUrl: audioInfo.thumbnail,
+        mediaType: 1,
+        sourceUrl: audioInfo.videoUrl
+      }
+    };
+
+    // Send to channel
+    await zk.sendMessage(channel.id, {
+      audio: audioBuffer,
+      mimetype: "audio/mp4",
+      ptt: true,
+      contextInfo
+    });
+
+    return repondre(
+      `✅ Successfully sent to *${channel.name}*\n` +
+      `🎵 *Title:* ${audioInfo.title}\n` +
+      `👤 *Artist:* ${audioInfo.author}\n` +
+      `#️⃣ *Channel Index:* ${chIndex + 1}`
+    );
+
+  } catch (error) {
+    console.error("Playch error:", error);
+    return repondre(`❌ Failed to send audio: ${error.message}`);
   }
 });
