@@ -426,3 +426,215 @@ keith({
     repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
   }
 });
+
+
+keith({
+  nomCom: "channelmute",
+  aliases: ["mutechannel", "silencechannel"],
+  categorie: "channel",
+  reaction: "🔇",
+  description: "Mute the current WhatsApp channel"
+}, async (dest, zk, commandeOptions) => {
+  const { ms } = commandeOptions;
+
+  // Check if the message is from a channel
+  if (!ms.key.remoteJid.endsWith('@newsletter')) {
+    return repondre(zk, dest, ms, 
+      "❌ This command must be used within a WhatsApp channel!\n" +
+      "Join the channel you want to mute and use the command there."
+    );
+  }
+
+  try {
+    const channelJid = ms.key.remoteJid;
+    
+    // Get channel info
+    const channelInfo = await zk.newsletterMetadata("invite", channelJid.split('@')[0]);
+
+    // Common context info for messages
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Manager'}`,
+        body: `Muting ${channelInfo.name}`,
+        thumbnailUrl: channelInfo.picture?.url || conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Mute the channel immediately
+    await zk.newsletterMute(channelJid);
+
+    // Send success message
+    await zk.sendMessage(dest, {
+      text: `🔇 Successfully muted:\n*${channelInfo.name}*\n\n` +
+            `You will no longer receive notifications from this channel.`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Channel mute error:", error);
+    
+    let errorMessage = "❌ Failed to mute channel";
+    if (error.message.includes("not found")) {
+      errorMessage = "❌ Channel not found or you're not following it";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ You don't have permission to mute this channel";
+    } else if (error.message.includes("already muted")) {
+      errorMessage = "ℹ️ This channel is already muted";
+    }
+
+    repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
+  }
+});
+
+
+keith({
+  nomCom: "channelunmute",
+  aliases: ["unmutechannel", "soundchannel"],
+  categorie: "channel",
+  reaction: "🔊",
+  description: "Unmute the current WhatsApp channel"
+}, async (dest, zk, commandeOptions) => {
+  const { ms } = commandeOptions;
+
+  // Check if the message is from a channel
+  if (!ms.key.remoteJid.endsWith('@newsletter')) {
+    return repondre(zk, dest, ms, 
+      "❌ This command must be used within a WhatsApp channel!\n" +
+      "Join the channel you want to unmute and use the command there."
+    );
+  }
+
+  try {
+    const channelJid = ms.key.remoteJid;
+    
+    // Get channel info
+    const channelInfo = await zk.newsletterMetadata("invite", channelJid.split('@')[0]);
+
+    // Common context info for messages
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Manager'}`,
+        body: `Unmuting ${channelInfo.name}`,
+        thumbnailUrl: channelInfo.picture?.url || conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Unmute the channel immediately
+    await zk.newsletterUnmute(channelJid);
+
+    // Send success message
+    await zk.sendMessage(dest, {
+      text: `🔊 Successfully unmuted:\n*${channelInfo.name}*\n\n` +
+            `You will now receive notifications from this channel.`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Channel unmute error:", error);
+    
+    let errorMessage = "❌ Failed to unmute channel";
+    if (error.message.includes("not found")) {
+      errorMessage = "❌ Channel not found or you're not following it";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ You don't have permission to unmute this channel";
+    } else if (error.message.includes("not muted")) {
+      errorMessage = "ℹ️ This channel is not currently muted";
+    }
+
+    repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
+  }
+});
+
+keith({
+  nomCom: "channeldescription",
+  aliases: ["setdescription", "updatedescription", "chdesc"],
+  categorie: "channel",
+  reaction: "✏️",
+  description: "Update WhatsApp channel description"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+
+  // Check if the message is from a channel
+  if (!ms.key.remoteJid.endsWith('@newsletter')) {
+    return repondre(zk, dest, ms, "❌ This command only works in WhatsApp channels!");
+  }
+
+  // Validate description input
+  if (!arg || !arg[0]) {
+    return repondre(zk, dest, ms,
+      `✏️ Please provide a new description for the channel!\n` +
+      `Usage: *${conf.PREFIX || '.'}channeldescription Your new channel description here*`
+    );
+  }
+
+  const newDescription = arg.join(' ').trim();
+  
+  // Validate description length (WhatsApp limits description length)
+  if (newDescription.length > 500) {
+    return repondre(zk, dest, ms, "❌ Description must be 500 characters or less");
+  }
+
+  try {
+    const channelJid = ms.key.remoteJid;
+    
+    // Common context info for messages
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Manager'}`,
+        body: "Updating channel description",
+        thumbnailUrl: conf.THUMBNAIL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Get current channel info
+    const channelInfo = await zk.newsletterMetadata("invite", channelJid.split('@')[0]);
+
+    // Send updating status
+    await zk.sendMessage(dest, {
+      text: `⏳ Updating channel description...`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+    // Update the channel description
+    await zk.newsletterUpdateDescription(channelJid, newDescription);
+
+    // Send success message with old and new description
+    await zk.sendMessage(dest, {
+      text: `✅ Channel description updated successfully!\n\n` +
+            `📌 *Previous Description:*\n${channelInfo.description || 'No description'}\n\n` +
+            `🆕 *New Description:*\n${newDescription}`,
+      contextInfo: {
+        ...commonContextInfo,
+        externalAdReply: {
+          ...commonContextInfo.externalAdReply,
+          title: `Description Updated | ${channelInfo.name}`,
+          thumbnailUrl: channelInfo.picture?.url || conf.URL || ''
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Channel description update error:", error);
+    
+    let errorMessage = "❌ Failed to update channel description";
+    if (error.message.includes("too long")) {
+      errorMessage = "❌ Description is too long (max 500 characters)";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ You don't have permission to update this channel's description";
+    }
+
+    repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
+  }
+});
