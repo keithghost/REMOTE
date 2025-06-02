@@ -432,7 +432,7 @@ keith({
 keith({
   nomCom: "channeldescription",
   aliases: ["setdescription", "updatedescription", "chdesc"],
-  categorie: "WhatsApp",
+  categorie: "channel",
   reaction: "✏️",
   description: "Update WhatsApp channel description"
 }, async (dest, zk, commandeOptions) => {
@@ -500,5 +500,81 @@ keith({
     }
 
     repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
+  }
+});
+
+
+keith({
+  nomCom: "channelfwd",
+  aliases: ["cfwd", "channelforward"],
+  categorie: "channel",
+  reaction: "📢",
+  description: "Forward message to your WhatsApp channel (Admin only)"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg, repondre } = commandeOptions;
+
+  // Check if user provided channel link and message
+  if (!arg || arg.length < 2) {
+    return repondre(
+      `📌 Usage: *${conf.PREFIX || '.'}channelfwd <channel-link> <message>*\n` +
+      `Example: *${conf.PREFIX || '.'}channelfwd https://whatsapp.com/channel/XXXXXX Hello members!*`
+    );
+  }
+
+  const channelLink = arg[0].trim();
+  const message = arg.slice(1).join(' ');
+
+  // Validate channel link format
+  if (!channelLink.startsWith("https://whatsapp.com/channel/")) {
+    return repondre("❌ Invalid channel link format. Please provide a valid WhatsApp channel link.");
+  }
+
+  try {
+    // Extract channel ID
+    const channelId = channelLink.split('/')[4];
+    if (!channelId) {
+      return repondre("❌ Could not extract channel ID from the link.");
+    }
+
+    const channelJid = `${channelId}@newsletter`;
+
+    // Verify admin status and get channel info
+    const channelInfo = await zk.newsletterMetadata("invite", channelId);
+    if (!channelInfo.canSend) {
+      return repondre("❌ You need to be an admin of this channel to forward messages.");
+    }
+
+    // Common context info
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Manager'}`,
+        body: `Message from admin`,
+        thumbnailUrl: channelInfo.picture?.url || conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Forward the message
+    await zk.sendMessage(channelJid, {
+      text: `📢 *Admin Announcement*\n\n${message}`,
+      contextInfo: commonContextInfo
+    });
+
+    return repondre(`✅ Message successfully forwarded to *${channelInfo.name}*`);
+
+  } catch (error) {
+    console.error("Channel forward error:", error);
+    
+    let errorMessage = "❌ Failed to forward message";
+    if (error.message.includes("not found")) {
+      errorMessage = "❌ Channel not found or invalid link";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ You don't have admin privileges for this channel";
+    }
+
+    return repondre(`${errorMessage}\nError: ${error.message}`);
   }
 });
