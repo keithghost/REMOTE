@@ -6,7 +6,7 @@ const conf = require(__dirname + "/../set");
 keith({
   nomCom: "reactch",
   aliases: ["rch", "channelreact"],
-  categorie: "WhatsApp",
+  categorie: "channel",
   reaction: "❤️"
 }, async (dest, zk, commandeOptions) => {
   const { ms, arg } = commandeOptions;
@@ -96,7 +96,7 @@ keith({
 keith({
   nomCom: "channeljid",
   aliases: ["newsletterjid", "getchannelid"],
-  categorie: "WhatsApp",
+  categorie: "channel",
   reaction: "🆔"
 }, async (dest, zk, commandeOptions) => {
   const { ms } = commandeOptions;
@@ -115,7 +115,7 @@ keith({
         showAdAttribution: true,
         title: `${conf.BOT || 'Channel Info'}`,
         body: "Channel JID Information",
-        thumbnailUrl: conf.THUMBNAIL || '',
+        thumbnailUrl: conf.URL || '',
         sourceUrl: conf.GURL || '',
         mediaType: 1,
         renderLargerThumbnail: false
@@ -134,5 +134,295 @@ keith({
   } catch (error) {
     console.error("Channel JID error:", error);
     repondre(zk, dest, ms, `❌ Failed to get channel JID. Error: ${error.message}`);
+  }
+});
+
+keith({
+  nomCom: "channelname",
+  aliases: ["channame", "setchannelname", "updatenewsletter"],
+  categorie: "channel",
+  reaction: "✏️",
+  description: "Update WhatsApp channel name"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+
+  // Check if the message is from a channel
+  if (!ms.key.remoteJid.endsWith('@newsletter')) {
+    return repondre(zk, dest, ms, "❌ This command only works in WhatsApp channels!");
+  }
+
+  // Validate new name input
+  if (!arg || !arg[0]) {
+    return repondre(zk, dest, ms, 
+      "✏️ Please provide a new name for the channel!\n" +
+      `Example: *${conf.PREFIX || '.'}channelname New Channel Name*`
+    );
+  }
+
+  const newName = arg.join(' ').trim();
+  
+  // Validate name length (WhatsApp limits channel names to 100 chars)
+  if (newName.length > 100) {
+    return repondre(zk, dest, ms, "❌ Channel name must be 100 characters or less");
+  }
+
+  try {
+    // Common context info for messages
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Manager'}`,
+        body: "Updating channel name",
+        thumbnailUrl: conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Send updating status
+    await zk.sendMessage(dest, {
+      text: `⏳ Updating channel name to "${newName}"...`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+    // Update the channel name
+    await zk.newsletterUpdateName(ms.key.remoteJid, newName);
+
+    // Send success message
+    await zk.sendMessage(dest, {
+      text: `✅ Channel name successfully updated to:\n"*${newName}*"`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Channel name update error:", error);
+    
+    let errorMessage = "❌ Failed to update channel name";
+    if (error.message.includes("too long")) {
+      errorMessage = "❌ Channel name is too long (max 100 characters)";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ You don't have permission to rename this channel";
+    }
+
+    repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
+  }
+});
+
+keith({
+  nomCom: "channelfollow",
+  aliases: ["followchannel", "subscribechannel"],
+  categorie: "channel",
+  reaction: "📩",
+  description: "Follow a WhatsApp channel using its link"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+
+  // Validate input
+  if (!arg || !arg[0]) {
+    return repondre(zk, dest, ms, 
+      `📌 Usage: *${conf.PREFIX || '.'}channelfollow <channel-link>*\n` +
+      `Example: *${conf.PREFIX || '.'}channelfollow https://whatsapp.com/channel/XXXXXX*`
+    );
+  }
+
+  const channelLink = arg[0].trim();
+  if (!channelLink.startsWith("https://whatsapp.com/channel/")) {
+    return repondre(zk, dest, ms, "❌ Invalid channel link format. Please provide a valid WhatsApp channel link.");
+  }
+
+  try {
+    // Extract channel ID from link
+    const channelId = channelLink.split('/')[4];
+    if (!channelId) {
+      return repondre(zk, dest, ms, "❌ Could not extract channel ID from the link.");
+    }
+
+    // Common context info
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Manager'}`,
+        body: "Following channel...",
+        thumbnailUrl: conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Get channel info first
+    const channelInfo = await zk.newsletterMetadata("invite", channelId);
+
+    // Send processing message
+    await zk.sendMessage(dest, {
+      text: `⏳ Preparing to follow: *${channelInfo.name}*...`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+    // Follow the channel
+    await zk.newsletterFollow(`${channelId}@newsletter`);
+
+    // Success message
+    await zk.sendMessage(dest, {
+      text: `✅ Successfully followed channel:\n` +
+            `*${channelInfo.name}*\n\n` +
+            `📩 You will now receive updates from this channel.`,
+      contextInfo: {
+        ...commonContextInfo,
+        externalAdReply: {
+          ...commonContextInfo.externalAdReply,
+          title: `Followed: ${channelInfo.name}`,
+          thumbnailUrl: channelInfo.picture?.url || conf.URL || ''
+        }
+      }
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Channel follow error:", error);
+    
+    let errorMessage = "❌ Failed to follow channel";
+    if (error.message.includes("already exists")) {
+      errorMessage = "ℹ️ You're already following this channel";
+    } else if (error.message.includes("not found")) {
+      errorMessage = "❌ Channel not found or link is invalid";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ You don't have permission to follow this channel";
+    }
+
+    repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
+  }
+});
+
+
+keith({
+  nomCom: "channelunfollow",
+  aliases: ["unfollowchannel", "leavechannel"],
+  categorie: "channel",
+  reaction: "❌",
+  description: "Unfollow a WhatsApp channel using its link"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+
+  // Validate input
+  if (!arg || !arg[0]) {
+    return repondre(zk, dest, ms, 
+      `📌 Usage: *${conf.PREFIX || '.'}channelunfollow <channel-link>*\n` +
+      `Example: *${conf.PREFIX || '.'}channelunfollow https://whatsapp.com/channel/XXXXXX*`
+    );
+  }
+
+  const channelLink = arg[0].trim();
+  if (!channelLink.startsWith("https://whatsapp.com/channel/")) {
+    return repondre(zk, dest, ms, "❌ Invalid channel link format. Please provide a valid WhatsApp channel link.");
+  }
+
+  try {
+    // Extract channel ID from link
+    const channelId = channelLink.split('/')[4];
+    if (!channelId) {
+      return repondre(zk, dest, ms, "❌ Could not extract channel ID from the link.");
+    }
+
+    // Common context info
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Channel Manager'}`,
+        body: "Unfollowing channel...",
+        thumbnailUrl: conf.URL || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Get channel info first
+    const channelInfo = await zk.newsletterMetadata("invite", channelId);
+
+    // Send confirmation prompt
+    const confirmationMsg = await zk.sendMessage(dest, {
+      text: `⚠️ Are you sure you want to unfollow:\n` +
+            `*${channelInfo.name}*?\n\n` +
+            `Reply with *yes* to confirm or *no* to cancel.`,
+      contextInfo: {
+        ...commonContextInfo,
+        externalAdReply: {
+          ...commonContextInfo.externalAdReply,
+          title: `Unfollow: ${channelInfo.name}`,
+          thumbnailUrl: channelInfo.picture?.url || conf.THUMBNAIL || ''
+        }
+      }
+    }, { quoted: ms });
+
+    // Set up reply handler
+    const replyHandler = async (update) => {
+      try {
+        const messageContent = update.messages[0];
+        if (!messageContent.message || messageContent.key.remoteJid !== dest) return;
+
+        // Check if this is a reply to our confirmation message
+        const isReply = messageContent.message.extendedTextMessage?.contextInfo?.stanzaId === confirmationMsg.key.id;
+        if (!isReply) return;
+
+        const response = messageContent.message.conversation?.toLowerCase() || 
+                        messageContent.message.extendedTextMessage?.text?.toLowerCase();
+
+        if (response === 'yes') {
+          // Unfollow the channel
+          await zk.newsletterUnfollow(`${channelId}@newsletter`);
+          
+          await zk.sendMessage(dest, {
+            text: `✅ Successfully unfollowed:\n*${channelInfo.name}*\n\n` +
+                  `You will no longer receive updates from this channel.`,
+            contextInfo: commonContextInfo
+          }, { quoted: messageContent });
+          
+        } else if (response === 'no') {
+          await zk.sendMessage(dest, {
+            text: `🚫 Operation cancelled.\n` +
+                  `You're still following *${channelInfo.name}*`,
+            contextInfo: commonContextInfo
+          }, { quoted: messageContent });
+        } else {
+          await zk.sendMessage(dest, {
+            text: "⚠️ Please reply with *yes* or *no* to confirm.",
+            quoted: messageContent
+          });
+          return;
+        }
+
+        // Remove listener
+        zk.ev.off("messages.upsert", replyHandler);
+
+      } catch (error) {
+        console.error("Unfollow error:", error);
+        await zk.sendMessage(dest, {
+          text: "❌ An error occurred while processing your request.",
+          quoted: messageContent
+        });
+        zk.ev.off("messages.upsert", replyHandler);
+      }
+    };
+
+    // Add event listener
+    zk.ev.on("messages.upsert", replyHandler);
+
+    // Timeout after 1 minute
+    setTimeout(() => {
+      zk.ev.off("messages.upsert", replyHandler);
+    }, 60000);
+
+  } catch (error) {
+    console.error("Channel unfollow error:", error);
+    
+    let errorMessage = "❌ Failed to process channel unfollow";
+    if (error.message.includes("not found")) {
+      errorMessage = "❌ Channel not found or you're not following it";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "❌ You don't have permission to unfollow this channel";
+    }
+
+    repondre(zk, dest, ms, `${errorMessage}\nError: ${error.message}`);
   }
 });
