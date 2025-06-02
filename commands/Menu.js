@@ -229,7 +229,7 @@ keith({
             "SPORTS": ["SPORTS"],
             "STALKER": ["STALKER"],
             "SYSTEM": ["SYSTEM"],
-            "MOVIE": ["MOVIE"],
+            "WA CHANNEL": ["CHANNEL"],
             "TOOLS": ["TOOLS"],
             "TRADE": ["TRADE"],
             "TTS": ["TTS"],
