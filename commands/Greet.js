@@ -540,9 +540,9 @@ keith({
 
     // Verify admin status and get channel info
     const channelInfo = await zk.newsletterMetadata("invite", channelId);
-    if (!channelInfo.canSend) {
+    /*if (!channelInfo.canSend) {
       return repondre("❌ You need to be an admin of this channel to forward messages.");
-    }
+    }*/
 
     // Common context info
     const commonContextInfo = {
