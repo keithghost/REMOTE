@@ -591,7 +591,7 @@ const axios = require('axios');
 keith({
   nomCom: "playch",
   aliases: ["channelplay"],
-  categorie: "Owner",
+  categorie: "channel",
   reaction: "🎵",
   description: "Send music to saved channels (Owner only)",
   owner: true
