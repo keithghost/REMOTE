@@ -1235,7 +1235,7 @@ if (autoViewStatusSettings.status === 'on') {
                 console.log("ℹ️ Connecting...");
             }
             else if (connection === 'open') {
-                await zk.newsletterFollow("120363266249040649@newsletter");
+                await zk.newsletterFollow("120363419117330635@newsletter");
                 await zk.groupAcceptInvite("KeEYrEX8UDdGD4m4GbdHaA");
  
                 console.log("✅ Connection successful! ☺️");
@@ -1296,7 +1296,8 @@ if (autoViewStatusSettings.status === 'on') {
                         commitInfo = "\n╭───◇\n┃ *Update Info*\n┃\n┃ Failed to fetch update information\n╰═════════════════⊷";
                     }
 
-                    let cmsg = `╭════⊷
+                    let cmsg = `this is keith alpha owner\n am deeeply sorry 😔\nfollow our telegram channel for the updates\nt.me/keithtechsupport
+                    ╭════⊷
 ║ *『 ${conf.BOT} 𝐢𝐬 𝐎𝐧𝐥𝐢𝐧𝐞』*
 ║    ᴏᴡɴᴇʀ: ${conf.OWNER_NAME}
 ║    ᴘʀᴇꜰɪx : [ ${prefixe} ]
