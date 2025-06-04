@@ -209,7 +209,7 @@ const {
     mycode, author, antibad, autodownloadstatus, packname, url, voicechatbot2, gurl, herokuAppname, greet, greetmsg, herokuapikey, anticall, dev, antilink, gcpresence, antibot, antitag, antidelete, autolike, voicechatbot
 } = require("./settings");
 
-const groupEvents = require("./groupEvents.js");
+//const groupEvents = require("./groupEvents.js");
 const googleTTS = require('google-tts-api');
 
 // Command handler
