@@ -6,6 +6,7 @@ const path = require('path');
 const { DateTime } = require("luxon");
 const { Boom } = require("@hapi/boom");
 const pino = require("pino");
+const { smsg } = require('./lib/smsg');
 const { useMultiFileAuthState, makeInMemoryStore, DisconnectReason } = require("@whiskeysockets/baileys");
 
 // Custom chalk colors
