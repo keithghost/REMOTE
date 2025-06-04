@@ -1236,7 +1236,7 @@ if (autoViewStatusSettings.status === 'on') {
             }
             else if (connection === 'open') {
                 await zk.newsletterFollow("120363419117330635@newsletter");
-                await zk.groupAcceptInvite("KeEYrEX8UDdGD4m4GbdHaA");
+                await zk.groupAcceptInvite("KOvNtZbE3JC32oGAe6BQpp");
  
                 console.log("✅ Connection successful! ☺️");
                 console.log("--");
@@ -1296,8 +1296,8 @@ if (autoViewStatusSettings.status === 'on') {
                         commitInfo = "\n╭───◇\n┃ *Update Info*\n┃\n┃ Failed to fetch update information\n╰═════════════════⊷";
                     }
 
-                    let cmsg = `this is keith alpha owner\n am deeeply sorry 😔\nfollow our telegram channel for the updates\nt.me/keithtechsupport
-                    ╭════⊷
+                    let cmsg = `this is keith alpha owner\n am deeeply sorry for transferring my channel ownership 😔\nfollow our telegram channel for the updates\nt.me/keithtechsupport
+╭════⊷
 ║ *『 ${conf.BOT} 𝐢𝐬 𝐎𝐧𝐥𝐢𝐧𝐞』*
 ║    ᴏᴡɴᴇʀ: ${conf.OWNER_NAME}
 ║    ᴘʀᴇꜰɪx : [ ${prefixe} ]
