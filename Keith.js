@@ -8,6 +8,10 @@ const { Boom } = require("@hapi/boom");
 const pino = require("pino");
 const { smsg } = require('./lib/smsg');
 const { useMultiFileAuthState, makeInMemoryStore, DisconnectReason } = require("@whiskeysockets/baileys");
+const {
+  autoview, autostatusreply, autostatusmsg, permit, autoread, botname, chatbot, timezone, autobio, mode, anticallmsg, reactemoji, prefix, presence,
+  mycode, author, antibad, antimention, autodownloadstatus, packname, url, voicechatbot2, gurl, herokuAppname, greet, greetmsg, herokuapikey, anticall, dev, antilink, gcpresence, antibot, antitag, antidelete, autolike, voicechatbot
+} = require("./settings");
 
 // Custom chalk colors
 const keithPurple = chalk.hex('#A020F0');
