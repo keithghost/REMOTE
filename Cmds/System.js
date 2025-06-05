@@ -76,7 +76,7 @@ keith({
             },
         };
 
-        let uptimeText = `Bot Uptime: *${uptimes(process.uptime())}*`;
+        let uptimeText = `${botname} uptime is: *${uptimes(process.uptime())}*`;
         
         await client.sendMessage(
             m.chat, 
@@ -84,7 +84,7 @@ keith({
             { quoted: customContactMessage }
         );
 
-        await reply(uptimeText);
+        //await reply(uptimeText);
 
     } catch (error) {
         console.error("Error sending uptime message:", error);
