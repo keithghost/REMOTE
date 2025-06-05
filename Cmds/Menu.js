@@ -1,5 +1,3 @@
-
-
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
 const fs = require('fs');
@@ -12,16 +10,7 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url, author }) => {
-    let customContactMessage = {
-      key: { fromMe: false, participant: `0@s.whatsapp.net`, remoteJid: 'status@broadcast' },
-      message: {
-        contactMessage: {
-          displayName: author,
-          vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${m?.sender?.split('@')[0] ?? 'unknown'}:${m?.sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`,
-        },
-      },
-    };  
+}, async ({ client, m, prefix, url }) => {
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
