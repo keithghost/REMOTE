@@ -1,4 +1,4 @@
-const { keith } = require('../../commandHandler');
+const { keith } = require('../commandHandler');
 const { Catbox } = require("node-catbox");
 const fs = require('fs-extra');
 const axios = require('axios');
