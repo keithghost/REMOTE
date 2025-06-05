@@ -10,7 +10,7 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url }) => {
+}, async ({ client, m, prefix, url, author }) => {
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
