@@ -1,6 +1,5 @@
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
-const fs = require('fs');
 const path = require('path');
 
 keith({
@@ -10,11 +9,10 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url, author, sendMediaMessage }) => {
+}, async ({ client, m, prefix, url, sendMediaMessage }) => {
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
-        const CMD_DIR = path.join(__dirname, '..', 'Cmds'); // Path to commands directory
         
         // Inspirational quotes
         const quotes = [
@@ -99,39 +97,46 @@ keith({
         menuText += `\n*Type ${prefix}help <command> for more info*\n`;
         menuText += `© ${client.user.name.split(' ')[0]} Bot`;
 
-        // Create contact message
-        const author = client.user.name.split(' ')[0] || 'Bot';
-        const customContactMessage = {
-            key: { 
-                fromMe: false, 
-                participant: `0@s.whatsapp.net`, 
-                remoteJid: 'status@broadcast' 
-            },
-            message: {
-                contactMessage: {
-                    displayName: author,
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${m?.sender?.split('@')[0] ?? 'unknown'}:${m?.sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-                }
-            }
+        // Create contact card
+        const botName = client.user.name.split(' ')[0] || 'Bot';
+        const contactCard = {
+            displayName: botName,
+            contacts: [{
+                displayName: botName,
+                vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${botName};;;\nFN:${botName}\nORG:${botName};\nTEL;type=CELL;type=VOICE;waid=${client.user.id.split(':')[0]}:${client.user.id.split(':')[0]}\nEND:VCARD`
+            }]
         };
 
         // Send menu with contact card
-        await sendMediaMessage(client, m,  {
-            image: { url },
-            caption: menuText,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                
-                externalAdReply: {
-                    title: `${client.user.name} Bot Menu`,
-                    body: `Get all commands information`,
-                    mediaType: 2,
-                    thumbnail: { url },
-                    mediaUrl: '',
-                    sourceUrl: ''
+        await sendMediaMessage(
+            client, 
+            m, 
+            {
+                image: { url },
+                caption: menuText,
+                mentions: [m.sender],
+                contextInfo: {
+                    externalAdReply: {
+                        title: `${botName} Bot Menu`,
+                        body: `Get all commands information`,
+                        mediaType: 2,
+                        thumbnail: { url },
+                        mediaUrl: '',
+                        sourceUrl: ''
+                    }
+                }
+            },
+            { 
+                quoted: {
+                    key: { 
+                        fromMe: false,
+                        participant: `0@s.whatsapp.net`,
+                        remoteJid: 'status@broadcast'
+                    },
+                    message: { contactMessage: contactCard }
                 }
             }
-        }, { quoted: customContactMessage });
+        );
 
     } catch (error) {
         console.error("Menu error:", error);
