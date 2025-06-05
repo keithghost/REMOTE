@@ -178,7 +178,7 @@ const { prefix, dev, botname, author, mode } = require('./settings');
 
 // Load all commands from the Commands directory
 function loadAllCommands() {
-    const cmdsDir = path.join(__dirname, 'Commands');
+    const cmdsDir = path.join(__dirname, 'Cmds');
     
     function loadCommandsFromDirectory(directory) {
         const items = fs.readdirSync(directory);
