@@ -1,98 +1,80 @@
 const { keith } = require('../commandHandler');
+const fetch = require('node-fetch');
 
 keith({
-    pattern: "test",
-    alias: ["sc", "script"],
-    desc: "Get bot repo",
-    category: "General",
-    react: "🎲",
+    pattern: "lyrics",
+    alias: ["lyric", "songtext"],
+    desc: "Fetch lyrics for a song",
+    category: "music",
+    react: "🎵",
     filename: __filename
 }, async (context) => {
-    const { client, m, prefix } = context;
+    try {
+        const { client, m, text, botname, sendReply, sendMediaMessage } = context;
 
-    // Define the message content
-    let p = `
-    
-    button ✅ Testing...
-    `;
+        if (!text) {
+            return sendReply(client, m, "Please specify a song to search lyrics for. Example: *lyrics faded*");
+        }
 
-    // Define the image URL
-    let imagePath = 'https://files.catbox.moe/2gegza.jpg';
+        // Fetch lyrics from API
+        const apiUrl = `https://apis-keith.vercel.app/search/lyrics?query=${encodeURIComponent(text)}`;
+        const response = await fetch(apiUrl);
+        const data = await response.json();
 
-    // Define the buttons
-    const buttons = [
-        {
-            buttonId: `${prefix}support`, 
-            buttonText: { displayText: "Support" },
-        },
-        {
-            buttonId: `${prefix}repo`, 
-            buttonText: { displayText: "Repo" },
-        },
-        {
-            buttonId: `${prefix}ping`, 
-            buttonText: { displayText: "Speed" },
-        },
-    ];
+        if (!data.status || !data.result || data.result.length === 0) {
+            return sendReply(client, m, "No lyrics found for this song. Try a different query.");
+        }
 
-    const flowActions = {
-        buttonId: "action",
-        buttonText: { displayText: "Options" },
-        type: 4,
-        nativeFlowInfo: {
-            name: "single_select",
-            paramsJson: JSON.stringify({
-                title: "MENU",
-                sections: [
-                    {
-                        title: "Select The Menu",
-                        highlight_label: "",
-                        rows: [
-                            {
-                                header: "Keith",
-                                title: "MD",
-                                description: "Regards Keith",
-                                id: `${prefix}menu`, 
-                            },
-                            {
-                                header: "KEITH MD",
-                                title: "Appreciation",
-                                description: "Regards to the owner",
-                                id: `${prefix}speed`, 
-                            },
-                        ],
-                    },
-                ],
-            }),
-        },
-        viewOnce: true,
-    };
+        // Select the first result (most relevant)
+        const song = data.result[0];
+        
+        // Format the lyrics response
+        const formattedLyrics = `
+╭════════════════════⊷
+║ *${song.song}* - ${song.artist}
+╰════════════════════⊷
 
-    const buttonMessage = {
-        image: { url: imagePath },
-        caption: p,
-        footer: "© Keith\n",
-        headerType: 1,
-        buttons: buttons,
-        viewOnce: true,
-        contextInfo: {
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: '120363266249040649@newsletter',
-                newsletterName: 'Keith Support',
-            },
-            externalAdReply: {
-                title: "Keith Testing",
-                body: "Keith",
-                thumbnailUrl: `https://files.catbox.moe/12t71b.jpg`,
-                sourceUrl: "https://whatsapp.com/channel/0029Vaan9TF9Bb62l8wpoD47",
-                mediaType: 1,
-                renderLargerThumbnail: true,
-            },
-        },
-    };
+${song.lyrics}
 
-    buttonMessage.buttons.push(flowActions);
+╭════════════════════⊷
+║ *Powered by ${botname}*
+╰════════════════════⊷`;
 
-    await client.sendMessage(m.key.remoteJid, buttonMessage);
+        // Send thumbnail if available
+        if (song.thumbnail) {
+            await sendMediaMessage(client, m, {
+                image: { url: song.thumbnail },
+                caption: `*${song.song}* - ${song.artist}\n\nLyrics displayed below...`
+            });
+        }
+
+        // Send lyrics as a message
+        // Split long messages to avoid WhatsApp limits
+        const maxLength = 1500;
+        if (formattedLyrics.length > maxLength) {
+            const parts = [];
+            let currentPart = '';
+            
+            for (const line of formattedLyrics.split('\n')) {
+                if (currentPart.length + line.length > maxLength) {
+                    parts.push(currentPart);
+                    currentPart = line + '\n';
+                } else {
+                    currentPart += line + '\n';
+                }
+            }
+            
+            if (currentPart) parts.push(currentPart);
+            
+            for (const part of parts) {
+                await sendReply(client, m, part);
+            }
+        } else {
+            await sendReply(client, m, formattedLyrics);
+        }
+
+    } catch (error) {
+        console.error('Lyrics command error:', error);
+        await sendReply(client, m, `An error occurred while fetching lyrics. Please try again later.`);
+    }
 });
