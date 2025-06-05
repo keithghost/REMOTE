@@ -1,5 +1,6 @@
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
+const fs = require('fs');
 const path = require('path');
 
 keith({
@@ -9,19 +10,11 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url, sendMediaMessage }) => {
+}, async ({ client, m, prefix, url, botname }) => {
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
-        
-        // Inspirational quotes
-        const quotes = [
-            "Code is poetry.",
-            "Stay hungry, stay foolish.",
-            "Simplicity is the ultimate sophistication.",
-            "First solve the problem, then write the code.",
-            "Make it work, make it right, make it fast."
-        ];
+        const CMD_DIR = path.join(__dirname, '..', 'Cmds'); // Path to commands directory
 
         // Helper functions
         const getGreeting = () => {
@@ -33,7 +26,6 @@ keith({
         };
 
         const getCurrentTime = () => DateTime.now().setZone(TIME_ZONE).toLocaleString(DateTime.TIME_SIMPLE);
-        const getRandomQuote = () => quotes[Math.floor(Math.random() * quotes.length)];
 
         const toFancyText = (text, type = 'lower') => {
             const fonts = {
@@ -75,21 +67,22 @@ keith({
         // Build menu
         const greeting = getGreeting();
         const time = getCurrentTime();
-        const quote = getRandomQuote();
 
         let menuText = `
-╭───「 *${greeting} ${m.pushName || 'User'}* 」───┈⊷
-│ *Quote*: ${quote}
-│ *Time*: ${time}
-│ *Prefix*: ${prefix}
-│ *Commands*: ${totalCommands}
+        *╰►Hey, ${greeting} ${m.pushName || 'User'}*
+╭───「  ⟮  ${botname} ⟯ ───┈⊷
+┃✵╭──────────────
+┃✵│ *Time*: ${time}
+┃✵│ *Prefix*: ${prefix}
+┃✵│ *Commands*: ${totalCommands}
+┃✵╰──────────────
 ╰───────────────────────┈⊷\n\n`;
 
         // Add commands by category
         Object.entries(commandsByCategory).forEach(([category, cmds], index) => {
             menuText += `╭───「 ${toFancyText(category, 'upper')} 」───┈⊷\n`;
             cmds.forEach((cmd, i) => {
-                menuText += `│ ${index + i + 1}. ${toFancyText(cmd)}\n`;
+                menuText += `││◦➛ ${index + i + 1}. ${toFancyText(cmd)}\n`;
             });
             menuText += `╰───────────────────────┈⊷\n`;
         });
@@ -97,46 +90,42 @@ keith({
         menuText += `\n*Type ${prefix}help <command> for more info*\n`;
         menuText += `© ${client.user.name.split(' ')[0]} Bot`;
 
-        // Create contact card
-        const botName = client.user.name.split(' ')[0] || 'Bot';
-        const contactCard = {
-            displayName: botName,
-            contacts: [{
-                displayName: botName,
-                vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${botName};;;\nFN:${botName}\nORG:${botName};\nTEL;type=CELL;type=VOICE;waid=${client.user.id.split(':')[0]}:${client.user.id.split(':')[0]}\nEND:VCARD`
-            }]
+        // Create buttons
+        const buttons = [
+            { buttonId: `${prefix}owner`, buttonText: { displayText: '👑 Owner' }, type: 1 },
+            { buttonId: `${prefix}donate`, buttonText: { displayText: '💸 Donate' }, type: 1 },
+            { buttonId: `${prefix}ping`, buttonText: { displayText: '🏓 Ping' }, type: 1 }
+        ];
+
+        // Create button message
+        const buttonMessage = {
+            text: menuText,
+            footer: `Powered by ${client.user.name}`,
+            buttons: buttons,
+            headerType: 1,
+            viewOnce: true
         };
 
-        // Send menu with contact card
-        await sendMediaMessage(
-            client, 
-            m, 
-            {
-                image: { url },
-                caption: menuText,
-                mentions: [m.sender],
-                contextInfo: {
-                    externalAdReply: {
-                        title: `${botName} Bot Menu`,
-                        body: `Get all commands information`,
-                        mediaType: 2,
-                        thumbnail: { url },
-                        mediaUrl: '',
-                        sourceUrl: ''
-                    }
-                }
-            },
-            { 
-                quoted: {
-                    key: { 
-                        fromMe: false,
-                        participant: `0@s.whatsapp.net`,
-                        remoteJid: 'status@broadcast'
-                    },
-                    message: { contactMessage: contactCard }
+        // Send menu with buttons
+        await client.sendMessage(m.chat, {
+            image: { url },
+            caption: menuText,
+            buttons: buttons,
+            headerType: 4,
+            contextInfo: {
+                mentionedJid: [m.sender],
+                forwardingScore: 999,
+                isForwarded: true,
+                externalAdReply: {
+                    title: `${client.user.name} Bot Menu`,
+                    body: `Get all commands information`,
+                    mediaType: 2,
+                    thumbnail: { url },
+                    mediaUrl: '',
+                    sourceUrl: ''
                 }
             }
-        );
+        });
 
     } catch (error) {
         console.error("Menu error:", error);
