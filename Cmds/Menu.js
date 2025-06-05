@@ -14,7 +14,7 @@ keith({
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
-        const CMD_DIR = path.join(__dirname, '..', 'Cmds'); // Path to commands directory
+        const CMD_DIR = path.join(__dirname, '..', 'Cmds');
         
         // Inspirational quotes
         const quotes = [
@@ -59,7 +59,7 @@ keith({
             return text.split('').map(char => fonts[type][char] || char).join('');
         };
 
-        // Get commands from commandHandler
+        // Get commands
         const commandList = require('../commandHandler').commands;
         const totalCommands = commandList.length;
 
@@ -74,7 +74,7 @@ keith({
             }
         });
 
-        // Build menu
+        // Build menu text
         const greeting = getGreeting();
         const time = getCurrentTime();
         const quote = getRandomQuote();
@@ -99,10 +99,10 @@ keith({
         menuText += `\n*Type ${prefix}help <command> for more info*\n`;
         menuText += `© ${client.user.name.split(' ')[0]} Bot`;
 
-        // Send menu
+        // Send menu with image and caption
         await client.sendMessage(m.chat, {
-            image: { url },
-            caption: menuText,
+            image: { url: url }, // Use the provided URL as image
+            caption: menuText,   // Use the menu text as caption
             contextInfo: { mentionedJid: [m.sender] }
         });
 
