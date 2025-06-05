@@ -1,3 +1,5 @@
+
+
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
 const fs = require('fs');
@@ -10,11 +12,20 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url }) => {
+}, async ({ client, m, prefix, url, author }) => {
+let customContactMessage = {
+      key: { fromMe: false, participant: `0@s.whatsapp.net`, remoteJid: 'status@broadcast' },
+      message: {
+        contactMessage: {
+          displayName: author,
+          vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${m?.sender?.split('@')[0] ?? 'unknown'}:${m?.sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`,
+        },
+      },
+    };
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
-        const CMD_DIR = path.join(__dirname, '..', 'Cmds');
+        const CMD_DIR = path.join(__dirname, '..', 'Cmds'); // Path to commands directory
         
         // Inspirational quotes
         const quotes = [
@@ -59,7 +70,7 @@ keith({
             return text.split('').map(char => fonts[type][char] || char).join('');
         };
 
-        // Get commands
+        // Get commands from commandHandler
         const commandList = require('../commandHandler').commands;
         const totalCommands = commandList.length;
 
@@ -74,7 +85,7 @@ keith({
             }
         });
 
-        // Build menu text
+        // Build menu
         const greeting = getGreeting();
         const time = getCurrentTime();
         const quote = getRandomQuote();
@@ -99,10 +110,10 @@ keith({
         menuText += `\n*Type ${prefix}help <command> for more info*\n`;
         menuText += `© ${client.user.name.split(' ')[0]} Bot`;
 
-        // Send menu with image and caption
+        // Send menu
         await client.sendMessage(m.chat, {
-            image: { url: url }, // Use the provided URL as image
-            caption: menuText,   // Use the menu text as caption
+            image: { url },
+            caption: menuText,
             contextInfo: { mentionedJid: [m.sender] }
         });
 
