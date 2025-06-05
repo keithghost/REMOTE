@@ -10,7 +10,7 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url, author }) => {
+}, async ({ client, m, prefix, url, author, sendMediaMessage }) => {
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
@@ -116,13 +116,12 @@ keith({
         };
 
         // Send menu with contact card
-        await client.sendMessage(m.chat, {
+        await sendMediaMessage(client, m,  {
             image: { url },
             caption: menuText,
             contextInfo: {
                 mentionedJid: [m.sender],
-                forwardingScore: 999,
-                isForwarded: true,
+                
                 externalAdReply: {
                     title: `${client.user.name} Bot Menu`,
                     body: `Get all commands information`,
