@@ -10,7 +10,7 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, totalCommands }) => {
+}, async ({ client, m, prefix, commands }) => {
     try {
         // Quotes array
         const quotes = [
