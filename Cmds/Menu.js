@@ -1,3 +1,13 @@
+let customContactMessage = {
+      key: { fromMe: false, participant: `0@s.whatsapp.net`, remoteJid: 'status@broadcast' },
+      message: {
+        contactMessage: {
+          displayName: author,
+          vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${m?.sender?.split('@')[0] ?? 'unknown'}:${m?.sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`,
+        },
+      },
+    };
+
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
 const fs = require('fs');
@@ -99,40 +109,12 @@ keith({
         menuText += `\n*Type ${prefix}help <command> for more info*\n`;
         menuText += `© ${client.user.name.split(' ')[0]} Bot`;
 
-        // Create contact message
-        const author = client.user.name.split(' ')[0] || 'Bot';
-        const customContactMessage = {
-            key: { 
-                fromMe: false, 
-                participant: `0@s.whatsapp.net`, 
-                remoteJid: 'status@broadcast' 
-            },
-            message: {
-                contactMessage: {
-                    displayName: author,
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${m?.sender?.split('@')[0] ?? 'unknown'}:${m?.sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-                }
-            }
-        };
-
-        // Send menu with contact card
+        // Send menu
         await client.sendMessage(m.chat, {
             image: { url },
             caption: menuText,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                forwardingScore: 999,
-                isForwarded: true,
-                externalAdReply: {
-                    title: `${client.user.name} Bot Menu`,
-                    body: `Get all commands information`,
-                    mediaType: 2,
-                    thumbnail: { url },
-                    mediaUrl: '',
-                    sourceUrl: ''
-                }
-            }
-        }, { quoted: customContactMessage });
+            contextInfo: { mentionedJid: [m.sender] }
+        });
 
     } catch (error) {
         console.error("Menu error:", error);
