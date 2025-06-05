@@ -6,7 +6,7 @@ keith({
     pattern: "menu",
     alias: ["help", "commands"],
     desc: "Show all available commands",
-    category: "general",
+    category: "General",
     react: "📜",
     filename: __filename
 }, async ({ client, m, prefix, url, botname }) => {
