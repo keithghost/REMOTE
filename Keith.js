@@ -461,7 +461,6 @@ async function startKeith() {
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
-                `║ ᴛᴏᴛᴀʟ ᴘʟᴜɢɪɴs ${commands.length}\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
                 `║ ʟɪʙʀᴀʀʏ Baileys\n` +
                 `╰═════════════════⊷`;
