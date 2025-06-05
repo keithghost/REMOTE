@@ -365,6 +365,7 @@ async function startKeith() {
                         Tag, 
                         text,
                         botname,
+                        prefix,
                         reply,
                         sendReply, 
                         sendMediaMessage, 
