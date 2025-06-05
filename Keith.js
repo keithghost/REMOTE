@@ -447,7 +447,7 @@ async function startKeith() {
 
             KeithLogger.success("Connected to Keith server");
             KeithLogger.success("Bot is now active");
-            KeithLogger.info(`Loaded ${commands.length} commands`);
+            KeithLogger.info(`commands loaded successfully 🔥`);
 
             const getGreeting = () => {
                 const currentHour = DateTime.now().setZone("Africa/Nairobi").hour;
