@@ -174,7 +174,7 @@ async function authenticationn() {
 
 // Command handler setup
 const { keith, commands } = require('./commandHandler');
-const { prefix, dev, botname, author, mode } = require('./settings');
+const { prefix, dev, botname, author, mode, url } = require('./settings');
 
 // Load all commands from the Commands directory
 function loadAllCommands() {
@@ -356,6 +356,7 @@ async function startKeith() {
                         getRandom, 
                         generateProfilePicture, 
                         args, 
+                        url,
                         dev, 
                         m, 
                         mode, 
