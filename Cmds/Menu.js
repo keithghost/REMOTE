@@ -79,7 +79,7 @@ keith({
         menuText += `│ *Quote*: ${getRandomQuote()}\n`;
         menuText += `│ *Time*: ${getCurrentTime()}\n`;
         menuText += `│ *Prefix*: ${prefix}\n`;
-        menuText += `│ *Commands*: ${totalCommands}\n`;
+        menuText += `│ *Commands*: ${commands}\n`;
         menuText += `╰───────────────────────┈⊷\n\n`;
 
         // Add commands by category
