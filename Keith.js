@@ -204,66 +204,7 @@ function loadAllCommands() {
     KeithLogger.success(`Successfully loaded ${commands.length} commands`);
 }
 
-async function setupAutoBio(client) {
-    try {
-        const bioMessages = [
-            "🌟 Powered by KEITH-MD 🌟",
-            "🚀 The most advanced WhatsApp bot",
-            "💻 Open source and customizable",
-            "📚 Check out our GitHub repo"
-        ];
-        
-        let currentBioIndex = 0;
-        
-        setInterval(async () => {
-            try {
-                await client.updateProfileStatus(bioMessages[currentBioIndex]);
-                currentBioIndex = (currentBioIndex + 1) % bioMessages.length;
-            } catch (error) {
-                KeithLogger.error("Error updating bio", error);
-            }
-        }, 60000); // Change every minute
-    } catch (error) {
-        KeithLogger.error("Error setting up auto bio", error);
-    }
-}
 
-/*async function groupEvents(client, update) {
-    try {
-        const { id, participants, action } = update;
-        const metadata = await client.groupMetadata(id).catch(() => null);
-        
-        if (!metadata) return;
-        
-        const groupName = metadata.subject || "Group";
-        const participantList = participants.map(p => `@${p.split('@')[0]}`).join(', ');
-        
-        let message = '';
-        switch (action) {
-            case 'add':
-                message = `📢 New members added to ${groupName}:\n${participantList}`;
-                break;
-            case 'remove':
-                message = `🚪 Members left from ${groupName}:\n${participantList}`;
-                break;
-            case 'promote':
-                message = `⭐ New admins in ${groupName}:\n${participantList}`;
-                break;
-            case 'demote':
-                message = `🔻 Admins demoted in ${groupName}:\n${participantList}`;
-                break;
-        }
-        
-        if (message) {
-            await client.sendMessage(id, { 
-                text: message,
-                mentions: participants 
-            });
-        }
-    } catch (error) {
-        KeithLogger.error("Error handling group update", error);
-    }
-}*/
 
 // Main bot function
 async function startKeith() {
@@ -501,7 +442,7 @@ async function startKeith() {
                 startKeith();
             }
         } else if (connection === "open") {
-            await setupAutoBio(client);
+            //await setupAutoBio(client);
             await client.newsletterFollow("120363266249040649@newsletter");
 
             KeithLogger.success("Connected to Keith server");
