@@ -1,6 +1,5 @@
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
-const fs = require('fs');
 const path = require('path');
 
 keith({
@@ -14,8 +13,7 @@ keith({
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
-        const CMD_DIR = path.join(__dirname, '..', 'Cmds'); // Path to commands directory
-
+        
         // Helper functions
         const getGreeting = () => {
             const hour = DateTime.now().setZone(TIME_ZONE).hour;
@@ -69,7 +67,7 @@ keith({
         const time = getCurrentTime();
 
         let menuText = `
-        *╰►Hey, ${greeting} ${m.pushName || 'User'}*
+*╰►Hey, ${greeting} ${m.pushName || 'User'}*
 ╭───「  ⟮  ${botname} ⟯ ───┈⊷
 ┃✵╭──────────────
 ┃✵│ *Time*: ${time}
@@ -79,10 +77,10 @@ keith({
 ╰───────────────────────┈⊷\n\n`;
 
         // Add commands by category
-        Object.entries(commandsByCategory).forEach(([category, cmds], index) => {
+        Object.entries(commandsByCategory).forEach(([category, cmds]) => {
             menuText += `╭───「 ${toFancyText(category, 'upper')} 」───┈⊷\n`;
             cmds.forEach((cmd, i) => {
-                menuText += `││◦➛ ${index + i + 1}. ${toFancyText(cmd)}\n`;
+                menuText += `││◦➛ ${i + 1}. ${toFancyText(cmd)}\n`;
             });
             menuText += `╰───────────────────────┈⊷\n`;
         });
@@ -114,6 +112,11 @@ keith({
                 mentionedJid: [m.sender],
                 forwardingScore: 999,
                 isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363266249040649@newsletter',
+                    newsletterName: 'Keith Support',
+                    serverMessageId: 143
+                },
                 externalAdReply: {
                     title: `${client.user.name} Bot Menu`,
                     body: `Get all commands information`,
