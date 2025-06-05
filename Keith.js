@@ -6,12 +6,28 @@ const path = require('path');
 const { DateTime } = require("luxon");
 const { Boom } = require("@hapi/boom");
 const pino = require("pino");
-const { smsg } = require('./lib/smsg');
 const { useMultiFileAuthState, makeInMemoryStore, DisconnectReason } = require("@whiskeysockets/baileys");
+const FileType = require("file-type");
+const { exec } = require("child_process");
+const express = require("express");
+const util = require("util");
+const speed = require("performance-now");
+const { smsg } = require('./lib/smsg');
+const fetchLogoUrl = require('./lib/ephoto');
 const {
-  autoview, autostatusreply, autostatusmsg, permit, autoread, botname, chatbot, timezone, autobio, mode, anticallmsg, reactemoji, prefix, presence,
-  mycode, author, antibad, antimention, autodownloadstatus, packname, url, voicechatbot2, gurl, herokuAppname, greet, greetmsg, herokuapikey, anticall, dev, antilink, gcpresence, antibot, antitag, antidelete, autolike, voicechatbot
-} = require("./settings");
+    smsgsmsg, formatp, tanggal, formatDate, getTime, sleep, clockString,
+    fetchJson, getBuffer, jsonformat, antispam, generateProfilePicture, parseMention,
+    getRandom, fetchBuffer,
+} = require("./lib/botFunctions.js");
+
+const { TelegraPh, UploadFileUgu } = require("./lib/toUrl");
+const uploadtoimgur = require("./lib/Imgur");
+
+const { sendReply, sendMediaMessage } = require("./lib/context");
+
+const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
+const ytmp3 = require("./lib/ytmp3");
+const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require("./lib/exif");
 
 // Custom chalk colors
 const keithPurple = chalk.hex('#A020F0');
@@ -156,42 +172,13 @@ async function authenticationn() {
     }
 }
 
-// Initialize database tables
-async function initializeDatabases() {
-    const { initAntiCallDB } = require('./database/anticall');
-    const { initAutoBioDB } = require('./database/autobio');
-    const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
-    const { initAntiLinkDB } = require('./database/antilink');
-    const { initAutoLikeStatusDB } = require('./database/autolikestatus');
-    const { initAntiBadDB } = require('./database/antibad');
-    const { initAutoViewDB } = require('./database/autoview');
-    const { initAntiDeleteDB } = require('./database/antidelete');
-    const { initPresenceDB } = require('./database/presence');
-    const { initAutoReadDB } = require('./database/autoread');
-
-    try {
-        await initAutoReadDB();
-        await initAutoViewDB();
-        await initAntiLinkDB();
-        await initAntiDeleteDB();
-        await initAutoLikeStatusDB();
-        await initPresenceDB();
-        await initAntiBadDB();
-        await initAutoDownloadStatusDB();
-        await initAutoBioDB();
-        await initAntiCallDB();
-        KeithLogger.success("All databases initialized successfully");
-    } catch (error) {
-        KeithLogger.error("Database initialization failed", error);
-    }
-}
-
 // Command handler setup
 const { keith, commands } = require('./commandHandler');
+const { prefix, dev, botname, author, mode } = require('./settings');
 
 // Load all commands from the Commands directory
 function loadAllCommands() {
-    const cmdsDir = path.join(__dirname, 'Cmds');
+    const cmdsDir = path.join(__dirname, 'Commands');
     
     function loadCommandsFromDirectory(directory) {
         const items = fs.readdirSync(directory);
@@ -217,10 +204,70 @@ function loadAllCommands() {
     KeithLogger.success(`Successfully loaded ${commands.length} commands`);
 }
 
+async function setupAutoBio(client) {
+    try {
+        const bioMessages = [
+            "🌟 Powered by KEITH-MD 🌟",
+            "🚀 The most advanced WhatsApp bot",
+            "💻 Open source and customizable",
+            "📚 Check out our GitHub repo"
+        ];
+        
+        let currentBioIndex = 0;
+        
+        setInterval(async () => {
+            try {
+                await client.updateProfileStatus(bioMessages[currentBioIndex]);
+                currentBioIndex = (currentBioIndex + 1) % bioMessages.length;
+            } catch (error) {
+                KeithLogger.error("Error updating bio", error);
+            }
+        }, 60000); // Change every minute
+    } catch (error) {
+        KeithLogger.error("Error setting up auto bio", error);
+    }
+}
+
+async function groupEvents(client, update) {
+    try {
+        const { id, participants, action } = update;
+        const metadata = await client.groupMetadata(id).catch(() => null);
+        
+        if (!metadata) return;
+        
+        const groupName = metadata.subject || "Group";
+        const participantList = participants.map(p => `@${p.split('@')[0]}`).join(', ');
+        
+        let message = '';
+        switch (action) {
+            case 'add':
+                message = `📢 New members added to ${groupName}:\n${participantList}`;
+                break;
+            case 'remove':
+                message = `🚪 Members left from ${groupName}:\n${participantList}`;
+                break;
+            case 'promote':
+                message = `⭐ New admins in ${groupName}:\n${participantList}`;
+                break;
+            case 'demote':
+                message = `🔻 Admins demoted in ${groupName}:\n${participantList}`;
+                break;
+        }
+        
+        if (message) {
+            await client.sendMessage(id, { 
+                text: message,
+                mentions: participants 
+            });
+        }
+    } catch (error) {
+        KeithLogger.error("Error handling group update", error);
+    }
+}
+
 // Main bot function
 async function startKeith() {
     await authenticationn();
-    await initializeDatabases();
     loadAllCommands();
 
     const { state, saveCreds } = await useMultiFileAuthState("session");
@@ -251,26 +298,6 @@ async function startKeith() {
 
     store.bind(client.ev);
 
-    // Auto-bio handler
-    let bioInterval;
-    async function setupAutoBio(client) {
-        const { getAutoBioSettings } = require('./database/autobio');
-        const settings = await getAutoBioSettings();
-        
-        if (bioInterval) clearInterval(bioInterval);
-        
-        if (settings.status) {
-            bioInterval = setInterval(async () => {
-                try {
-                    await client.updateProfileStatus(settings.message);
-                    KeithLogger.info('Auto-bio updated');
-                } catch (error) {
-                    KeithLogger.error('Error updating bio:', error);
-                }
-            }, settings.interval * 1000);
-        }
-    }
-
     // Message handler
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
@@ -284,64 +311,68 @@ async function startKeith() {
             const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
                 m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
-            const pushname = m.pushName || "No Name";
-      const botNumber = await client.decodeJid(client.user.id);
-      const servBot = botNumber.split('@')[0];
-      const Ghost = "254796299158"; 
-      const Ghost2 = "254110190196";
-      const Ghost3 = "2547483876159";
-      const Ghost4 = "254743995989";
-      const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
-      const isOwner = superUserNumbers.includes(m.sender); 
-      const isBotMessage = m.sender === botNumber;  
-      const itsMe = m.sender === botNumber;
-      const text = args.join(" ");
-      const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
-        ? m.message.extendedTextMessage.contextInfo.mentionedJid
-        : [];
 
-      let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
-      let budy = typeof m.text === "string" ? m.text : "";
-
-      const timestamp = speed();
-      const Keithspeed = speed() - timestamp;
-
-      const getGroupAdmins = (participants) => {
-        let admins = [];
-        for (let i of participants) {
-          if (i.admin === "superadmin") admins.push(i.id);
-          if (i.admin === "admin") admins.push(i.id);
-        }
-        return admins || [];
-      };
-
-      const keizzah = m.quoted || m;
-      const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
-        keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
-          keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
-
-      const color = (text, color) => {
-        return color ? chalk.keyword(color)(text) : chalk.green(text);
-      };
-
-      const mime = quoted.mimetype || "";
-      const qmsg = quoted;
-      const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
-      const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-      const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
-      const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-      const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
-      const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
-
-      const IsGroup = m.chat?.endsWith("@g.us");
-
-
-            const { prefix } = require("./settings");
-            
             const cmd = body.startsWith(prefix);
+            const args = body.trim().split(/ +/).slice(1);
+            const pushname = m.pushName || "No Name";
+            const botNumber = await client.decodeJid(client.user.id);
+            const servBot = botNumber.split('@')[0];
+            const Ghost = "254796299159"; 
+            const Ghost2 = "254110190196";
+            const Ghost3 = "254748387615";
+            const Ghost4 = "254786989022";
+            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
+            const isOwner = superUserNumbers.includes(m.sender); 
+            const isBotMessage = m.sender === botNumber;  
+            const itsMe = m.sender === botNumber;
+            const text = args.join(" ");
+            const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
+                ? m.message.extendedTextMessage.contextInfo.mentionedJid
+                : [];
+
+            let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
+            let budy = typeof m.text === "string" ? m.text : "";
+
+            const timestamp = speed();
+            const Keithspeed = speed() - timestamp;
+
+            const getGroupAdmins = (participants) => {
+                let admins = [];
+                for (let i of participants) {
+                    if (i.admin === "superadmin") admins.push(i.id);
+                    if (i.admin === "admin") admins.push(i.id);
+                }
+                return admins || [];
+            };
+
+            const keizzah = m.quoted || m;
+            const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
+                keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
+                    keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
+
+            const color = (text, color) => {
+                return color ? chalk.keyword(color)(text) : chalk.green(text);
+            };
+
+            const mime = quoted.mimetype || "";
+            const qmsg = quoted;
+            const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
+            const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
+            const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
+            const IsNewsletter = m.chat?.endsWith("@newsletter");
+            const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
+            const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
+            const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
+
+            const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
+            const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
+            const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
+            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
+            const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
+
+            const IsGroup = m.chat?.endsWith("@g.us");
             if (!cmd) return;
 
-            const args = body.trim().split(/ +/).slice(1);
             const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
             
             const commandHandler = commands.find(cmd => 
@@ -362,12 +393,45 @@ async function startKeith() {
 
                     await commandHandler.function({
                         client,
-                        m,
-                        store,
-                        args,
-                        text: args.join(" "),
-                        command,
-                        // Add other context properties as needed
+                        downloadYouTube, 
+                        downloadSoundCloud, 
+                        downloadSpotify, 
+                        searchYouTube, 
+                        searchSoundCloud, 
+                        searchSpotify, 
+                        subscribers, 
+                        fetchLogoUrl, 
+                        newsletterMetadata, 
+                        isNewsletterAdmin, 
+                        isNewsletterBotAdmin, 
+                        isOwner, 
+                        fetchJson, 
+                        exec, 
+                        getRandom, 
+                        generateProfilePicture, 
+                        args, 
+                        dev, 
+                        m, 
+                        mode, 
+                        mime, 
+                        qmsg, 
+                        msgKeith, 
+                        Tag, 
+                        text, 
+                        sendReply, 
+                        sendMediaMessage, 
+                        prefix, 
+                        groupAdmin, 
+                        getGroupAdmins, 
+                        groupName, 
+                        groupMetadata, 
+                        participants, 
+                        pushname, 
+                        botNumber, 
+                        itsMe, 
+                        store, 
+                        isAdmin, 
+                        isBotAdmin 
                     });
                     
                     KeithLogger.info(`Command executed: ${command}`);
@@ -380,6 +444,37 @@ async function startKeith() {
             KeithLogger.error("Error processing message", error);
         }
     });
+
+    process.on("unhandledRejection", (reason, promise) => {
+        KeithLogger.error(`Unhandled Rejection at: ${promise}`, reason);
+    });
+
+    process.on("uncaughtException", (err) => {
+        KeithLogger.error("Caught exception", err);
+    });
+
+    client.decodeJid = (jid) => {
+        if (!jid) return jid;
+        if (/:\d+@/gi.test(jid)) {
+            const decode = jidDecode(jid) || {};
+            return (decode.user && decode.server && decode.user + "@" + decode.server) || jid;
+        }
+        return jid;
+    };
+
+    client.getName = async (jid) => {
+        const id = client.decodeJid(jid);
+        if (id.endsWith("@g.us")) {
+            const group = store.contacts[id] || (await client.groupMetadata(id)) || {};
+            return group.name || group.subject || PhoneNumber("+" + id.replace("@s.whatsapp.net", "")).getNumber("international");
+        }
+        const contact = store.contacts[id] || {};
+        return contact.name || contact.subject || contact.verifiedName || PhoneNumber("+" + id.replace("@s.whatsapp.net", "")).getNumber("international");
+    };
+
+    client.public = true;
+    client.serializeM = (m) => smsg(client, m, store);
+    client.ev.on("group-participants.update", (m) => groupEvents(client, m));
 
     // Connection event handler
     client.ev.on("connection.update", async (update) => {
@@ -421,7 +516,6 @@ async function startKeith() {
                 return "Good night 😴";
             };
 
-            const { botname, author, mode, prefix } = require("./settings");
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
@@ -438,97 +532,6 @@ async function startKeith() {
 
     // Credentials update handler
     client.ev.on("creds.update", saveCreds);
-
-    // Group participants update handler
-    client.ev.on("group-participants.update", async (update) => {
-        try {
-            const { id, participants, action } = update;
-            const metadata = await client.groupMetadata(id).catch(() => null);
-            
-            if (!metadata) return;
-            
-            const groupName = metadata.subject || "Group";
-            const participantList = participants.map(p => `@${p.split('@')[0]}`).join(', ');
-            
-            let message = '';
-            switch (action) {
-                case 'add':
-                    message = `📢 New members added to ${groupName}:\n${participantList}`;
-                    break;
-                case 'remove':
-                    message = `🚪 Members left from ${groupName}:\n${participantList}`;
-                    break;
-                case 'promote':
-                    message = `⭐ New admins in ${groupName}:\n${participantList}`;
-                    break;
-                case 'demote':
-                    message = `🔻 Admins demoted in ${groupName}:\n${participantList}`;
-                    break;
-            }
-            
-            if (message) {
-                await client.sendMessage(id, { 
-                    text: message,
-                    mentions: participants 
-                });
-            }
-        } catch (error) {
-            KeithLogger.error("Error handling group update", error);
-        }
-    });
-
-    // Presence update handler
-    client.ev.on('presence.update', async ({ id, presences }) => {
-        try {
-            const { getPresenceSettings } = require('./database/presence');
-            const settings = await getPresenceSettings();
-            
-            const jid = id;
-            let chatType;
-            
-            if (jid.endsWith('@s.whatsapp.net')) {
-                chatType = 'private';
-            } else if (jid.endsWith('@g.us')) {
-                chatType = 'group';
-            } else {
-                return;
-            }
-
-            if (!settings.chatTypes.includes(chatType)) return;
-
-            if (settings.typing) {
-                await client.sendPresenceUpdate('composing', jid);
-            } else if (settings.recording) {
-                await client.sendPresenceUpdate('recording', jid);
-            } else if (settings.online) {
-                await client.sendPresenceUpdate('available', jid);
-            } else {
-                await client.sendPresenceUpdate('unavailable', jid);
-            }
-        } catch (error) {
-            KeithLogger.error('Presence update error:', error.message);
-        }
-    });
-
-    // Utility functions
-    client.decodeJid = (jid) => {
-        if (!jid) return jid;
-        if (/:\d+@/gi.test(jid)) {
-            const decode = jidDecode(jid) || {};
-            return (decode.user && decode.server && decode.user + "@" + decode.server) || jid;
-        }
-        return jid;
-    };
-
-    client.getName = async (jid) => {
-        const id = client.decodeJid(jid);
-        if (id.endsWith("@g.us")) {
-            const group = store.contacts[id] || (await client.groupMetadata(id)) || {};
-            return group.name || group.subject || PhoneNumber("+" + id.replace("@s.whatsapp.net", "")).getNumber("international");
-        }
-        const contact = store.contacts[id] || {};
-        return contact.name || contact.subject || contact.verifiedName || PhoneNumber("+" + id.replace("@s.whatsapp.net", "")).getNumber("international");
-    };
 
     client.downloadMediaMessage = async (message) => {
         const mime = (message.msg || message).mimetype || "";
@@ -557,7 +560,6 @@ async function startKeith() {
     };
 
     // Start Express server
-    const express = require('express');
     const app = express();
     const port = process.env.PORT || 10000;
 
