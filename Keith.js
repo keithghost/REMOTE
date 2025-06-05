@@ -228,7 +228,7 @@ async function setupAutoBio(client) {
     }
 }
 
-async function groupEvents(client, update) {
+/*async function groupEvents(client, update) {
     try {
         const { id, participants, action } = update;
         const metadata = await client.groupMetadata(id).catch(() => null);
@@ -263,7 +263,7 @@ async function groupEvents(client, update) {
     } catch (error) {
         KeithLogger.error("Error handling group update", error);
     }
-}
+}*/
 
 // Main bot function
 async function startKeith() {
