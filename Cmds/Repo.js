@@ -46,8 +46,8 @@ keith({
         │ ✞ *Release Date:* ${createdDate}
         │ ✞ *Last Update:* ${lastUpdateDate}
         │ ✞ *Owner:* ${repoInfo.owner}
-        │ ✞ *Repository:* ${repoInfo.url}
-        │ ✞ *Session:* keith-session.onrender.com
+        │ ✞ *sc:* ${repoInfo.url}
+        │ ✞ *Session:* keithpair.onrender.com
         ╰───────────────────
         `;
 
