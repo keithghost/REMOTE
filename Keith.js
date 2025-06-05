@@ -310,6 +310,10 @@ async function startKeith() {
             const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
             const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
             const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
+             const reply = (teks) => {
+      client.sendMessage(m.chat, { text: teks }, { quoted: mek });
+    };
+
 
             const IsGroup = m.chat?.endsWith("@g.us");
             if (!cmd) return;
@@ -358,7 +362,9 @@ async function startKeith() {
                         qmsg, 
                         msgKeith, 
                         Tag, 
-                        text, 
+                        text,
+                        botname,
+                        reply,
                         sendReply, 
                         sendMediaMessage, 
                         prefix, 
