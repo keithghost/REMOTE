@@ -90,28 +90,26 @@ keith({
         menuText += `\n*Type ${prefix}help <command> for more info*\n`;
         menuText += `© ${client.user.name.split(' ')[0]} Bot`;
 
-        // Create buttons
-        const buttons = [
-            { buttonId: `${prefix}owner`, buttonText: { displayText: '👑 Owner' }, type: 1 },
-            { buttonId: `${prefix}donate`, buttonText: { displayText: '💸 Donate' }, type: 1 },
-            { buttonId: `${prefix}ping`, buttonText: { displayText: '🏓 Ping' }, type: 1 }
-        ];
-
-        // Create button message
-        const buttonMessage = {
-            text: menuText,
-            footer: `Powered by ${client.user.name}`,
-            buttons: buttons,
-            headerType: 1,
-            viewOnce: true
+        // Create contact message
+        const author = client.user.name.split(' ')[0] || 'Bot';
+        const customContactMessage = {
+            key: { 
+                fromMe: false, 
+                participant: `0@s.whatsapp.net`, 
+                remoteJid: 'status@broadcast' 
+            },
+            message: {
+                contactMessage: {
+                    displayName: author,
+                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${m?.sender?.split('@')[0] ?? 'unknown'}:${m?.sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
+                }
+            }
         };
 
-        // Send menu with buttons
+        // Send menu with contact card
         await client.sendMessage(m.chat, {
             image: { url },
             caption: menuText,
-            buttons: buttons,
-            headerType: 4,
             contextInfo: {
                 mentionedJid: [m.sender],
                 forwardingScore: 999,
@@ -125,7 +123,7 @@ keith({
                     sourceUrl: ''
                 }
             }
-        });
+        }, { quoted: customContactMessage });
 
     } catch (error) {
         console.error("Menu error:", error);
