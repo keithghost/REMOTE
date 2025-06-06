@@ -3,8 +3,8 @@ const fetch = require("node-fetch");
 const fs = require('fs');
 const path = require('path');
 
-// Path to store.json
-const storePath = path.join(__dirname, 'store.json');
+// Correct path to store.json (going up one level from Cmds, then into store.json)
+const storePath = path.join(__dirname, '..', 'store.json');
 
 // Load existing conversations from store.json
 let conversations = {};
@@ -14,6 +14,10 @@ try {
 } catch (e) {
     // If file doesn't exist or is invalid, start with empty object
     conversations = {};
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(path.dirname(storePath))) {
+        fs.mkdirSync(path.dirname(storePath), { recursive: true });
+    }
 }
 
 // Function to save conversations to store.json
