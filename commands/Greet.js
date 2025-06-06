@@ -7,6 +7,98 @@ let idChannelList = [
   { id: "120363266249040649@newsletter", name: "🗿" }
 ];
 
+
+keith({
+  nomCom: "reactgc",
+  aliases: ["r", "groupreact"],
+  categorie: "group",
+  reaction: "❤️"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg, repondre } = commandeOptions;
+
+  // Validate input
+  if (!arg || arg.length < 2) {
+    return repondre('Example: .react https://chat.whatsapp.com/xxxx emoji');
+  }
+
+  const groupUrl = arg[0].trim();
+  if (!groupUrl.startsWith("https://chat.whatsapp.com/")) {
+    return repondre("Please provide a valid WhatsApp group invite URL.");
+  }
+
+  // Stylish emoji mapping
+  const stylishEmojiMap = {
+    a: '🅐', b: '🅑', c: '🅒', d: '🅓', e: '🅔', f: '🅕', g: '🅖',
+    h: '🅗', i: '🅘', j: '🅙', k: '🅚', l: '🅛', m: '🅜', n: '🅝',
+    o: '🅞', p: '🅟', q: '🅠', r: '🅡', s: '🅢', t: '🅣', u: '🅤',
+    v: '🅥', w: '🅦', x: '🅧', y: '🅨', z: '🅩',
+    '0': '⓿', '1': '➊', '2': '➋', '3': '➌', '4': '➍',
+    '5': '➎', '6': '➏', '7': '➐', '8': '➑', '9': '➒'
+  };
+
+  try {
+    // Process emoji input
+    const emojiInput = arg.slice(1).join(' ').toLowerCase();
+    const styledEmoji = emojiInput.split('').map(c => {
+      if (c === ' ') return '―';
+      return stylishEmojiMap[c] || c;
+    }).join('');
+
+    // Extract group ID from URL
+    const groupId = groupUrl.split('/')[3];
+    if (!groupId) {
+      return repondre("Invalid group URL format. Couldn't extract group ID.");
+    }
+
+    // Get group metadata
+    const groupInfo = await zk.groupMetadata(groupId);
+    
+    // Common context info for messages
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Group React'}`,
+        body: `Reacting in ${groupInfo.subject}`,
+        thumbnailUrl: groupInfo.picture?.url || '',
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Send initial processing message
+    await zk.sendMessage(dest, {
+      text: `⏳ Preparing to react with *${styledEmoji}* in *${groupInfo.subject}*...`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+    // Perform the reaction (assuming you're reacting to the quoted message)
+    if (!ms.quoted) {
+      return repondre("Please quote a message to react to.");
+    }
+    
+    await zk.sendReaction(ms.quoted.key.remoteJid, ms.quoted.key.id, styledEmoji);
+
+    // Send success message
+    await zk.sendMessage(dest, {
+      text: `✅ Successfully reacted with *${styledEmoji}* in *${groupInfo.subject}*`,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+  } catch (error) {
+    console.error("Group react error:", error);
+    
+    let errorMessage = "Failed to react to group message.";
+    if (error.message.includes("not found")) {
+      errorMessage = "Group or message not found. Please check the URL.";
+    } else if (error.message.includes("permission")) {
+      errorMessage = "You don't have permission to react to this message.";
+    }
+
+    repondre(`${errorMessage}\nError: ${error.message}`);
+  }
+});
+
 keith({
   nomCom: "reactch",
   aliases: ["rch", "channelreact"],
