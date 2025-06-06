@@ -83,7 +83,7 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 
 // Main Command
 keith({
-    pattern: "men",
+    pattern: "menu",
     alias: ["help", "commands"],
     desc: "Show all available commands",
     category: "general",
