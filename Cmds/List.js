@@ -2,6 +2,9 @@ const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
 const path = require('path');
 
+// Active menu sessions
+const activeMenus = new Map();
+
 keith({
     pattern: "list",
     alias: ["help", "commands"],
@@ -55,10 +58,11 @@ keith({
         const commandsByCategory = {};
         commandList.forEach(cmd => {
             if (!cmd.dontAddCommandList && cmd.category) {
-                if (!commandsByCategory[cmd.category]) {
-                    commandsByCategory[cmd.category] = [];
+                const category = cmd.category.toUpperCase();
+                if (!commandsByCategory[category]) {
+                    commandsByCategory[category] = [];
                 }
-                commandsByCategory[cmd.category].push({
+                commandsByCategory[category].push({
                     pattern: cmd.pattern,
                     desc: cmd.desc || 'No description',
                     alias: cmd.alias ? cmd.alias.join(', ') : 'None'
@@ -69,41 +73,40 @@ keith({
         // Convert categories to array for numbering
         const categories = Object.keys(commandsByCategory);
         
-        // Check if this is a reply to get specific category commands
-        if (m.quoted && m.quoted.id && !isNaN(m.text)) {
-            const selectedNum = parseInt(m.text.trim());
-            if (selectedNum > 0 && selectedNum <= categories.length) {
-                const selectedCategory = categories[selectedNum - 1];
-                const categoryCommands = commandsByCategory[selectedCategory];
+        // Check if this is a reply to a menu message
+        if (m.quoted) {
+            const userId = m.sender;
+            const session = activeMenus.get(userId);
+            
+            if (session && (m.quoted.id === session.menuId || m.quoted.id === session.categoryId)) {
+                const input = m.text.trim();
                 
-                let categoryText = `╭───「 ${toFancyText(selectedCategory, 'upper')} 」───┈⊷\n`;
-                categoryCommands.forEach((cmd, i) => {
-                    categoryText += `││◦➛ *${prefix}${cmd.pattern}*\n`;
-                    categoryText += `││◦➛ *Description*: ${cmd.desc}\n`;
-                    if (cmd.alias !== 'None') {
-                        categoryText += `││◦➛ *Aliases*: ${cmd.alias}\n`;
-                    }
-                    categoryText += `╰───────────────────────┈⊷\n\n`;
-                });
+                // Handle "0" to go back to main menu
+                if (input === '0') {
+                    await sendMainMenu();
+                    await client.sendMessage(m.chat, { react: { text: '🔙', key: m.key } });
+                    return;
+                }
                 
-                categoryText += `\n*Type ${prefix}help <command> for more info*\n`;
-                categoryText += `© ${client.user.name.split(' ')[0]} Bot`;
-                
-                await client.sendMessage(m.chat, {
-                    text: categoryText,
-                    contextInfo: {
-                        mentionedJid: [m.sender]
-                    }
-                }, { react: '✅' });
-                return;
+                // Handle category selection
+                const selectedNum = parseInt(input);
+                if (!isNaN(selectedNum) && selectedNum > 0 && selectedNum <= categories.length) {
+                    const selectedCategory = categories[selectedNum - 1];
+                    await sendCategoryCommands(selectedCategory);
+                    await client.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+                    return;
+                }
             }
         }
 
-        // Build main menu
-        const greeting = getGreeting();
-        const time = getCurrentTime();
+        // Send main menu if not a reply or invalid reply
+        await sendMainMenu();
+        
+        async function sendMainMenu() {
+            const greeting = getGreeting();
+            const time = getCurrentTime();
 
-        let menuText = `
+            let menuText = `
 *╰►Hey, ${greeting} ${m.pushName || 'User'}*
 ╭───「  ⟮  ${botname} ⟯ ───┈⊷
 ┃✵╭──────────────
@@ -113,36 +116,94 @@ keith({
 ┃✵╰──────────────
 ╰───────────────────────┈⊷\n\n`;
 
-        // Add categories with numbers
-        categories.forEach((category, index) => {
-            menuText += `││◦➛ ${index + 1}. ${toFancyText(category, 'upper')}\n`;
-        });
+            // Add categories with numbers
+            categories.forEach((category, index) => {
+                menuText += `││◦➛ ${index + 1}. ${toFancyText(category, 'upper')}\n`;
+            });
 
-        menuText += `\n*Reply with the category number to view commands*\n`;
-        menuText += `*Example: Reply with "1" for ${categories[0]} commands*\n\n`;
-        menuText += `*Type ${prefix}help <command> for more info*\n`;
-        menuText += `© ${client.user.name.split(' ')[0]} Bot`;
+            menuText += `\n*Reply with the category number to view commands*\n`;
+            menuText += `*Example: Reply with "1" for ${categories[0]} commands*\n`;
+            menuText += `*Reply "0" to return to this menu from any category*\n\n`;
+            menuText += `*Type ${prefix}help <command> for more info*\n`;
+            menuText += `© ${client.user.name.split(' ')[0]} Bot`;
 
-        // Send menu with image
-        await client.sendMessage(m.chat, {
-            image: { url },
-            caption: menuText,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                externalAdReply: {
-                    title: `${client.user.name} Bot Menu`,
-                    body: `Get all commands information`,
-                    mediaType: 2,
-                    thumbnail: { url },
-                    sourceUrl: ''
+            const sentMessage = await client.sendMessage(m.chat, {
+                image: { url },
+                caption: menuText,
+                contextInfo: {
+                    mentionedJid: [m.sender],
+                    externalAdReply: {
+                        title: `${client.user.name} Bot Menu`,
+                        body: `Get all commands information`,
+                        mediaType: 2,
+                        thumbnail: { url },
+                        sourceUrl: ''
+                    }
                 }
+            });
+
+            // Store the menu session
+            activeMenus.set(m.sender, {
+                menuId: sentMessage.key.id,
+                categoryId: null,
+                timestamp: Date.now()
+            });
+
+            // Auto-cleanup after 10 minutes
+            setTimeout(() => {
+                if (activeMenus.has(m.sender)) {
+                    activeMenus.delete(m.sender);
+                }
+            }, 600000);
+        }
+        
+        async function sendCategoryCommands(category) {
+            const categoryCommands = commandsByCategory[category];
+            
+            let categoryText = `╭───「 ${toFancyText(category, 'upper')} 」───┈⊷\n`;
+            categoryCommands.forEach((cmd, i) => {
+                categoryText += `││◦➛ *${prefix}${cmd.pattern}*\n`;
+                categoryText += `││◦➛ *Description*: ${cmd.desc}\n`;
+                if (cmd.alias !== 'None') {
+                    categoryText += `││◦➛ *Aliases*: ${cmd.alias}\n`;
+                }
+                categoryText += `╰───────────────────────┈⊷\n\n`;
+            });
+            
+            categoryText += `\n*Reply "0" to return to main menu*\n`;
+            categoryText += `© ${client.user.name.split(' ')[0]} Bot`;
+            
+            const sentMessage = await client.sendMessage(m.chat, {
+                text: categoryText,
+                contextInfo: {
+                    mentionedJid: [m.sender],
+                    externalAdReply: {
+                        title: `${category} Commands`,
+                        body: `Total: ${categoryCommands.length} commands`,
+                        thumbnail: { url },
+                        sourceUrl: ''
+                    }
+                }
+            });
+
+            // Update the session with the category message ID
+            if (activeMenus.has(m.sender)) {
+                const session = activeMenus.get(m.sender);
+                session.categoryId = sentMessage.key.id;
+                activeMenus.set(m.sender, session);
             }
-        });
+        }
 
     } catch (error) {
         console.error("Menu error:", error);
         await client.sendMessage(m.chat, {
-            text: `❌ Error generating menu: ${error.message}`
+            text: `❌ Error generating menu: ${error.message}`,
+            react: { text: '❌', key: m.key }
         });
     }
+});
+
+// Cleanup active menus on process exit
+process.on('exit', () => {
+    activeMenus.clear();
 });
