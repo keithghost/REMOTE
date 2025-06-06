@@ -140,9 +140,9 @@ keith({
         const formattedDate = DateTime.now().setZone('Africa/Nairobi').toLocaleString(DateTime.DATE_FULL);
         const randomQuote = getRandomQuote();
         const totalCommands = require('../commandHandler').commands.length;
-        const totalMemory = formatMemory(os.totalmem());
+        /*const totalMemory = formatMemory(os.totalmem());
         const usedMemory = formatMemory(os.totalmem() - os.freemem());
-        const uptime = formatUptime(process.uptime());
+        const uptime = formatUptime(process.uptime());*/
 
         // Create contact message
         const author = client.user.name.split(' ')[0] || 'Bot';
@@ -168,8 +168,6 @@ keith({
 ├──────────────
 │✵│▸ 𝗣𝗿𝗲𝗳𝗶𝘅: [ ${prefix} ]
 │✵│▸ 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀: ${totalCommands}
-│✵│▸ 𝗥𝗔𝗠: ${usedMemory}/${totalMemory}
-│✵│▸ 𝗨𝗽𝘁𝗶𝗺𝗲: ${uptime}
 │✵│▸ 𝗗𝗮𝘁𝗲: ${formattedDate}
 │✵│▸ 𝗧𝗶𝗺𝗲: ${formattedTime}
 ╰──────────────────────⊷
