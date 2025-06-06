@@ -1,8 +1,25 @@
 const { keith } = require('../commandHandler');
 const fetch = require("node-fetch");
+const fs = require('fs');
+const path = require('path');
 
-// Memory store for conversations
-const conversationMemory = new Map();
+// Path to store.json
+const storePath = path.join(__dirname, 'store.json');
+
+// Load existing conversations from store.json
+let conversations = {};
+try {
+    const data = fs.readFileSync(storePath, 'utf8');
+    conversations = JSON.parse(data);
+} catch (e) {
+    // If file doesn't exist or is invalid, start with empty object
+    conversations = {};
+}
+
+// Function to save conversations to store.json
+function saveConversations() {
+    fs.writeFileSync(storePath, JSON.stringify(conversations, null, 2), 'utf8');
+}
 
 keith({
     pattern: "gpt",
@@ -21,10 +38,10 @@ keith({
 
         // Get or create conversation history for this user
         const userId = author;
-        if (!conversationMemory.has(userId)) {
-            conversationMemory.set(userId, []);
+        if (!conversations[userId]) {
+            conversations[userId] = [];
         }
-        const userConversation = conversationMemory.get(userId);
+        const userConversation = conversations[userId];
 
         // Add the new user message to the conversation
         userConversation.push({ role: "user", content: text });
@@ -40,6 +57,9 @@ keith({
             if (data.status && data.result) {
                 // Add the AI response to the conversation
                 userConversation.push({ role: "assistant", content: data.result });
+                
+                // Save the updated conversations to store.json
+                saveConversations();
                 
                 // Send the response back to the user
                 await sendReply(client, m, data.result);
