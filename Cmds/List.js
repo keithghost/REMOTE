@@ -90,11 +90,19 @@ keith({
                 
                 // Handle category selection
                 const selectedNum = parseInt(input);
-                if (!isNaN(selectedNum) && selectedNum > 0 && selectedNum <= categories.length) {
-                    const selectedCategory = categories[selectedNum - 1];
-                    await sendCategoryCommands(selectedCategory);
-                    await client.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
-                    return;
+                if (!isNaN(selectedNum) {
+                    if (selectedNum > 0 && selectedNum <= categories.length) {
+                        const selectedCategory = categories[selectedNum - 1];
+                        await sendCategoryCommands(selectedCategory);
+                        await client.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+                        return;
+                    } else {
+                        await client.sendMessage(m.chat, { 
+                            text: `❌ Invalid selection. Please reply with a number between 1-${categories.length} or 0 to go back.`,
+                            react: { text: '❌', key: m.key }
+                        });
+                        return;
+                    }
                 }
             }
         }
