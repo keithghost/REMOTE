@@ -1,3 +1,4 @@
+const { timezone } = require('../settings');
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
 const fs = require('fs');
@@ -83,7 +84,7 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 
 // Main Command
 keith({
-    pattern: "menu",
+    pattern: "men",
     alias: ["help", "commands"],
     desc: "Show all available commands",
     category: "general",
@@ -103,7 +104,7 @@ keith({
         initializeCommands();
         
         // Dynamic greeting
-        const hour = DateTime.now().setZone('Africa/Nairobi').hour;
+        const hour = DateTime.now().setZone(timezone).hour;
         let greeting = "🌙 Good Night!";
         if (hour >= 5 && hour < 12) greeting = "🌅 Good Morning!";
         else if (hour >= 12 && hour < 18) greeting = "☀️ Good Afternoon!";
@@ -125,8 +126,8 @@ keith({
         };
 
         // System info
-        const formattedTime = DateTime.now().setZone('Africa/Nairobi').toLocaleString(DateTime.TIME_SIMPLE);
-        const formattedDate = DateTime.now().setZone('Africa/Nairobi').toLocaleString(DateTime.DATE_FULL);
+        const formattedTime = DateTime.now().setZone(timezone).toLocaleString(DateTime.TIME_SIMPLE);
+        const formattedDate = DateTime.now().setZone(timezone).toLocaleString(DateTime.DATE_FULL);
         const totalCommands = require('../commandHandler').commands.length;
 
         // Create contact message
@@ -196,7 +197,8 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                 const isReplyToMenu = response.contextInfo?.stanzaId === sentMessage.key.id;
                 const isReplyToCategory = activeMenus.get(userId)?.lastCategoryMessage === message.key.id;
 
-                if (!isReplyToMenu && !isReplyToCategory) return;
+                // Only process if it's a reply to a category message
+                if (!isReplyToCategory) return;
 
                 const userInput = response.text.trim();
                 const selectedNumber = parseInt(userInput);
@@ -204,7 +206,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                 // Send loading reaction for processing
                 await client.sendMessage(m.chat, { react: { text: '⏳', key: message.key } });
 
-                // Handle back to menu command
+                // Handle back to menu command (only works when replying to category lists)
                 if (userInput === "0") {
                     await client.sendMessage(m.chat, { text: menuMessage }, { quoted: customContactMessage });
                     activeMenus.set(userId, { 
