@@ -268,3 +268,38 @@ keith({
         sendReply(client, m, "An unexpected error occurred. Please try again.");
     }
 });
+
+keith({
+    pattern: "copilot",
+    alias: ["githubcopilot", "aicopilot"],
+    desc: "Chat with GitHub Copilot using Keith's API",
+    category: "Ai",
+    react: "🤖",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, sendReply } = context;
+
+        if (!text) {
+            return sendReply(client, m, "I'm GitHub Copilot powered by Keith's API. How can I assist you with coding today? 💻");
+        }
+
+        try {
+            const apiUrl = `https://apis-keith.vercel.app/ai/github-copilot?q=${encodeURIComponent(text)}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (data.status && data.result && data.result.response) {
+                await sendReply(client, m, data.result.response);
+            } else {
+                throw new Error("Invalid API response structure");
+            }
+        } catch (e) {
+            console.error("API Error:", e);
+            await sendReply(client, m, "Sorry, I couldn't process your request. Please try again later.");
+        }
+    } catch (error) {
+        console.error("Command Error:", error);
+        await sendReply(client, m, "An unexpected error occurred. Please try again.");
+    }
+});
