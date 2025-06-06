@@ -90,7 +90,7 @@ keith({
                 
                 // Handle category selection
                 const selectedNum = parseInt(input);
-                if (!isNaN(selectedNum) {
+                if (!isNaN(selectedNum)) {
                     if (selectedNum > 0 && selectedNum <= categories.length) {
                         const selectedCategory = categories[selectedNum - 1];
                         await sendCategoryCommands(selectedCategory);
