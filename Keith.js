@@ -352,6 +352,7 @@ async function startKeith() {
                         isOwner, 
                         fetchJson, 
                         exec,
+                        pushname,
                         commands,
                         getRandom, 
                         generateProfilePicture, 
