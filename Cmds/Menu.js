@@ -84,7 +84,7 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 // Main Command
 keith({
     pattern: "menu",
-    alias: ["help", "commands"],
+    alias: ["cmds", "commands"],
     desc: "Show all available commands",
     category: "general",
     react: "📜",
@@ -173,9 +173,10 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                 forwardingScore: 999,
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
-                newsletterJid: '120363266249040649@newsletter', 
-                newsletterName: 'Keith Support',
-                serverMessageId: 143 
+                    newsletterJid: '120363266249040649@newsletter', 
+                    newsletterName: 'Keith Support',
+                    serverMessageId: 143 
+                },
                 externalAdReply: {
                     title: `${client.user.name} Menu`,
                     body: `Get all commands information`,
