@@ -1,4 +1,3 @@
-const { timezone } = require('../settings');
 const { keith } = require('../commandHandler');
 const { DateTime } = require('luxon');
 const fs = require('fs');
@@ -104,7 +103,7 @@ keith({
         initializeCommands();
         
         // Dynamic greeting
-        const hour = DateTime.now().setZone(timezone).hour;
+        const hour = DateTime.now().setZone('Africa/Nairobi').hour;
         let greeting = "🌙 Good Night!";
         if (hour >= 5 && hour < 12) greeting = "🌅 Good Morning!";
         else if (hour >= 12 && hour < 18) greeting = "☀️ Good Afternoon!";
@@ -126,8 +125,8 @@ keith({
         };
 
         // System info
-        const formattedTime = DateTime.now().setZone(timezone).toLocaleString(DateTime.TIME_SIMPLE);
-        const formattedDate = DateTime.now().setZone(timezone).toLocaleString(DateTime.DATE_FULL);
+        const formattedTime = DateTime.now().setZone('Africa/Nairobi').toLocaleString(DateTime.TIME_SIMPLE);
+        const formattedDate = DateTime.now().setZone('Africa/Nairobi').toLocaleString(DateTime.DATE_FULL);
         const totalCommands = require('../commandHandler').commands.length;
 
         // Create contact message
@@ -173,6 +172,10 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                 mentionedJid: [m.sender],
                 forwardingScore: 999,
                 isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                newsletterJid: '120363266249040649@newsletter', 
+                newsletterName: 'Keith Support',
+                serverMessageId: 143 
                 externalAdReply: {
                     title: `${client.user.name} Menu`,
                     body: `Get all commands information`,
@@ -197,8 +200,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                 const isReplyToMenu = response.contextInfo?.stanzaId === sentMessage.key.id;
                 const isReplyToCategory = activeMenus.get(userId)?.lastCategoryMessage === message.key.id;
 
-                // Only process if it's a reply to a category message
-                if (!isReplyToCategory) return;
+                if (!isReplyToMenu && !isReplyToCategory) return;
 
                 const userInput = response.text.trim();
                 const selectedNumber = parseInt(userInput);
@@ -206,7 +208,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${t
                 // Send loading reaction for processing
                 await client.sendMessage(m.chat, { react: { text: '⏳', key: message.key } });
 
-                // Handle back to menu command (only works when replying to category lists)
+                // Handle back to menu command
                 if (userInput === "0") {
                     await client.sendMessage(m.chat, { text: menuMessage }, { quoted: customContactMessage });
                     activeMenus.set(userId, { 
