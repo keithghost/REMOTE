@@ -1,29 +1,8 @@
 const { keith } = require('../commandHandler');
 const fetch = require("node-fetch");
-const fs = require('fs');
-const path = require('path');
 
-// Correct path to store.json (going up one level from Cmds, then into store.json)
-const storePath = path.join(__dirname, '..', 'store.json');
-
-// Load existing conversations from store.json
-let conversations = {};
-try {
-    const data = fs.readFileSync(storePath, 'utf8');
-    conversations = JSON.parse(data);
-} catch (e) {
-    // If file doesn't exist or is invalid, start with empty object
-    conversations = {};
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(path.dirname(storePath))) {
-        fs.mkdirSync(path.dirname(storePath), { recursive: true });
-    }
-}
-
-// Function to save conversations to store.json
-function saveConversations() {
-    fs.writeFileSync(storePath, JSON.stringify(conversations, null, 2), 'utf8');
-}
+// Simple in-memory store
+const store = { chats: {} };
 
 keith({
     pattern: "gpt",
@@ -42,37 +21,31 @@ keith({
 
         // Get or create conversation history for this user
         const userId = author;
-        if (!conversations[userId]) {
-            conversations[userId] = [];
+        if (!store.chats[userId]) {
+            store.chats[userId] = [];
         }
-        const userConversation = conversations[userId];
+        const userConversation = store.chats[userId];
 
-        // Add the new user message to the conversation
+        // Add user message
         userConversation.push({ role: "user", content: text });
 
         try {
-            // Construct the API URL with the query
             const apiUrl = `https://apis-keith.vercel.app/ai/bard?q=${encodeURIComponent(text)}`;
-            
-            // Call the API
             const response = await fetch(apiUrl);
             const data = await response.json();
 
             if (data.status && data.result) {
-                // Add the AI response to the conversation
+                // Add AI response
                 userConversation.push({ role: "assistant", content: data.result });
                 
-                // Save the updated conversations to store.json
-                saveConversations();
-                
-                // Send the response back to the user
+                // Send response
                 await sendReply(client, m, data.result);
             } else {
                 throw new Error("Invalid API response");
             }
         } catch (e) {
             console.error("API Error:", e);
-            sendReply(client, m, "Sorry, I encountered an error while processing your request. Please try again later.");
+            sendReply(client, m, "Sorry, I encountered an error. Please try again later.");
         }
     } catch (error) {
         console.error("Command Error:", error);
