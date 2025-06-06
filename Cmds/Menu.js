@@ -89,7 +89,7 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url, author }) => {
+}, async ({ client, m, prefix, url, author, botname }) => {
     try {
         const userId = m.sender;
         
@@ -144,7 +144,7 @@ keith({
         const totalCommands = require('../commandHandler').commands.length;
 
         // Create contact message
-        const authorName = client.user.name.split(' ')[0] || 'Bot';
+        const authorName = botname;
         const customContactMessage = {
             key: { 
                 fromMe: false, 
