@@ -339,7 +339,8 @@ keith({
         // Send cat GIF if available
         if (catgif) {
             await client.sendMessage(m.chat, { 
-                image: { url: catgif },
+                video: { url: catgif },
+                gifPlayback: true,
                 caption: textResponse ? "" : "Meow! Here's a cat for you! 🐾",
                 mentions: [m.sender]
             }, { quoted: m });
