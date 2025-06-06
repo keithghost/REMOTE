@@ -112,16 +112,30 @@ keith({
         // Category groups
         const categoryGroups = {
             "AI": ["AI"],
-            "AUDIO EDIT": ["AUDIO"],
-            "GENERAL": ["GENERAL"],
+            "AUDIO EDIT": ["AUDIO-EDIT"],
+            "BUG-CMDS": ["BUG-CMDS"],
+            "CODING": ["CODING"],
+            "CONVERT CMDS": ["CONVERSATION"],
+            "DOWNLOAD": ["DOWNLOAD"],
+            "EDITTING": ["EDITTING"],
             "FUN": ["FUN"],
+            "GENERAL": ["GENERAL"],
             "IMAGES": ["IMAGES"],
+            "MODERN-LOGO": ["MODERN-LOGO"],
             "MODS": ["MODS"],
             "OWNER": ["OWNER"],
+            "REACTION": ["REACTION"],
+            "SCREENSHOTS": ["SCREENSHOTS"],
             "SEARCH": ["SEARCH"],
+            "SPORTS": ["SPORTS"],
+            "STALKER": ["STALKER"],
             "SYSTEM": ["SYSTEM"],
+            "WA CHANNEL": ["CHANNEL"],
             "TOOLS": ["TOOLS"],
-            "UTILITY": ["UTILITY"]
+            "TRADE": ["TRADE"],
+            "TTS": ["TTS"],
+            "UTILITY": ["SEARCH"],
+            "SETTINGS": ["SETTING"]
         };
 
         // System info
