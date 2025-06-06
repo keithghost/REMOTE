@@ -303,3 +303,52 @@ keith({
         await sendReply(client, m, "An unexpected error occurred. Please try again.");
     }
 });
+
+keith({
+    pattern: "catgpt",
+    alias: ["cat", "meow", "kittyai"],
+    desc: "Chat with Cat GPT - a feline-themed AI assistant",
+    category: "Ai",
+    react: "🐱",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text } = context;
+
+        if (!text) {
+            return await client.sendMessage(m.chat, { 
+                text: "Meow! I'm Cat GPT 😺. What would you like to chat about?" 
+            }, { quoted: m });
+        }
+
+        const apiUrl = `https://apis-keith.vercel.app/ai/cat-gpt?q=${encodeURIComponent(text)}`;
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (!data.status || !data.result) {
+            throw new Error("Invalid API response structure");
+        }
+
+        const { response: textResponse, catgif } = data.result;
+
+        // Send text response first
+        if (textResponse) {
+            await client.sendMessage(m.chat, { text: textResponse }, { quoted: m });
+        }
+
+        // Send cat GIF if available
+        if (catgif) {
+            await client.sendMessage(m.chat, { 
+                image: { url: catgif },
+                caption: textResponse ? "" : "Meow! Here's a cat for you! 🐾",
+                mentions: [m.sender]
+            }, { quoted: m });
+        }
+
+    } catch (error) {
+        console.error("Error in catgpt command:", error);
+        await client.sendMessage(m.chat, { 
+            text: "Meow! Something went wrong. Maybe the cat got my tongue! 😿\nPlease try again later." 
+        }, { quoted: m });
+    }
+});
