@@ -2,6 +2,7 @@ const { keith } = require('../commandHandler');
 const { Catbox } = require("node-catbox");
 const fs = require('fs-extra');
 const axios = require('axios');
+const fetch = require("node-fetch");
 
 const catbox = new Catbox();
 
@@ -31,10 +32,50 @@ async function analyzeImage(imageUrl, question) {
     }
 }
 
+
+
+
+keith({
+    pattern: "bing",
+    alias: ["flux", "imageai", "dalle"],
+    desc: "generate image",
+    category: "Ai",
+    react: "🗿",
+    filename: __filename
+}, async (context) => {
+    try {
+    const { client, m, text, botname, reply } = context;
+
+    if (!text) return reply("Provide a text");
+
+    try {
+        
+        const response = await fetch(`https://apis-keith.vercel.app/ai/flux?q=${text}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+       
+        const arrayBuffer = await response.arrayBuffer();
+        
+        
+        const buffer = Buffer.from(arrayBuffer);
+
+        
+        await client.sendMessage(m.chat, {
+            image: buffer,
+            caption: `Downloaded by ${botname}`
+        }, { quoted: m });
+
+    } catch (e) {
+        reply("An error occurred. API might be down\n" + e);
+    }
+};
 keith({
     pattern: "vision",
     alias: ["vsn", "visionn"],
-    desc: "Flip a coin and get heads or tails",
+    desc: "analyze image",
     category: "Ai",
     react: "🔥",
     filename: __filename
