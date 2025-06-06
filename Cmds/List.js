@@ -5,7 +5,7 @@ keith({
     pattern: "list",
     alias: ["allcommands", "cmdlist"],
     desc: "Display all available commands in an elegant list format",
-    category: "Utility",
+    category: "General",
     react: "📜",
     filename: __filename
 }, async ({ client, m, prefix }) => {
