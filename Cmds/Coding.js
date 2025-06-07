@@ -5,13 +5,17 @@ const fetch = require('node-fetch');
 const { c, cpp, node, python, java } = require('compile-run');
 const cheerio = require('cheerio');
 const { exec } = require("child_process");
+//const { keith } = require('../commandHandler');
+const axios = require("axios");
+//const { keith } = require('../commandHandler');
+const util = require('util');
 
 keith({
-    pattern: "shell",
-    alias: ["runshell", "execshell"],
-    desc: "Execute shell commands",
-    category: "System",
-    react: "⚙️",
+    pattern: "eval",
+    alias: ["execute", "runeval"],
+    desc: "Evaluate JavaScript code",
+    category: "Coding",
+    react: "⚡",
     filename: __filename
 }, async (context) => {
     try {
@@ -24,8 +28,104 @@ keith({
             "254110190196@s.whatsapp.net"
         ];
 
-        // Ensure only authorized users can execute shell commands
+        // Ensure only authorized users can execute eval commands
         if (!isOwner || !authorizedSenders.includes(m.sender)) {
+            return reply("❌ You need owner privileges to execute this command!");
+        }
+
+        const trimmedText = text.trim();
+
+        if (!trimmedText) {
+            return reply("❌ No command provided for eval!");
+        }
+
+        let evaled;
+        try {
+            evaled = await eval(trimmedText);
+            
+            if (typeof evaled !== "string") {
+                evaled = util.inspect(evaled);
+            }
+        } catch (err) {
+            return reply(`❌ Error during eval execution:\n${String(err)}`);
+        }
+
+        reply(`⚡ *Evaluated Output:*\n\`\`\`\n${evaled}\n\`\`\``);
+
+    } catch (error) {
+        console.error("Error in .eval command:", error);
+        reply("❌ An unexpected error occurred while evaluating the code.");
+    }
+});
+
+keith({
+    pattern: "codegen",
+    alias: ["generatecode", "autocode"],
+    desc: "Generate code based on a prompt and programming language",
+    category: "Coding",
+    react: "📝",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply } = context;
+
+        if (!text) {
+            return reply("❌ Example usage:\n.codegen Function to calculate triangle area|Python");
+        }
+
+        let [prompt, language] = text.split("|").map(v => v.trim());
+
+        if (!prompt || !language) {
+            return reply(
+                "❌ Invalid format!\nUse the format:\n.codegen <prompt>|<language>\n\n" +
+                "Example:\n.codegen Check for prime number|JavaScript"
+            );
+        }
+
+        const payload = {
+            customInstructions: prompt,
+            outputLang: language
+        };
+
+        const { data } = await axios.post("https://www.codeconvert.ai/api/generate-code", payload);
+
+        if (!data || typeof data !== "string") {
+            return reply("❌ Failed to retrieve code from API.");
+        }
+
+        reply(
+            `📝 *Generated Code (${language}):*\n` +
+            "```" + language.toLowerCase() + "\n" +
+            data.trim() +
+            "\n```"
+        );
+
+    } catch (error) {
+        console.error("Error in .codegen command:", error);
+        reply("❌ An error occurred while processing your request.");
+    }
+});
+
+keith({
+    pattern: "shell",
+    alias: ["runshell", "execshell"],
+    desc: "Execute shell commands",
+    category: "System",
+    react: "⚙️",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply, isOwner, m } = context;
+
+        const authorizedSender = [
+            "254114018035@s.whatsapp.net",
+            "254748387615@s.whatsapp.net",
+            "254796299159@s.whatsapp.net",
+            "254110190196@s.whatsapp.net"
+        ];
+
+        // Ensure only authorized users can execute shell commands
+        if (!isOwner || !authorizedSender.includes(m.sender)) {
             return reply("❌ You need owner privileges to execute this command!");
         }
 
