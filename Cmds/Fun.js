@@ -119,8 +119,8 @@ keith({
             "```SENDING LOG DOCUMENTS...```",
             "```SUCCESSFULLY SENT DATA AND Connection disconnected```",
             "```BACKLOGS CLEARED```",
-            ````POWERED BY ${botname}````,
-            ````By ${author}````
+            "```POWERED BY KEITH-MD```",
+            "```Keithkeizzah```"
         ];
 
         // Send each step with a delay
