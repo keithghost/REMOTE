@@ -1,5 +1,223 @@
 const { keith } = require('../commandHandler');
 const fetch = require("node-fetch");
+const axios = require('axios');
+
+keith({
+    pattern: "pick",
+    alias: ["rpick", "randompick"],
+    desc: "Randomly select one option from given choices",
+    category: "Fun",
+    react: "🎲",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { m, text, reply } = context;
+
+        if (!text || !text.includes(',')) {
+            return await reply("❌ Please provide multiple choices separated by commas.\nExample: `.pick ice cream, pizza, burger`");
+        }
+
+        const options = text.split(',')
+            .map(option => option.trim())
+            .filter(option => option.length > 0);
+
+        if (options.length < 2) {
+            return await reply("❌ Please provide at least two valid choices to pick from.");
+        }
+
+        const choice = options[Math.floor(Math.random() * options.length)];
+        await reply(`🎲 *I pick:* ${choice}`);
+
+    } catch (error) {
+        console.error("Error in pick command:", error);
+        await reply("❌ An error occurred while making a selection. Please try again.");
+    }
+});
+keith({
+    pattern: "joke",
+    alias: ["randomjoke", "funny"],
+    desc: "Fetch a random joke",
+    category: "Fun",
+    react: "😂",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply } = context;
+        const apiUrl = "https://v2.jokeapi.dev/joke/Any?type=single";
+        
+        const response = await axios.get(apiUrl);
+        const data = response.data;
+
+        if (data.error) {
+            return reply("❌ Error fetching joke. Please try again later.");
+        }
+
+        let jokeMessage = `😂 *Random Joke:* \n\n${data.joke}\n\n`;
+        jokeMessage += `🏷 *Category:* ${data.category}\n`;
+        jokeMessage += `🔍 *Safe Content:* ${data.safe ? "✅ Yes" : "⚠️ No"}\n`;
+
+        reply(jokeMessage);
+    } catch (error) {
+        console.error("Error in .joke command:", error);
+        reply("❌ An unexpected error occurred while fetching the joke.");
+    }
+});
+
+
+keith({
+    pattern: "hack",
+    alias: ["hackprank", "breech"],
+    desc: "Fake hacking prank simulation",
+    category: "Fun",
+    react: "🌍",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { m, author, botname } = context;
+        const mek = m; // The message object for quoting
+
+        // Define the steps of the prank
+        const steps = [
+            "```Injecting Malware```",
+            "```█ 10%```",
+            "```█ █ 20%```",
+            "```█ █ █ 30%```",
+            "```█ █ █ █ 40%```",
+            "```█ █ █ █ █ 50%```",
+            "```█ █ █ █ █ █ 60%```",
+            "```█ █ █ █ █ █ █ 70%```",
+            "```█ █ █ █ █ █ █ █ 80%```",
+            "```█ █ █ █ █ █ █ █ █ 90%```",
+            "```█ █ █ █ █ █ █ █ █ █ 100%```",
+            "```System hijacking on process..```\n```Connecting to Server error to find 404```",
+            "```Device successfully connected...\nReceiving data...```",
+            "```Data hijacked from device 100% completed\nKilling all evidence, killing all malwares...```",
+            "```HACKING COMPLETED```",
+            "```SENDING LOG DOCUMENTS...```",
+            "```SUCCESSFULLY SENT DATA AND Connection disconnected```",
+            "```BACKLOGS CLEARED```",
+            ````POWERED BY ${botname}````,
+            ````By ${author}````
+        ];
+
+        // Send each step with a delay
+        for (const line of steps) {
+            await context.client.sendMessage(m.chat, { text: line }, { quoted: mek });
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        }
+
+    } catch (error) {
+        console.error('Error during hack prank:', error);
+        await context.client.sendMessage(m.chat, {
+            text: `❌ *Error!* The hack prank failed. Reason: ${error.message}`
+        });
+    }
+});
+keith({
+    pattern: "guesscountry",
+    alias: ["nationality", "countrypredict"],
+    desc: "Predict likely nationalities based on a name",
+    category: "Fun",
+    react: "🌍",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply, botname } = context;
+
+        if (!text) {
+            return reply("🌍 Please provide a name to analyze.\nExample: `.guesscountry John`");
+        }
+
+        const apiUrl = `https://api.nationalize.io/?name=${encodeURIComponent(text)}`;
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) throw new Error("❌ Failed to access nationality service.");
+        
+        const data = await response.json();
+        
+        if (!data?.country?.length) {
+            return reply(`❌ No country data found for "${text}". Try another name.`);
+        }
+
+        let output = `🌍 *${botname} Country Guesser* 🌍\n\n` +
+                     `✍️ *Name:* ${data.name}\n\n` +
+                     `📊 *Likely Nationalities:*\n`;
+
+        data.country.slice(0, 5).forEach((c, index) => {
+            output += `${index + 1}. ${getCountryName(c.country_id)} (${(c.probability * 100).toFixed(1)}%)\n`;
+        });
+
+        output += `\n🔍 Powered by *Nationalize.io*`;
+
+        reply(output);
+
+    } catch (error) {
+        console.error("Error in .guesscountry command:", error);
+        reply("❌ An unexpected error occurred while processing the country prediction.");
+    }
+});
+
+// Helper function to convert country codes to full names
+function getCountryName(code) {
+    const countryNames = {
+        US: "United States",
+        NG: "Nigeria",
+        IN: "India",
+        CN: "China",
+        BR: "Brazil",
+        GB: "United Kingdom",
+        DE: "Germany",
+        FR: "France",
+        IT: "Italy",
+        JP: "Japan",
+        KE: "Kenya",
+        ZA: "South Africa",
+        CA: "Canada"
+        // Add more country codes as needed
+    };
+    return countryNames[code] || code;
+}
+
+keith({
+    pattern: "guessage",
+    alias: ["agepredict", "estimateage"],
+    desc: "Predict the age based on a given name",
+    category: "Fun",
+    react: "🎂",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply } = context;
+
+        if (!text) {
+            return reply("❌ Please provide a name.");
+        }
+
+        const name = encodeURIComponent(text);
+        const response = await fetch(`https://api.agify.io/?name=${name}`);
+        const data = await response.json();
+
+        if (!data.age) {
+            return reply("❌ No valid name found. Try another.");
+        }
+
+        const messageText = `
+🎂 *KEITH MD - Age Guess* 🎂
+-----------------------------------
+📛 *Name:* ${data.name}
+📊 *Dataset Count:* ${data.count}
+🧮 *Estimated Age:* ${data.age}
+-----------------------------------
+🔍 Powered by *Keith MD*
+        `;
+
+        reply(messageText);
+
+    } catch (error) {
+        console.error("Error fetching age estimate:", error);
+        reply("❌ An unexpected error occurred while predicting the age.");
+    }
+});
 
 keith({
     pattern: "fliptext",
