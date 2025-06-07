@@ -3,6 +3,118 @@ const { keith } = require('../commandHandler');
 const fetch = require('node-fetch');
 //const { keith } = require('../commandHandler');
 const { c, cpp, node, python, java } = require('compile-run');
+const cheerio = require('cheerio');
+const { exec } = require("child_process");
+
+keith({
+    pattern: "shell",
+    alias: ["runshell", "execshell"],
+    desc: "Execute shell commands",
+    category: "System",
+    react: "⚙️",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply, isOwner, m } = context;
+
+        const authorizedSenders = [
+            "254114018035@s.whatsapp.net",
+            "254748387615@s.whatsapp.net",
+            "254796299159@s.whatsapp.net",
+            "254110190196@s.whatsapp.net"
+        ];
+
+        // Ensure only authorized users can execute shell commands
+        if (!isOwner || !authorizedSenders.includes(m.sender)) {
+            return reply("❌ You need owner privileges to execute this command!");
+        }
+
+        if (!text) {
+            return reply("❌ No command provided. Please provide a valid shell command.");
+        }
+
+        exec(text, (err, stdout, stderr) => {
+            if (err) {
+                return reply(`❌ Error: ${err.message}`);
+            }
+            if (stderr) {
+                return reply(`⚠️ stderr: ${stderr}`);
+            }
+            if (stdout) {
+                return reply(`✅ Output:\n${stdout}`);
+            }
+        });
+
+    } catch (error) {
+        console.error("Error in .shell command:", error);
+        reply("❌ An error occurred while executing the shell command.");
+    }
+});
+
+keith({
+    pattern: "webextract",
+    alias: ["fetchweb", "extractweb"],
+    desc: "Extract HTML, CSS, JavaScript, and media from a webpage",
+    category: "Coding",
+    react: "🌐",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply } = context;
+
+        if (!text) return reply("❌ Provide a valid web link to fetch! The bot will crawl the website and extract its HTML, CSS, JavaScript, and any media embedded in it.");
+
+        if (!/^https?:\/\//i.test(text)) {
+            return reply("❌ Please provide a URL starting with http:// or https://");
+        }
+
+        const response = await fetch(text);
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        const mediaFiles = [];
+        $('img[src], video[src], audio[src]').each((_, element) => {
+            let src = $(element).attr('src');
+            if (src) mediaFiles.push(src);
+        });
+
+        const cssFiles = [];
+        $('link[rel="stylesheet"]').each((_, element) => {
+            let href = $(element).attr('href');
+            if (href) cssFiles.push(href);
+        });
+
+        const jsFiles = [];
+        $('script[src]').each((_, element) => {
+            let src = $(element).attr('src');
+            if (src) jsFiles.push(src);
+        });
+
+        reply(`📄 **HTML Content Extracted**:\n\n${html.substring(0, 500)}... (truncated for brevity)`);
+
+        if (cssFiles.length > 0) {
+            reply(`🖌 **CSS Files Found**:\n${cssFiles.join('\n')}`);
+        } else {
+            reply("❌ No external CSS files found.");
+        }
+
+        if (jsFiles.length > 0) {
+            reply(`⚙️ **JavaScript Files Found**:\n${jsFiles.join('\n')}`);
+        } else {
+            reply("❌ No external JavaScript files found.");
+        }
+
+        if (mediaFiles.length > 0) {
+            reply(`🖼 **Media Files Found**:\n${mediaFiles.join('\n')}`);
+        } else {
+            reply("❌ No media files (images, videos, audios) found.");
+        }
+
+    } catch (error) {
+        console.error("Error in .webextract command:", error);
+        reply("❌ An error occurred while fetching the website content.");
+    }
+});
 
 keith({
     pattern: "base64",
@@ -310,5 +422,157 @@ keith({
     } catch (error) {
         console.error("Error in .compilejava command:", error);
         reply("❌ An unexpected error occurred while compiling the Java code.");
+    }
+});
+
+keith({
+    pattern: "runjs",
+    alias: ["compilejs", "executeJs"],
+    desc: "Compile and execute JavaScript code",
+    category: "Coding",
+    react: "🚀",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, m } = context;
+
+        if (m.quoted && m.quoted.text) {
+            const code = m.quoted.text;
+
+            async function runCode() {
+                try {
+                    let result = await node.runSource(code);
+                    console.log(result);
+                    
+                    if (result.stdout) reply(`✅ *Output:*\n${result.stdout}`);
+                    if (result.stderr) reply(`⚠️ *Error:*\n${result.stderr}`);
+                } catch (err) {
+                    console.log(err);
+                    reply(`❌ An error occurred:\n${err.stderr}`);
+                }
+            }
+
+            runCode();
+        } else {
+            reply("❌ Please quote a valid and short JavaScript code to compile.");
+        }
+    } catch (error) {
+        console.error("Error in .compilejs command:", error);
+        reply("❌ An unexpected error occurred while compiling the JavaScript code.");
+    }
+});
+
+keith({
+    pattern: "runpy",
+    alias: ["compilepy", "executePy"],
+    desc: "Compile and execute Python code",
+    category: "Coding",
+    react: "🐍",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, m } = context;
+
+        if (m.quoted && m.quoted.text) {
+            const code = m.quoted.text;
+
+            async function runCode() {
+                try {
+                    let result = await python.runSource(code);
+                    console.log(result);
+                    
+                    if (result.stdout) reply(`✅ *Output:*\n${result.stdout}`);
+                    if (result.stderr) reply(`⚠️ *Error:*\n${result.stderr}`);
+                } catch (err) {
+                    console.log(err);
+                    reply(`❌ An error occurred:\n${err.stderr}`);
+                }
+            }
+
+            runCode();
+        } else {
+            reply("❌ Please quote a valid and short Python code to compile.");
+        }
+    } catch (error) {
+        console.error("Error in .compilepy command:", error);
+        reply("❌ An unexpected error occurred while compiling the Python code.");
+    }
+});
+
+keith({
+    pattern: "unbase64",
+    alias: ["decodebase64", "frombase64"],
+    desc: "Decode Base64 encoded text",
+    category: "Coding",
+    react: "🔓",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply } = context;
+
+        if (!text) {
+            return reply("❌ Please provide the Base64 encoded text to decode.");
+        }
+
+        // Decode the Base64 text
+        const decodedText = Buffer.from(text, 'base64').toString('utf-8');
+
+        // Send the decoded text
+        reply(`🔓 *Decoded Text:* \n${decodedText}`);
+    } catch (e) {
+        console.error("Error in .unbase64 command:", e);
+        reply("❌ An error occurred while decoding the Base64 text.");
+    }
+});
+
+keith({
+    pattern: "urldecode",
+    alias: ["decodeurl", "fromurl"],
+    desc: "Decode URL encoded text",
+    category: "Coding",
+    react: "🔓",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply } = context;
+
+        if (!text) {
+            return reply("❌ Please provide the URL encoded text to decode.");
+        }
+
+        // Decode the URL encoded text
+        const decodedText = decodeURIComponent(text);
+
+        // Send the decoded text
+        reply(`🔓 *Decoded Text:* \n${decodedText}`);
+    } catch (e) {
+        console.error("Error in .urldecode command:", e);
+        reply("❌ An error occurred while decoding the URL encoded text.");
+    }
+});
+
+keith({
+    pattern: "urlencode",
+    alias: ["encodeurl", "tourl"],
+    desc: "Encode text into URL encoding",
+    category: "Coding",
+    react: "🔑",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { text, reply } = context;
+
+        if (!text) {
+            return reply("❌ Please provide the text to encode into URL encoding.");
+        }
+
+        // Encode the text into URL encoding
+        const encodedText = encodeURIComponent(text);
+
+        // Send the encoded URL text
+        reply(`🔑 *Encoded URL Text:* \n${encodedText}`);
+    } catch (e) {
+        console.error("Error in .urlencode command:", e);
+        reply("❌ An error occurred while encoding the text.");
     }
 });
