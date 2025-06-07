@@ -1,7 +1,30 @@
 const { keith } = require('../commandHandler');
 const fetch = require("node-fetch");
 const axios = require('axios');
+const badAdvice = require("badadvice");
 
+keith({
+    pattern: "advice",
+    alias: ["randomadvice", "tip"],
+    desc: "Get random humorous bad advice",
+    category: "Fun",
+    react: "💡",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply } = context;
+        
+        // Get random bad advice
+        const randomAdvice = badAdvice();
+        
+        // Send the advice with proper formatting
+        await reply(`💡 *Bad Advice:*\n\n"${randomAdvice}"`);
+
+    } catch (error) {
+        console.error("Error in advice command:", error);
+        await reply("❌ Failed to get advice. The advice giver is on break!");
+    }
+});
 keith({
     pattern: "pick",
     alias: ["rpick", "randompick"],
