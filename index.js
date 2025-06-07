@@ -1295,8 +1295,7 @@ if (autoViewStatusSettings.status === 'on') {
                         console.error('Error fetching GitHub commit info:', error);
                         commitInfo = "\n╭───◇\n┃ *Update Info*\n┃\n┃ Failed to fetch update information\n╰═════════════════⊷";
                     }
-
-                    let cmsg = `this is keith alpha owner\n am deeeply sorry for transferring my channel ownership 😔\nfollow our telegram channel for the updates\nt.me/keithtechsupport
+                    let cmsg = `
 ╭════⊷
 ║ *『 ${conf.BOT} 𝐢𝐬 𝐎𝐧𝐥𝐢𝐧𝐞』*
 ║    ᴏᴡɴᴇʀ: ${conf.OWNER_NAME}
