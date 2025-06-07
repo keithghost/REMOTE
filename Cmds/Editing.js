@@ -1,6 +1,7 @@
 const { keith } = require('../commandHandler');
 const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 const axios = require("axios");
+const canvacord = require("canvacord");
 
 keith({
     pattern: "emix",
@@ -51,3 +52,245 @@ keith({
     }
 });
 
+
+
+keith({
+    pattern: "rip",
+    alias: ["ripimage", "ripsticker"],
+    desc: "Apply a RIP effect to a user's profile picture",
+    category: "Editing",
+    react: "🪦",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, Tag, botname, m, client } = context;
+
+        let cap = `Converted By ${botname}`;
+        let img;
+
+        if (m.quoted) {
+            try {
+                img = await client.profilePictureUrl(m.quoted.sender, 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else if (Tag && Tag.length > 0) {
+            try {
+                img = await client.profilePictureUrl(Tag[0], 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else {
+            return reply("❌ Please quote a message or tag a user to apply the RIP effect.");
+        }
+
+        const result = await canvacord.Canvacord.rip(img);
+
+        await client.sendMessage(m.chat, { image: result, caption: cap }, { quoted: m });
+
+    } catch (error) {
+        console.error("Error in .rip command:", error);
+        reply("❌ An unexpected error occurred while processing the RIP effect.");
+    }
+});
+
+keith({
+    pattern: "hitler",
+    alias: ["hitlerimage", "hitlersticker"],
+    desc: "Apply a HITLER effect to a user's profile picture",
+    category: "Editing",
+    react: "🪦",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, Tag, botname, m, client } = context;
+
+        let cap = `Converted By ${botname}`;
+        let img;
+
+        if (m.quoted) {
+            try {
+                img = await client.profilePictureUrl(m.quoted.sender, 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else if (Tag && Tag.length > 0) {
+            try {
+                img = await client.profilePictureUrl(Tag[0], 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else {
+            return reply("❌ Please quote a message or tag a user to apply the RIP effect.");
+        }
+
+        const result = await canvacord.Canvacord.hitler(img);
+
+        await client.sendMessage(m.chat, { image: result, caption: cap }, { quoted: m });
+
+    } catch (error) {
+        console.error("Error in .rip command:", error);
+        reply("❌ An unexpected error occurred while processing the RIP effect.");
+    }
+});
+
+keith({
+    pattern: "shit",
+    alias: ["shitimage", "shitsticker"],
+    desc: "Apply a SHIT effect to a user's profile picture",
+    category: "Editing",
+    react: "🪦",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, Tag, botname, m, client } = context;
+
+        let cap = `Converted By ${botname}`;
+        let img;
+
+        if (m.quoted) {
+            try {
+                img = await client.profilePictureUrl(m.quoted.sender, 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else if (Tag && Tag.length > 0) {
+            try {
+                img = await client.profilePictureUrl(Tag[0], 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else {
+            return reply("❌ Please quote a message or tag a user to apply the RIP effect.");
+        }
+
+        const result = await canvacord.Canvacord.shit(img);
+
+        await client.sendMessage(m.chat, { image: result, caption: cap }, { quoted: m });
+
+    } catch (error) {
+        console.error("Error in .rip command:", error);
+        reply("❌ An unexpected error occurred while processing the RIP effect.");
+    }
+});
+
+keith({
+    pattern: "wanted",
+    alias: ["wantedimage", "ripsticker"],
+    desc: "Apply a wanted effect to a user's profile picture",
+    category: "Editing",
+    react: "🪦",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, Tag, botname, m, client } = context;
+
+        let cap = `Converted By ${botname}`;
+        let img;
+
+        if (m.quoted) {
+            try {
+                img = await client.profilePictureUrl(m.quoted.sender, 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else if (Tag && Tag.length > 0) {
+            try {
+                img = await client.profilePictureUrl(Tag[0], 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else {
+            return reply("❌ Please quote a message or tag a user to apply the RIP effect.");
+        }
+
+        const result = await canvacord.Canvacord.wanted(img);
+
+        await client.sendMessage(m.chat, { image: result, caption: cap }, { quoted: m });
+
+    } catch (error) {
+        console.error("Error in .rip command:", error);
+        reply("❌ An unexpected error occurred while processing the RIP effect.");
+    }
+});
+
+keith({
+    pattern: "trash",
+    alias: ["ripimage", "ripsticker"],
+    desc: "Apply a RIP effect to a user's profile picture",
+    category: "Editing",
+    react: "🪦",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, Tag, botname, m, client } = context;
+
+        let cap = `Converted By ${botname}`;
+        let img;
+
+        if (m.quoted) {
+            try {
+                img = await client.profilePictureUrl(m.quoted.sender, 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else if (Tag && Tag.length > 0) {
+            try {
+                img = await client.profilePictureUrl(Tag[0], 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else {
+            return reply("❌ Please quote a message or tag a user to apply the RIP effect.");
+        }
+
+        const result = await canvacord.Canvacord.trash(img);
+
+        await client.sendMessage(m.chat, { image: result, caption: cap }, { quoted: m });
+
+    } catch (error) {
+        console.error("Error in .rip command:", error);
+        reply("❌ An unexpected error occurred while processing the RIP effect.");
+    }
+});
+
+
+keith({
+    pattern: "wasted",
+    alias: ["ripimage", "ripsticker"],
+    desc: "Apply a RIP effect to a user's profile picture",
+    category: "Editing",
+    react: "🪦",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, Tag, botname, m, client } = context;
+
+        let cap = `Converted By ${botname}`;
+        let img;
+
+        if (m.quoted) {
+            try {
+                img = await client.profilePictureUrl(m.quoted.sender, 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else if (Tag && Tag.length > 0) {
+            try {
+                img = await client.profilePictureUrl(Tag[0], 'image');
+            } catch {
+                img = "https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg";
+            }
+        } else {
+            return reply("❌ Please quote a message or tag a user to apply the RIP effect.");
+        }
+
+        const result = await canvacord.Canvacord.wasted(img);
+
+        await client.sendMessage(m.chat, { image: result, caption: cap }, { quoted: m });
+
+    } catch (error) {
+        console.error("Error in .rip command:", error);
+        reply("❌ An unexpected error occurred while processing the RIP effect.");
+    }
+});
