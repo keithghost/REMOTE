@@ -1,34 +1,7 @@
 const { keith } = require('../commandHandler');
-const { DateTime } = require('luxon');
 const fs = require('fs');
 const path = require('path');
 const activeMenus = new Map();
-
-// Utility Functions
-const formatUptime = (seconds) => {
-    const intervals = [
-        { value: Math.floor(seconds / 86400), unit: "day" },
-        { value: Math.floor((seconds % 86400) / 3600), unit: "hour" },
-        { value: Math.floor((seconds % 3600) / 60), unit: "minute" },
-        { value: Math.floor(seconds % 60), unit: "second" }
-    ];
-
-    return intervals
-        .filter(obj => obj.value > 0)
-        .map(obj => `${obj.value} ${obj.unit}${obj.value !== 1 ? 's' : ''}`)
-        .join(', ');
-};
-
-const formatMemory = (bytes) => {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let unitIndex = 0;
-    while (size >= 1024 && unitIndex < units.length - 1) {
-        size /= 1024;
-        unitIndex++;
-    }
-    return `${size.toFixed(2)} ${units[unitIndex]}`;
-};
 
 // Command Management
 const commandList = {};
@@ -64,13 +37,13 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 
 // Main Command
 keith({
-    pattern: "fuck",
+    pattern: "mama",
     alias: ["help", "commands"],
     desc: "Show all available commands",
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix, url, author }) => {
+}, async ({ client, m, prefix, url, author, pushname, botname }) => {
     try {
         const userId = m.sender;
         
@@ -83,13 +56,6 @@ keith({
 
         initializeCommands();
         
-        // Dynamic greeting
-        const hour = DateTime.now().setZone('Africa/Nairobi').hour;
-        let greeting = "🌙 Good Night!";
-        if (hour >= 5 && hour < 12) greeting = "🌅 Good Morning!";
-        else if (hour >= 12 && hour < 18) greeting = "☀️ Good Afternoon!";
-        else if (hour >= 18 && hour < 22) greeting = "🌆 Good Evening!";
-
         // Category groups
         const categoryGroups = {
             "AI": ["AI"],
@@ -105,36 +71,14 @@ keith({
             "UTILITY": ["UTILITY"]
         };
 
-        // System info
-        const formattedTime = DateTime.now().setZone('Africa/Nairobi').toLocaleString(DateTime.TIME_SIMPLE);
-        const formattedDate = DateTime.now().setZone('Africa/Nairobi').toLocaleString(DateTime.DATE_FULL);
         const totalCommands = require('../commandHandler').commands.length;
-
-        // Create contact message
-        const authorName = client.user.name.split(' ')[0] || 'Bot';
-        const customContactMessage = {
-            key: { 
-                fromMe: false, 
-                participant: `0@s.whatsapp.net`, 
-                remoteJid: 'status@broadcast' 
-            },
-            message: {
-                contactMessage: {
-                    displayName: authorName,
-                    vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${authorName};;;;\nFN:${authorName}\nitem1.TEL;waid=${m?.sender?.split('@')[0] ?? 'unknown'}:${m?.sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`
-                }
-            }
-        };
 
         // Main menu message
         const menuMessage = `
-*╰► ${greeting} ${m.pushName || 'User'}!*
-╭───〔  *${client.user.name}* 〕──────┈⊷
+╭───〔  *${botname}* 〕──────┈⊷
 ├──────────────
 │✵│▸ 𝗣𝗿𝗲𝗳𝗶𝘅: [ ${prefix} ]
 │✵│▸ 𝗖𝗼𝗺𝗺𝗮𝗻𝗱𝘀: ${totalCommands}
-│✵│▸ 𝗗𝗮𝘁𝗲: ${formattedDate}
-│✵│▸ 𝗧𝗶𝗺𝗲: ${formattedTime}
 ╰──────────────────────⊷
 
 ╭───◇ *𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗘𝗦* ◇──────┈⊷
@@ -146,7 +90,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${c
         // Send loading reaction
         await client.sendMessage(m.chat, { react: { text: '⬇️', key: m.key } });
 
-        // Send main menu with contact card as quoted
+        // Send main menu
         const sentMessage = await client.sendMessage(m.chat, {
             text: menuMessage,
             contextInfo: {
@@ -162,7 +106,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${c
                     sourceUrl: ''
                 }
             }
-        }, { quoted: customContactMessage });
+        });
 
         // Send completion reaction
         await client.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
@@ -187,7 +131,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${c
 
                 // Handle back to menu command
                 if (userInput === "0") {
-                    await client.sendMessage(m.chat, { text: menuMessage }, { quoted: customContactMessage });
+                    await client.sendMessage(m.chat, { text: menuMessage });
                     activeMenus.set(userId, { 
                         sentMessage, 
                         handler: replyHandler,
