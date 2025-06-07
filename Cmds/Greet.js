@@ -10,7 +10,7 @@ keith({
     category: "general",
     react: "📜",
     filename: __filename
-}, async ({ client, m, prefix }) => {
+}, async ({ client, m, prefix, pushname, botname }) => {
     try {
         // Configuration
         const TIME_ZONE = 'Africa/Nairobi';
@@ -80,7 +80,7 @@ keith({
         const quote = getRandomQuote();
 
         let menuText = `
-╭───「 *${greeting} ${m.pushName || 'User'}* 」───┈⊷
+╭───「 *${greeting} ${pushname}* 」───┈⊷
 │ *Quote*: ${quote}
 │ *Time*: ${time}
 │ *Prefix*: ${prefix}
@@ -97,7 +97,7 @@ keith({
         });
 
         menuText += `\n*Type ${prefix}help <command> for more info*\n`;
-        menuText += `© ${client.user.name.split(' ')[0]} Bot`;
+        menuText += `© ${botname} Bot`;
 
         // Send menu
         await client.sendMessage(m.chat, {
