@@ -136,7 +136,7 @@ keith({
         });
     }
 });
-keith({
+/*keith({
     pattern: "guesscountry",
     alias: ["nationality", "countrypredict"],
     desc: "Predict likely nationalities based on a name",
@@ -199,7 +199,7 @@ function getCountryName(code) {
         // Add more country codes as needed
     };
     return countryNames[code] || code;
-}
+}*/
 
 keith({
     pattern: "guessage",
