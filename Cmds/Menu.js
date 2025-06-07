@@ -117,7 +117,7 @@ ${Object.keys(categoryGroups).map((cat, index) => `> │◦➛ ${index + 1}. ${c
                     serverMessageId: 143 
                 },
                 externalAdReply: {
-                    title: `${client.user.name} Menu`,
+                    title: `${botname} Menu`,
                     body: `Get all commands information`,
                     thumbnailUrl: url,
                     sourceUrl: gurl,
