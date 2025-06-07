@@ -64,7 +64,7 @@ keith({
             "CODING": ["CODING"],
             "CONVERT CMDS": ["CONVERSATION"],
             "DOWNLOAD": ["DOWNLOAD"],
-            "EDITTING": ["EDITTING"],
+            "EDITING": ["EDITING"],
             "FUN": ["FUN"],
             "GENERAL": ["GENERAL"],
             "IMAGES": ["IMAGES"],
