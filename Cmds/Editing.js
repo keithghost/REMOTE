@@ -6,7 +6,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fs = require("fs");
 const { exec } = require("child_process");
 
-keith({
+/*keith({
     pattern: "amplify",
     alias: ["replaceaudio", "mergeaudio"],
     desc: "Replace the audio of a video with an external audio file",
@@ -57,7 +57,7 @@ keith({
         console.error("Error in .amplify command:", error);
         reply("❌ An unexpected error occurred while processing the media.");
     }
-});
+});*/
 
 keith({
     pattern: "toaudio",
