@@ -59,7 +59,7 @@ keith({
         // Category groups
         const categoryGroups = {
             "AI": ["AI"],
-            "AUDIO EDIT": ["AUDIO-EDIT"],
+            "MEDIA EDIT": ["MEDIA-EDIT"],
             "BUG-CMDS": ["BUG-CMDS"],
             "CODING": ["CODING"],
             "CONVERT CMDS": ["CONVERSATION"],
