@@ -1,7 +1,7 @@
 const { keith } = require('../commandHandler');
 const fs = require("fs");
 const { exec } = require("child_process");
-
+const axios = require("axios");
 
 keith({
     pattern: "imgvid",
@@ -76,7 +76,7 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, reply, getRandom } = context;
+        const { client, m, reply, getRandom, text } = context;
         const quoted = m.quoted ? m.quoted : null;
         const mime = quoted?.mimetype || "";
 
@@ -137,6 +137,7 @@ keith({
         reply("❌ An unexpected error occurred while processing the audio.");
     }
 });
+
 keith({
     pattern: "reverse",
     alias: ["rev", "backwards"],
@@ -264,6 +265,7 @@ keith({
         reply("❌ An unexpected error occurred while processing the audio.");
     }
 });
+
 keith({
     pattern: "deep",
     alias: ["pitch", "tempo"],
@@ -334,6 +336,7 @@ keith({
         reply("❌ An unexpected error occurred while processing the audio.");
     }
 });
+
 keith({
     pattern: "bitcrusher",
     alias: ["bitcrush", "crush"],
@@ -343,7 +346,7 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, reply, getRandom } = context;
+        const { client, m, reply, getRandom, text } = context;
         const quoted = m.quoted ? m.quoted : null;
         const mime = quoted?.mimetype || "";
 
@@ -361,7 +364,7 @@ keith({
         const ffmpegCmd = `ffmpeg -i ${mediaPath} ` +
             `-af "acrusher=level=${Math.min(Math.max(level, 0.01), 1)}:` +
             `bits=${Math.min(Math.max(bits, 1), 16)}:` +
-            `mix=${Math.min(Math.max(mix, 0), 1)}" ` +
+            `mix=${Math.min(Math.max(mix, 0), 1}" ` +
             `${outputPath}`;
 
         exec(ffmpegCmd, (error) => {
@@ -392,6 +395,7 @@ keith({
         reply("❌ An unexpected error occurred while processing the audio.");
     }
 });
+
 keith({
     pattern: "bass",
     alias: ["bassboost", "boost"],
@@ -451,6 +455,7 @@ keith({
         reply("❌ An unexpected error occurred while processing the audio.");
     }
 });
+
 keith({
     pattern: "volvideo",
     alias: ["vidvol", "vvolvid"],
@@ -518,6 +523,7 @@ keith({
         reply("❌ An unexpected error occurred while processing the video.");
     }
 });
+
 keith({
     pattern: "volaudio",
     alias: ["volume", "vol"],
@@ -536,7 +542,7 @@ keith({
         }
 
         const volume = parseFloat(text.trim());
-        if (isNaN(volume) {
+        if (isNaN(volume)) {
             return reply("❌ Please provide a valid volume multiplier.\n*Example:* `.volaudio 2.0` (doubles volume)");
         }
 
@@ -576,6 +582,7 @@ keith({
         reply("❌ An unexpected error occurred while processing the audio.");
     }
 });
+
 keith({
     pattern: "trim",
     alias: ["cut"],
@@ -636,6 +643,7 @@ keith({
         reply('❌ An error occurred while processing the media.');
     }
 });
+
 keith({
     pattern: "amplify",
     alias: ["replaceaudio", "mergeaudio"],
@@ -688,4 +696,3 @@ keith({
         reply("❌ An unexpected error occurred while processing the media.");
     }
 });
-
