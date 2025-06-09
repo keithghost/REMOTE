@@ -1,5 +1,5 @@
 
-const { keith } = require('../../commandHandler');
+const { keith } = require('../commandHandler');
 const axios = require('axios');
 const yts = require("yt-search");
 
