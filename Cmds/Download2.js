@@ -6,7 +6,7 @@ const yts = require("yt-search");
 const API_BASE = "https://apis-keith.vercel.app";
 
 keith({
-    pattern: "play",
+    pattern: "play4",
     alias: ["audio", "song"],
     desc: "Download high quality audio from YouTube, Spotify or SoundCloud",
     category: "Download",
