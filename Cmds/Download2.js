@@ -2,8 +2,11 @@ const { keith } = require('../commandHandler');
 const axios = require('axios');
 const yts = require("yt-search");
 
+// API base URL
+const API_BASE = "https://apis-keith.vercel.app";
+
 keith({
-    pattern: "play3",
+    pattern: "play",
     alias: ["audio", "song"],
     desc: "Download high quality audio from YouTube, Spotify or SoundCloud",
     category: "Download",
@@ -12,195 +15,244 @@ keith({
 }, async (context) => {
     try {
         const { client, m, text, sendReply, sendMediaMessage } = context;
-        
-        if (!text) return sendReply(client, m, "Please provide a song name or link to download");
 
-        // Try YouTube search first
+        if (!text) return sendReply(client, m, "Please provide a song name or URL to download");
+
         try {
-            const search = await yts(text);
-            const video = search.all[0];
-            if (!video) throw new Error("No results found on YouTube");
+            // First try Spotify
+            const spotifyData = await handleSpotify(text);
+            if (spotifyData) {
+                return await sendSongResponse(context, spotifyData, "spotify");
+            }
 
-            // Try YouTube download first
-            let songData;
-            try {
-                songData = await handlePlaydl(video.url);
-            } catch (youtubeError) {
-                console.log("YouTube download failed, trying Spotify...");
-                // Fallback to Spotify if YouTube fails
-                try {
-                    const spotifyData = await handleSpotify(text);
-                    songData = {
-                        downloadUrl: spotifyData.track.downloadLink,
-                        title: spotifyData.track.title,
-                        thumbnail: spotifyData.track.thumbnail,
-                        duration: spotifyData.track.duration
-                    };
-                } catch (spotifyError) {
-                    console.log("Spotify failed, trying SoundCloud...");
-                    // Fallback to SoundCloud if Spotify fails
-                    const soundcloudData = await handleSoundCloud(text);
-                    songData = {
-                        downloadUrl: soundcloudData.track.downloadUrl,
-                        title: soundcloudData.track.title,
-                        thumbnail: soundcloudData.track.thumbnail,
-                        duration: soundcloudData.track.audioInfo.duration
+            // Then try SoundCloud
+            const soundcloudData = await handleSoundCloud(text);
+            if (soundcloudData) {
+                return await sendSongResponse(context, soundcloudData, "soundcloud");
+            }
+
+            // Fallback to YouTube
+            const youtubeData = await handleYouTube(text);
+            if (youtubeData) {
+                return await sendSongResponse(context, youtubeData, "youtube");
+            }
+
+            throw new Error("No results found on any platform");
+        } catch (error) {
+            console.error("Error in play command:", error);
+            return sendReply(client, m, `❌ Failed to download: ${error.message}`);
+        }
+    } catch (error) {
+        console.error("Global error in play command:", error);
+        return sendReply(context.client, context.m, `❌ An unexpected error occurred: ${error.message}`);
+    }
+});
+
+async function handleSpotify(query) {
+    try {
+        // Check if it's a Spotify URL
+        if (query.match(/spotify\.com|spotify:track:/)) {
+            const response = await axios.get(`${API_BASE}/download/spotify?url=${encodeURIComponent(query)}`);
+            if (response.data?.status && response.data?.result?.track) {
+                return {
+                    title: response.data.result.track.title,
+                    artist: response.data.result.track.artist,
+                    duration: response.data.result.track.duration,
+                    thumbnail: response.data.result.track.thumbnail,
+                    downloadUrl: response.data.result.track.downloadLink,
+                    source: "spotify"
+                };
+            }
+        } else {
+            // Search Spotify
+            const searchResponse = await axios.get(`${API_BASE}/search/spotify?q=${encodeURIComponent(query)}`);
+            if (searchResponse.data?.status && searchResponse.data?.result?.length > 0) {
+                const track = searchResponse.data.result[0];
+                const dlResponse = await axios.get(`${API_BASE}/download/spotify?url=${encodeURIComponent(track.url)}`);
+                if (dlResponse.data?.status && dlResponse.data?.result?.track) {
+                    return {
+                        title: dlResponse.data.result.track.title,
+                        artist: dlResponse.data.result.track.artist,
+                        duration: dlResponse.data.result.track.duration,
+                        thumbnail: dlResponse.data.result.track.thumbnail,
+                        downloadUrl: dlResponse.data.result.track.downloadLink,
+                        source: "spotify"
                     };
                 }
             }
+        }
+    } catch (error) {
+        console.error("Spotify handler error:", error);
+        return null;
+    }
+    return null;
+}
 
-            const caption = `  
-╭═════════════════⊷
-║  🎵 *Music Downloader* 🎵
+async function handleSoundCloud(query) {
+    try {
+        // Check if it's a SoundCloud URL
+        if (query.match(/soundcloud\.com/)) {
+            const response = await axios.get(`${API_BASE}/download/soundcloud?url=${encodeURIComponent(query)}`);
+            if (response.data?.status && response.data?.result?.track) {
+                return {
+                    title: response.data.result.track.title,
+                    artist: response.data.result.track.artist,
+                    duration: response.data.result.track.audioInfo.duration,
+                    thumbnail: response.data.result.track.thumbnail,
+                    downloadUrl: response.data.result.track.downloadUrl,
+                    source: "soundcloud"
+                };
+            }
+        } else {
+            // Search SoundCloud
+            const searchResponse = await axios.get(`${API_BASE}/search/soundcloud?q=${encodeURIComponent(query)}`);
+            if (searchResponse.data?.status && searchResponse.data?.result?.result?.length > 0) {
+                const track = searchResponse.data.result.result[0];
+                const dlResponse = await axios.get(`${API_BASE}/download/soundcloud?url=${encodeURIComponent(track.url)}`);
+                if (dlResponse.data?.status && dlResponse.data?.result?.track) {
+                    return {
+                        title: dlResponse.data.result.track.title,
+                        artist: dlResponse.data.result.track.artist,
+                        duration: dlResponse.data.result.track.audioInfo.duration,
+                        thumbnail: dlResponse.data.result.track.thumbnail,
+                        downloadUrl: dlResponse.data.result.track.downloadUrl,
+                        source: "soundcloud"
+                    };
+                }
+            }
+        }
+    } catch (error) {
+        console.error("SoundCloud handler error:", error);
+        return null;
+    }
+    return null;
+}
+
+async function handleYouTube(query) {
+    try {
+        const search = await yts(query);
+        const video = search.all[0];
+        if (!video) return null;
+
+        // Try API download first
+        try {
+            const apiResponse = await axios.get(`${API_BASE}/download/dlmp3?url=${encodeURIComponent(video.url)}`);
+            if (apiResponse.data?.status && apiResponse.data?.result?.downloadUrl) {
+                return {
+                    title: video.title,
+                    artist: video.author.name,
+                    duration: video.timestamp,
+                    thumbnail: video.thumbnail,
+                    downloadUrl: apiResponse.data.result.downloadUrl,
+                    source: "youtube"
+                };
+            }
+        } catch (apiError) {
+            console.error("YouTube API download failed, falling back to ytdl:", apiError);
+        }
+
+        // Fallback to ytdl-core or other methods if needed
+        // (You would need to implement this part based on your available libraries)
+        // For now, we'll just return the basic info
+        return {
+            title: video.title,
+            artist: video.author.name,
+            duration: video.timestamp,
+            thumbnail: video.thumbnail,
+            url: video.url,
+            source: "youtube"
+        };
+    } catch (error) {
+        console.error("YouTube handler error:", error);
+        return null;
+    }
+}
+
+async function sendSongResponse(context, songData, source) {
+    const { client, m, sendReply } = context;
+    
+    try {
+        let caption = `╭═════════════════⊷
+║  🎵 *${source.toUpperCase()} Music Downloader* 🎵
 ║━━━━━━━━━━━━━━━━━
-║ *Title*: ${songData.title || video.title}
-║ *Duration*: ${songData.duration || video.timestamp}
-║ *Source*: ${songData.source || "YouTube"}
+║ *Title*: ${songData.title}
+║ *Artist*: ${songData.artist}
+║ *Duration*: ${songData.duration}
 ║━━━━━━━━━━━━━━━━━
 ║ 1. Audio (MP3)
 ║ 2. Document (MP3)
 ║ 3. Lyrics
 ╰═════════════════⊷`;
 
-            const thumbnailUrl = songData.thumbnail || video.thumbnail;
+        // Send the image and caption
+        const message = await client.sendMessage(m.chat, {
+            image: { url: songData.thumbnail },
+            caption: caption,
+        });
 
-            // Send the image and caption with a reply
-            const message = await client.sendMessage(m.chat, {
-                image: { url: thumbnailUrl },
-                caption: caption,
-            });
+        const messageId = message.key.id;
 
-            const messageId = message.key.id;
+        // Event listener for reply messages
+        client.ev.on("messages.upsert", async (update) => {
+            const messageContent = update.messages[0];
+            if (!messageContent.message) return;
 
-            // Event listener for reply messages
-            client.ev.on("messages.upsert", async (update) => {
-                const messageContent = update.messages[0];
-                if (!messageContent.message) return;
+            const responseText = messageContent.message.conversation || 
+                              messageContent.message.extendedTextMessage?.text;
+            const chatId = messageContent.key.remoteJid;
 
-                const responseText = messageContent.message.conversation || 
-                    messageContent.message.extendedTextMessage?.text;
-                const keith = messageContent.key.remoteJid;
+            // Check if the response is a reply to our message
+            const isReplyToMessage = messageContent.message.extendedTextMessage?.contextInfo.stanzaId === messageId;
 
-                // Check if the response is a reply to our message
-                const isReplyToMessage = messageContent.message.extendedTextMessage?.contextInfo.stanzaId === messageId;
+            if (isReplyToMessage) {
+                try {
+                    // React to the message
+                    await client.sendMessage(chatId, {
+                        react: { text: '⬇️', key: messageContent.key },
+                    });
 
-                if (isReplyToMessage) {
-                    try {
-                        // React to the message
-                        await client.sendMessage(keith, {
-                            react: { text: '⬇️', key: messageContent.key },
-                        });
-
-                        // Send the requested media based on the user's response
-                        if (responseText === '1') {
-                            await client.sendMessage(keith, {
-                                audio: { url: songData.downloadUrl },
-                                mimetype: "audio/mpeg",
-                            }, { quoted: messageContent });
-                        } else if (responseText === '2') {
-                            await client.sendMessage(keith, {
-                                document: { url: songData.downloadUrl },
-                                mimetype: "audio/mpeg",
-                                fileName: `${(songData.title || video.title).replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
-                            }, { quoted: messageContent });
-                        } else if (responseText === '3') {
-                            const lyricsData = await handleLyrics(songData.title || video.title);
-                            if (lyricsData && lyricsData.lyrics) {
-                                await client.sendMessage(keith, {
-                                    image: { url: lyricsData.thumbnail || thumbnailUrl },
-                                    caption: `📜 *Lyrics for ${lyricsData.title} by ${lyricsData.artist}* 📜\n\n${lyricsData.lyrics}`,
-                                }, { quoted: messageContent });
-                            } else {
-                                await client.sendMessage(keith, {
-                                    text: "Sorry, couldn't find lyrics for this song.",
-                                }, { quoted: messageContent });
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Error handling user response:", error);
-                        await client.sendMessage(keith, {
-                            text: "An error occurred while processing your request.",
+                    if (responseText === '1') {
+                        await client.sendMessage(chatId, {
+                            audio: { url: songData.downloadUrl },
+                            mimetype: "audio/mpeg",
+                            ptt: false,
+                        }, { quoted: messageContent });
+                    } else if (responseText === '2') {
+                        await client.sendMessage(chatId, {
+                            document: { url: songData.downloadUrl },
+                            mimetype: "audio/mpeg",
+                            fileName: `${songData.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
+                        }, { quoted: messageContent });
+                    } else if (responseText === '3') {
+                        const lyrics = await getLyrics(`${songData.title} ${songData.artist}`);
+                        await client.sendMessage(chatId, {
+                            image: { url: songData.thumbnail },
+                            caption: `📜 *Lyrics for ${songData.title} by ${songData.artist}* 📜\n\n${lyrics || "Lyrics not found"}`,
                         }, { quoted: messageContent });
                     }
+                } catch (error) {
+                    console.error("Error handling reply:", error);
+                    await client.sendMessage(chatId, {
+                        text: "❌ Failed to process your request. Please try again.",
+                    }, { quoted: messageContent });
                 }
-            });
-
-        } catch (error) {
-            console.error("Main error:", error);
-            sendReply(client, m, `Error: ${error.message}`);
-        }
-    } catch (outerError) {
-        console.error("Outer error:", outerError);
-    }
-});
-
-// Helper functions with fallback mechanisms
-async function handlePlaydl(url) {
-    try {
-        const response = await axios.get(`https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(url)}`);
-        if (response.data.status && response.data.result.downloadUrl) {
-            return {
-                ...response.data.result,
-                source: "YouTube"
-            };
-        }
-        throw new Error("Invalid response from YouTube download API");
+            }
+        });
     } catch (error) {
-        console.error("YouTube download error:", error);
+        console.error("Error sending song response:", error);
         throw error;
     }
 }
 
-async function handleSpotify(query) {
+async function getLyrics(query) {
     try {
-        const response = await axios.get(`https://apis-keith.vercel.app/download/spotify?q=${encodeURIComponent(query)}`);
-        if (response.data.status && response.data.result.track.downloadLink) {
-            return response.data;
+        const response = await axios.get(`${API_BASE}/search/lyrics?query=${encodeURIComponent(query)}`);
+        if (response.data?.status && response.data?.result?.length > 0) {
+            return response.data.result[0].lyrics;
         }
-        throw new Error("Invalid response from Spotify API");
+        return null;
     } catch (error) {
-        console.error("Spotify error:", error);
-        throw error;
-    }
-}
-
-async function handleSoundCloud(query) {
-    try {
-        // First search SoundCloud
-        const searchResponse = await axios.get(`https://apis-keith.vercel.app/search/soundcloud?q=${encodeURIComponent(query)}`);
-        
-        if (!searchResponse.data.status || !searchResponse.data.result.result || searchResponse.data.result.result.length === 0) {
-            throw new Error("No SoundCloud results found");
-        }
-        
-        // Get the first valid track with URL
-        const track = searchResponse.data.result.result.find(t => t.url);
-        if (!track) throw new Error("No valid SoundCloud track found");
-        
-        // Now download the track
-        const dlResponse = await axios.get(`https://apis-keith.vercel.app/download/soundcloud?url=${encodeURIComponent(track.url)}`);
-        
-        if (dlResponse.data.status && dlResponse.data.result.track.downloadUrl) {
-            return dlResponse.data;
-        }
-        throw new Error("Invalid response from SoundCloud download API");
-    } catch (error) {
-        console.error("SoundCloud error:", error);
-        throw error;
-    }
-}
-
-async function handleLyrics(query) {
-    try {
-        const response = await axios.get(`https://apis-keith.vercel.app/search/lyrics?query=${encodeURIComponent(query)}`);
-        
-        if (response.data.status && response.data.result && response.data.result.length > 0) {
-            // Return the first lyrics result
-            return response.data.result[0];
-        }
-        throw new Error("No lyrics found");
-    } catch (error) {
-        console.error("Lyrics error:", error);
-        throw error;
+        console.error("Lyrics search error:", error);
+        return null;
     }
 }
