@@ -10,48 +10,48 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, text, botname, sendReply, sendMediaMessage } = context;
+        const { client, m, text, botname, reply } = context;
 
         // Validate input
-        if (!text) return await sendReply(client, m, '🎵 Please provide a TikTok link\nExample: *tiktok https://vm.tiktok.com/...*');
-        if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) return await sendReply(client, m, '❌ Invalid TikTok link');
+        if (!text) return await reply('🎵 Please provide a TikTok link\nExample: *tiktok https://vm.tiktok.com/...*');
+        if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) return await reply('❌ Invalid TikTok link');
 
         // API endpoint
         const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl?url=${encodeURIComponent(text)}`;
 
-        // Fetch data from API
-        const response = await axios.get(apiUrl);
+        // Fetch data from API with timeout
+        const response = await axios.get(apiUrl, { timeout: 15000 });
         const data = response.data;
 
-        if (!data.status || !data.result) {
-            throw new Error('Invalid response from API');
+        if (!data?.status || !data?.result) {
+            throw new Error(data?.message || 'Invalid response from API');
         }
 
         const result = data.result;
 
-        // Build caption
+        // Build caption with Unicode characters
         const caption = `🎵 *TikTok Downloader* - ${botname}\n\n` +
                        `📌 *Title:* ${result.title || 'No title'}\n` +
-                       `📝 *Caption:* ${result.caption || 'No caption'}\n\n` +
-                       `_Powered by ${botname}_`;
+                       `📝 *Description:* ${result.caption || 'No description'}\n\n` +
+                       `_⚡ Powered by ${botname}_`;
 
         // Send video (using nowm link - no watermark)
-        await sendMediaMessage(client, m, {
+        await client.sendMessage(m.chat, {
             video: { url: result.nowm },
             caption: caption,
             gifPlayback: false
-        });
+        }, { quoted: m });
 
-        // Optionally send audio separately
+        // Optionally send audio separately if available
         if (result.mp3) {
-            await sendMediaMessage(client, m, {
+            await client.sendMessage(m.chat, {
                 audio: { url: result.mp3 },
                 mimetype: 'audio/mpeg'
-            });
+            }, { quoted: m });
         }
 
     } catch (error) {
         console.error('TikTok Download Error:', error);
-        await sendReply(client, m, `❌ Failed to download TikTok: ${error.message}`);
+        await reply(`❌ Failed to download TikTok: ${error.message}`);
     }
 });
