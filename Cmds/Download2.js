@@ -64,7 +64,6 @@ async function sendTikTokResponse(context, tiktokData) {
 ║━━━━━━━━━━━━━━━━━
 ║ *Title*: ${tiktokData.title}
 ║ *Quality*: ${tiktokData.format}
-║ *Source*: ${tiktokData.srcUrl}
 ║━━━━━━━━━━━━━━━━━
 ║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗕𝗘𝗟𝗢𝗪 𝗡𝗨𝗠𝗕𝗘𝗥𝗦
 ║ 1. Stream Video (MP4)
