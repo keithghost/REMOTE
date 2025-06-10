@@ -10,43 +10,62 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, text, botname, sendReply, sendMediaMessage } = context;
+        const { client, m, text, sendReply, sendMediaMessage } = context;
 
         // Validate input
-        if (!text) return await sendReply(client, m, '🎵 Please provide a TikTok link\nExample: *tiktok https://vm.tiktok.com/...*');
-        if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) return await sendReply(client, m, '❌ Invalid TikTok link');
+        if (!text) {
+            return await sendReply(
+                client, 
+                m, 
+                '🎵 Please provide a TikTok link\nExample: *tiktok https://vm.tiktok.com/...*'
+            );
+        }
+
+        if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) {
+            return await sendReply(client, m, '❌ Invalid TikTok link');
+        }
 
         // API endpoint
         const apiUrl = `https://bk9.fun/download/tiktok?url=${encodeURIComponent(text)}`;
 
-        // Fetch data from API
-        const response = await axios.get(apiUrl);
-        const data = response.data;
+        // Fetch data from API with timeout
+        const response = await axios.get(apiUrl, { timeout: 10000 });
+        const { data } = response;
 
-        if (!data.status || !data.BK9) {
+        if (!data?.status || !data?.BK9) {
             throw new Error('Invalid response from API');
         }
 
         const videoData = data.BK9;
+        
+        if (!videoData?.videoUrl) {
+            throw new Error('No video URL found in response');
+        }
 
         // Build detailed caption
-        const caption = `⬇️ *TikTok Downloader* - ${botname}\n\n` +
-                       `📌 *Description:* ${videoData.desc || 'No description'}\n` +
-                       `👤 *Author:* ${videoData.nickname || 'Unknown'}\n` +
-                       `🎶 *Music:* ${videoData.music_info?.title || 'No music info'}\n` +
-                       `❤️ *Likes:* ${videoData.likes_count?.toLocaleString() || '0'}\n` +
-                       `💬 *Comments:* ${videoData.comment_count?.toLocaleString() || '0'}\n\n` +
-                       `_Powered by @${data.owner}_`;
+        const caption = `
+╭═════════════════⊷
+║ *TikTok Downloader*
+║ *Description:* ${videoData.desc || 'No description'}
+║ *Author:* ${videoData.nickname || 'Unknown'}
+║ *Music:* ${videoData.music_info?.title || 'No music info'}
+║ *Likes:* ${videoData.likes_count?.toLocaleString() || '0'}
+║ *Comments:* ${videoData.comment_count?.toLocaleString() || '0'}
+╰═════════════════⊷`.trim();
 
         // Send video
         await sendMediaMessage(client, m, {
-            video: { url: videoData.BK9 }, // The video URL is in the BK9 property
+            video: { url: videoData.videoUrl },
             caption: caption,
             gifPlayback: false
         });
 
     } catch (error) {
         console.error('TikTok Download Error:', error);
-        await sendReply(client, m, `❌ Failed to download TikTok: ${error.message}\nPlease try again later or use a different link.`);
+        await sendReply(
+            client, 
+            m, 
+            `❌ Failed to download TikTok: ${error.message}\nPlease try again later or use a different link.`
+        );
     }
 });
