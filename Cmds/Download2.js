@@ -68,8 +68,8 @@ async function sendTikTokResponse(context, tiktokData) {
 ║━━━━━━━━━━━━━━━━━
 ║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗕𝗘𝗟𝗢𝗪 𝗡𝗨𝗠𝗕𝗘𝗥𝗦
 ║ 1. Stream Video (MP4)
-║ 2. Download Video (MP4)
-║ 3. Thumbnail (Image)
+║ 2. Download Video document 
+║ 3. tiktok audio
 ╰═════════════════⊷`;
 
         const message = await client.sendMessage(m.chat, {
@@ -113,8 +113,8 @@ async function sendTikTokResponse(context, tiktokData) {
                             
                         case '3': // Thumbnail (Image)
                             await client.sendMessage(chatId, {
-                                image: { url: tiktokData.thumbnail },
-                                caption: "TikTok Thumbnail"
+                                audio: { url: tiktokData.downloadUrl },
+                                mimetype: "audio/mp4",
                             }, { quoted: messageContent });
                             break;
                             
