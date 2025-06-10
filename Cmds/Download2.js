@@ -17,38 +17,33 @@ keith({
         if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) return await reply('❌ Invalid TikTok link');
 
         // API endpoint
-        const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl?url=${encodeURIComponent(text)}`;
+        const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(text)}`;
 
         // Fetch data from API with timeout
         const response = await axios.get(apiUrl, { timeout: 15000 });
         const data = response.data;
 
-        if (!data?.status || !data?.result) {
+        if (!data?.status || !data?.BK9) {
             throw new Error(data?.message || 'Invalid response from API');
         }
 
-        const result = data.result;
+        const result = data.BK9;
 
         // Build caption with Unicode characters
         const caption = `🎵 *TikTok Downloader* - ${botname}\n\n` +
-                       `📌 *Title:* ${result.title || 'No title'}\n` +
-                       `📝 *Description:* ${result.caption || 'No description'}\n\n` +
+                       `📌 *Author:* ${result.nickname || 'Unknown'}\n` +
+                       `📝 *Description:* ${result.desc || 'No description'}\n` +
+                       `❤️ *Likes:* ${result.likes_count?.toLocaleString() || '0'}\n` +
+                       `💬 *Comments:* ${result.comment_count?.toLocaleString() || '0'}\n` +
+                       `🎶 *Music:* ${result.music_info?.title || 'No music info'}\n\n` +
                        `_⚡ Powered by ${botname}_`;
 
-        // Send video (using nowm link - no watermark)
+        // Send video
         await client.sendMessage(m.chat, {
-            video: { url: result.nowm },
+            video: { url: result.BK9 },
             caption: caption,
             gifPlayback: false
         }, { quoted: m });
-
-        // Optionally send audio separately if available
-        if (result.mp3) {
-            await client.sendMessage(m.chat, {
-                audio: { url: result.mp3 },
-                mimetype: 'audio/mpeg'
-            }, { quoted: m });
-        }
 
     } catch (error) {
         console.error('TikTok Download Error:', error);
