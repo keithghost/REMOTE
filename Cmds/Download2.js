@@ -2,9 +2,9 @@ const { keith } = require('../commandHandler');
 const axios = require('axios');
 
 keith({
-    pattern: "tiktok2",
-    alias: ["tt2", "tiktokdl2"],
-    desc: "Download TikTok videos with quality options",
+    pattern: "tiktok",
+    alias: ["tt", "tiktokdl"],
+    desc: "Download TikTok videos",
     category: "Download",
     react: "⬇️",
     filename: __filename
@@ -31,19 +31,21 @@ keith({
     }
 });
 
-async function handleTikTok(url, format = '720p') {
+async function handleTikTok(url) {
     try {
-        const apiUrl = `https://ytdlp.giftedtech.web.id/api/ytmp4.php?url=${encodeURIComponent(url)}&format=${format}`;
-        const response = await axios.get(apiUrl, { timeout: 15000 });
+        const apiUrl = `https://ytdlp.giftedtech.web.id/api/ytmp4.php?url=${encodeURIComponent(url)}`;
+        const response = await axios.get(apiUrl, {
+            timeout: 15000
+        });
         
-        if (response.data?.status && response.data?.result) {
+        if (response.data?.status && response.data?.success) {
             return {
                 title: response.data.result.title || "TikTok Video",
-                thumbnail: response.data.result.thumbnail,
-                streamUrl: response.data.result.stream_url,
+                format: response.data.result.format || "Unknown",
+                videoUrl: response.data.result.stream_url,
                 downloadUrl: response.data.result.download_url,
-                info: response.data.result.info,
-                availableFormats: ['360p', '480p', '720p', '1080p', '2160p']
+                thumbnail: response.data.result.thumbnail,
+                srcUrl: response.data.result.src_url
             };
         }
         throw new Error("Invalid TikTok API response");
@@ -61,18 +63,14 @@ async function sendTikTokResponse(context, tiktokData) {
 ║  ⬇️ *TikTok Downloader* ⬇️
 ║━━━━━━━━━━━━━━━━━
 ║ *Title*: ${tiktokData.title}
+║ *Quality*: ${tiktokData.format}
+║ *Source*: ${tiktokData.srcUrl}
 ║━━━━━━━━━━━━━━━━━
-║ *Available Qualities*:
-║ 1. 360p
-║ 2. 480p
-║ 3. 720p (Default)
-║ 4. 1080p
-║ 5. 2160p (4K)
-║━━━━━━━━━━━━━━━━━
-║ *Info*: ${tiktokData.info}
-╰═════════════════⊷
-
-Reply with the quality number you want (1-5)`;
+║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗕𝗘𝗟𝗢𝗪 𝗡𝗨𝗠𝗕𝗘𝗥𝗦
+║ 1. Stream Video (MP4)
+║ 2. Download Video (MP4)
+║ 3. Thumbnail (Image)
+╰═════════════════⊷`;
 
         const message = await client.sendMessage(m.chat, {
             image: { url: tiktokData.thumbnail },
@@ -97,39 +95,38 @@ Reply with the quality number you want (1-5)`;
                         react: { text: '⬇️', key: messageContent.key }
                     });
 
-                    const qualityMap = {
-                        '1': '360p',
-                        '2': '480p',
-                        '3': '720p',
-                        '4': '1080p',
-                        '5': '2160p'
-                    };
-
-                    const selectedQuality = qualityMap[responseText];
-                    
-                    if (selectedQuality) {
-                        // Show "Processing" message
-                        await client.sendMessage(chatId, {
-                            text: `⬇️ Downloading video in ${selectedQuality} quality...`
-                        }, { quoted: messageContent });
-
-                        // Get the video in selected quality
-                        const qualityData = await handleTikTok(messageContent.message.extendedTextMessage.contextInfo.quotedMessage.conversation.match(/(https?:\/\/[^\s]+)/)[0], selectedQuality);
-                        
-                        // Send the video
-                        await client.sendMessage(chatId, {
-                            video: { url: qualityData.streamUrl },
-                            caption: `${qualityData.title} (${selectedQuality})`
-                        });
-                    } else {
-                        await client.sendMessage(chatId, {
-                            text: "❌ Invalid option selected. Please reply with a number between 1-5"
-                        }, { quoted: messageContent });
+                    switch (responseText) {
+                        case '1': // Stream Video (MP4)
+                            await client.sendMessage(chatId, {
+                                video: { url: tiktokData.videoUrl },
+                                caption: tiktokData.title
+                            }, { quoted: messageContent });
+                            break;
+                            
+                        case '2': // Download Video (MP4)
+                            await client.sendMessage(chatId, {
+                                document: { url: tiktokData.downloadUrl },
+                                mimetype: "video/mp4",
+                                fileName: `${tiktokData.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp4`
+                            }, { quoted: messageContent });
+                            break;
+                            
+                        case '3': // Thumbnail (Image)
+                            await client.sendMessage(chatId, {
+                                image: { url: tiktokData.thumbnail },
+                                caption: "TikTok Thumbnail"
+                            }, { quoted: messageContent });
+                            break;
+                            
+                        default:
+                            await client.sendMessage(chatId, {
+                                text: "❌ Invalid option selected"
+                            }, { quoted: messageContent });
                     }
                 } catch (error) {
                     console.error("TikTok reply handling error:", error);
                     await client.sendMessage(chatId, {
-                        text: "❌ Failed to process your TikTok download request. The video may not be available in the selected quality."
+                        text: "❌ Failed to process your TikTok download request"
                     }, { quoted: messageContent });
                 }
             }
@@ -139,71 +136,3 @@ Reply with the quality number you want (1-5)`;
         throw error;
     }
 }
-keith({
-    pattern: "tiktok",
-    alias: ["tt", "tiktokdl"],
-    desc: "Download TikTok videos with audio",
-    category: "Download",
-    react: "⬇️",
-    filename: __filename
-}, async (context) => {
-    try {
-        const { client, m, text, sendReply, sendMediaMessage } = context;
-
-        // Validate input
-        if (!text) {
-            return await sendReply(
-                client, 
-                m, 
-                '🎵 Please provide a TikTok link\nExample: *tiktok https://vm.tiktok.com/...*'
-            );
-        }
-
-        if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) {
-            return await sendReply(client, m, '❌ Invalid TikTok link');
-        }
-
-        // API endpoint
-        const apiUrl = `https://bk9.fun/download/tiktok?url=${encodeURIComponent(text)}`;
-
-        // Fetch data from API with timeout
-        const response = await axios.get(apiUrl, { timeout: 10000 });
-        const { data } = response;
-
-        if (!data?.status || !data?.BK9) {
-            throw new Error('Invalid response from API');
-        }
-
-        const videoData = data.BK9;
-        
-        if (!videoData?.videoUrl) {
-            throw new Error('No video URL found in response');
-        }
-
-        // Build detailed caption
-        const caption = `
-╭═════════════════⊷
-║ *TikTok Downloader*
-║ *Description:* ${videoData.desc || 'No description'}
-║ *Author:* ${videoData.nickname || 'Unknown'}
-║ *Music:* ${videoData.music_info?.title || 'No music info'}
-║ *Likes:* ${videoData.likes_count?.toLocaleString() || '0'}
-║ *Comments:* ${videoData.comment_count?.toLocaleString() || '0'}
-╰═════════════════⊷`.trim();
-
-        // Send video
-        await sendMediaMessage(client, m, {
-            video: { url: videoData.videoUrl },
-            caption: caption,
-            gifPlayback: false
-        });
-
-    } catch (error) {
-        console.error('TikTok Download Error:', error);
-        await sendReply(
-            client, 
-            m, 
-            `❌ Failed to download TikTok: ${error.message}\nPlease try again later or use a different link.`
-        );
-    }
-});
