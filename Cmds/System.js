@@ -2,6 +2,33 @@ const { keith } = require('../commandHandler');
 const speed = require("performance-now");
 
 keith({
+    pattern: "restart",
+    alias: ["reboot", "startbot"],
+    desc: "bot restart",
+    category: "System",
+    react: "🗿",
+    filename: __filename
+}, async (context) => {
+    const { reply, isOwner } = context;
+
+    if (!isOwner) {
+        return reply("You need owner privileges to execute this command!");
+    }
+
+    try {
+        await reply("*Restarting...*");
+
+        // Sleep function for delay
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        await sleep(3000); // Wait for 3 seconds before restarting
+
+        process.exit(0); // Exit gracefully
+    } catch (error) {
+        console.error("Error during restart:", error);
+    }
+});
+
+keith({
     pattern: "alive",
     alias: ["test", "testing"],
     desc: "bot test",
