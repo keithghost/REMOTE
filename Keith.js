@@ -242,6 +242,7 @@ async function startKeith() {
     // Message handler
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
+            const sender = m.sender;
             const mek = chatUpdate.messages[0];
             if (!mek.message) return;
             mek.message = mek.message.ephemeralMessage?.message || mek.message;
@@ -263,7 +264,7 @@ async function startKeith() {
             const Ghost3 = "254748387615";
             const Ghost4 = "254786989022";
             const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
-            const isOwner = superUserNumbers.includes(m.sender); 
+            
             const isBotMessage = m.sender === botNumber;  
             const itsMe = m.sender === botNumber;
             const text = args.join(" ");
@@ -298,6 +299,14 @@ async function startKeith() {
             const mime = quoted.mimetype || "";
             const qmsg = quoted;
             const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
+            const groupSender = m.isGroup && groupMetadata
+  ? (() => {
+      const found = groupMetadata.participants.find(p => 
+        p.id === sender || client.decodeJid(p.id) === client.decodeJid(sender)
+      );
+      return found?.pn || sender;
+    })()
+  : sender;
             const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
             const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
             const IsNewsletter = m.chat?.endsWith("@newsletter");
@@ -308,8 +317,9 @@ async function startKeith() {
             const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
             const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
             const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
+            const isOwner = superUserNumbers.includes(groupSender); 
             const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
-            const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
+            const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
              const reply = (teks) => {
       client.sendMessage(m.chat, { text: teks }, { quoted: mek });
     };
