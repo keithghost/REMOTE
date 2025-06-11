@@ -3,6 +3,100 @@ const axios = require('axios');
 const getFBInfo = require("@xaviabot/fb-downloader");
 
 keith({
+    pattern: "spotify",
+    alias: ["sp", "spotifydl"],
+    desc: "Download Spotify tracks",
+    category: "Download",
+    react: "🎵",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, botname, sendReply } = context;
+
+        // Validate input
+        if (!text) {
+            return await sendReply(client, m, 
+                '🎧 Please provide a Spotify track name or URL\n\n' +
+                'Examples:\n' +
+                '*spotify Spectre*\n' +
+                '*spotify https://open.spotify.com/track/4Nwrh5BlZ8I31znYQULS7G*'
+            );
+        }
+
+        // Show processing message
+        const processingMsg = await sendReply(client, m, '🔍 Searching Spotify...');
+
+        // Prepare query (URL or search term)
+        const query = text.includes('spotify.com') ? encodeURIComponent(text) : encodeURIComponent(text);
+        const apiUrl = `https://apis-keith.vercel.app/download/spotify?q=${query}`;
+
+        // Fetch track info with timeout
+        const response = await Promise.race([
+            axios.get(apiUrl, { timeout: 15000 }),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Spotify API timeout')), 20000)
+            )
+        ]);
+
+        if (!response.data?.status || !response.data?.result?.track?.downloadLink) {
+            throw new Error('No downloadable track found');
+        }
+
+        const track = response.data.result.track;
+
+        // Build caption
+        const caption = `╭═════════════════⊷
+║  🎵 *Spotify Downloader* 🎵
+║━━━━━━━━━━━━━━━━━
+║ *Title:* ${track.title}
+║ *Artist:* ${track.artist}
+║ *Duration:* ${track.duration}
+║ *Popularity:* ${track.popularity}
+║━━━━━━━━━━━━━━━━━
+║ Downloaded by ${botname}
+╰═════════════════⊷`;
+
+        // Delete processing message
+        await client.sendMessage(m.chat, { delete: processingMsg.key });
+
+        // Send audio file with metadata
+        await client.sendMessage(m.chat, {
+            audio: { url: track.downloadLink },
+            mimetype: 'audio/mpeg',
+            fileName: `${track.artist} - ${track.name}.mp3`.replace(/[^\w\s.-]/g, ''),
+            contextInfo: {
+                externalAdReply: {
+                    title: track.name,
+                    body: track.artist,
+                    thumbnailUrl: track.thumbnail,
+                    mediaType: 2,
+                    mediaUrl: track.url
+                }
+            },
+            caption: caption
+        });
+
+    } catch (error) {
+        console.error('Spotify Download Error:', error);
+        
+        let errorMessage;
+        if (error.message.includes('timeout')) {
+            errorMessage = '⌛ Server took too long to respond. Please try again later.';
+        } else if (error.message.includes('No downloadable track')) {
+            errorMessage = '❌ No downloadable track found. The song may not be available.';
+        } else {
+            errorMessage = `❌ Error: ${error.message}`;
+        }
+        
+        await sendReply(client, m, errorMessage);
+        
+        // Delete processing message if it exists
+        if (processingMsg) {
+            await client.sendMessage(m.chat, { delete: processingMsg.key });
+        }
+    }
+});
+keith({
     pattern: "facebook",
     alias: ["fb", "fbdl"],
     desc: "Download Facebook videos",
