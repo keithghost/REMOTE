@@ -1,10 +1,10 @@
 const { keith } = require('../commandHandler');
-const getFBInfo = require("@xaviabot/fb-downloader");
+const axios = require('axios');
 
 keith({
-    pattern: "facebook",
-    alias: ["fb", "fbdl"],
-    desc: "Download Facebook videos",
+    pattern: "twitter",
+    alias: ["tw", "twdl", "x"],
+    desc: "Download Twitter/X videos",
     category: "Download",
     react: "⬇️",
     filename: __filename
@@ -12,59 +12,66 @@ keith({
     try {
         const { client, m, text, sendReply } = context;
 
-        if (!text) return sendReply(client, m, "📘 Please provide a Facebook URL\nExample: *fb https://fb.watch/...*");
+        if (!text) return sendReply(client, m, "Please provide a Twitter URL to download");
         
-        const fbUrl = text.match(/(https?:\/\/)?(www\.)?(facebook\.com|fb\.watch)\/[^\s]+/i)?.[0];
-        if (!fbUrl) return sendReply(client, m, '❌ Invalid Facebook URL');
-
-        const fbData = await handleFacebook(fbUrl);
-        if (!fbData) {
-            return sendReply(client, m, "❌ Failed to download Facebook content");
+        // Validate Twitter URL
+        if (!text.match(/twitter\.com|x\.com/)) {
+            return sendReply(client, m, "❌ Please provide a valid Twitter URL");
         }
 
-        return await sendFacebookResponse(context, fbData);
+        const twitterData = await handleTwitter(text);
+        if (!twitterData) {
+            return sendReply(client, m, "❌ Failed to download Twitter content");
+        }
+
+        return await sendTwitterResponse(context, twitterData);
     } catch (error) {
-        console.error("Facebook error:", error);
+        console.error("Twitter error:", error);
         return sendReply(context.client, context.m, `❌ An error occurred: ${error.message}`);
     }
 });
 
-async function handleFacebook(url) {
+async function handleTwitter(url) {
     try {
-        const result = await getFBInfo(url);
-        if (!result?.hd && !result?.sd) {
-            throw new Error("No downloadable video found");
+        const apiUrl = `https://apis-keith.vercel.app/download/twitter?url=${encodeURIComponent(url)}`;
+        const response = await axios.get(apiUrl, {
+            timeout: 15000
+        });
+        
+        if (response.data?.status && response.data?.result) {
+            return {
+                description: response.data.result.desc || "Twitter Video",
+                thumbnail: response.data.result.thumb,
+                videoSD: response.data.result.video_sd,
+                videoHD: response.data.result.video_hd,
+                audio: response.data.result.audio
+            };
         }
-
-        return {
-            title: result.title || "Facebook Video",
-            hdUrl: result.hd,
-            sdUrl: result.sd || result.hd, // Fallback to HD if SD not available
-            thumbnail: result.thumbnail
-        };
+        throw new Error("Invalid Twitter API response");
     } catch (error) {
-        console.error("Facebook handler error:", error);
+        console.error("Twitter handler error:", error);
         throw error;
     }
 }
 
-async function sendFacebookResponse(context, fbData) {
+async function sendTwitterResponse(context, twitterData) {
     const { client, m } = context;
     
     try {
         const caption = `╭═════════════════⊷
-║  ⬇️ *Facebook Downloader* ⬇️
+║  ⬇️ *Twitter Downloader* ⬇️
 ║━━━━━━━━━━━━━━━━━
-║ *Title*: ${fbData.title}
+║ *Description*: ${twitterData.description}
 ║━━━━━━━━━━━━━━━━━
 ║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗕𝗘𝗟𝗢𝗪 𝗡𝗨𝗠𝗕𝗘𝗥𝗦
-║ 1. HD Quality (MP4)
-║ 2. SD Quality (MP4)
-║ 3. AUDIO
+║ 1. HD Quality Video (720p)
+║ 2. SD Quality Video (480p)
+║ 3. Audio Only
+║ 4. Thumbnail Image
 ╰═════════════════⊷`;
 
         const message = await client.sendMessage(m.chat, {
-            image: { url: fbData.thumbnail },
+            image: { url: twitterData.thumbnail },
             caption: caption
         });
 
@@ -87,24 +94,32 @@ async function sendFacebookResponse(context, fbData) {
                     });
 
                     switch (responseText) {
-                        case '1': // HD Quality
+                        case '1': // HD Video
                             await client.sendMessage(chatId, {
-                                video: { url: fbData.hdUrl },
-                                caption: fbData.title
+                                video: { url: twitterData.videoHD },
+                                caption: twitterData.description
                             }, { quoted: messageContent });
                             break;
                             
-                        case '2': // SD Quality
+                        case '2': // SD Video
                             await client.sendMessage(chatId, {
-                                video: { url: fbData.sdUrl },
-                                caption: fbData.title
+                                video: { url: twitterData.videoSD },
+                                caption: twitterData.description
                             }, { quoted: messageContent });
                             break;
                             
-                        case '3': // Thumbnail
+                        case '3': // Audio
                             await client.sendMessage(chatId, {
-                                audio: { url: fbData.sdUrl },
-                                mimetype: 'audio/mp4',
+                                audio: { url: twitterData.audio },
+                                mimetype: "audio/mp4",
+                                caption: "Audio from: " + twitterData.description
+                            }, { quoted: messageContent });
+                            break;
+                            
+                        case '4': // Thumbnail
+                            await client.sendMessage(chatId, {
+                                image: { url: twitterData.thumbnail },
+                                caption: "Thumbnail for: " + twitterData.description
                             }, { quoted: messageContent });
                             break;
                             
@@ -114,15 +129,15 @@ async function sendFacebookResponse(context, fbData) {
                             }, { quoted: messageContent });
                     }
                 } catch (error) {
-                    console.error("Facebook reply handling error:", error);
+                    console.error("Twitter reply handling error:", error);
                     await client.sendMessage(chatId, {
-                        text: "❌ Failed to process your Facebook download request"
+                        text: "❌ Failed to process your Twitter download request"
                     }, { quoted: messageContent });
                 }
             }
         });
     } catch (error) {
-        console.error("Facebook response sending error:", error);
+        console.error("Twitter response sending error:", error);
         throw error;
     }
 }
