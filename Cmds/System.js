@@ -5,6 +5,83 @@ const execAsync = util.promisify(require('child_process').exec);
 const fs = require('fs');
 const fsp = require('fs').promises;
 const path = require('path');
+const os = require('os');
+
+// Function to format bytes into human-readable form
+const formatSize = (bytes) => {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    if (bytes === 0) return '0 Byte';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+};
+
+keith({
+    pattern: "botstatus",
+    alias: ["status", "sysinfo"],
+    desc: "Display bot system information",
+    category: "System",
+    react: "📊",
+    filename: __filename
+}, async (context) => {
+    const { reply, isOwner } = context;
+
+    if (!isOwner) {
+        return reply("You need owner privileges to execute this command!");
+    }
+
+    const startTime = speed();
+
+    // Get system uptime in hours, minutes, seconds
+    const uptime = os.uptime();
+    const formattedUptime = `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`;
+
+    // Get RAM usage
+    const totalRam = os.totalmem();
+    const freeRam = os.freemem();
+    const usedRam = totalRam - freeRam;
+
+    // Get disk usage
+    let disk = { size: "N/A", free: "N/A" };
+    try {
+        const { stdout } = await execAsync('df -h --total | grep total');
+        const diskValues = stdout.trim().split(/\s+/);
+        disk.size = diskValues[1];
+        disk.free = diskValues[3];
+    } catch (error) {
+        console.error("Error fetching disk usage:", error);
+    }
+
+    // Network Usage (Downloaded/Uploaded)
+    let download = "N/A", upload = "N/A";
+    try {
+        const { stdout } = await execAsync("vnstat --oneline | awk -F';' '{print $4, $6}'");
+        const netValues = stdout.trim().split(" ");
+        download = netValues[0] || "N/A";
+        upload = netValues[1] || "N/A";
+    } catch (error) {
+        console.error("Error fetching network stats:", error);
+    }
+
+    // Calculate ping using performance-now
+    const endTime = speed();
+    const ping = `${(endTime - startTime).toFixed(2)} ms`;
+
+    // Bot system status message
+    const botStatus = `📊 *Bot Status* 📊
+🔸 *Ping:* ${ping}
+🔸 *Uptime:* ${formattedUptime}
+🔸 *RAM Usage:* ${formatSize(usedRam)} / ${formatSize(totalRam)}
+🔸 *Free RAM:* ${formatSize(freeRam)}
+🔸 *Disk Usage:* ${disk.size} / ${disk.free}
+🔸 *Free Disk:* ${disk.free}
+🔸 *Platform:* ${os.platform()}
+🔸 *NodeJS Version:* ${process.version}
+🔸 *CPU Model:* ${os.cpus()[0].model}
+🔸 *Downloaded:* ${download}
+🔸 *Uploaded:* ${upload}`;
+
+    await reply(botStatus);
+});
 
 keith({
     pattern: "disk",
