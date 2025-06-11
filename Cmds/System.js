@@ -2,6 +2,100 @@ const { keith } = require('../commandHandler');
 const speed = require("performance-now");
 const util = require('util');
 const execAsync = util.promisify(require('child_process').exec);
+const fs = require('fs');
+const fsp = require('fs').promises;
+const path = require('path');
+
+keith({
+    pattern: "listjunk",
+    alias: ["junklist", "showjunk"],
+    desc: "List junk files before deletion",
+    category: "System",
+    react: "📂",
+    filename: __filename
+}, async (context) => {
+    const { reply, isOwner } = context;
+
+    if (!isOwner) {
+        return reply("You need owner privileges to execute this command!");
+    }
+
+    await reply("Scanning for junk files...");
+
+    // Function to list junk files
+    const listJunkFiles = async (dir, filters, folderName) => {
+        try {
+            const files = await fsp.readdir(dir);
+            const junkFiles = files.filter(item => filters.some(filter => item.startsWith(filter) || item.endsWith(filter)));
+
+            if (junkFiles.length === 0) {
+                return reply(`*No junk files found in the ${folderName} folder!*`);
+            }
+
+            console.log(`Junk files in ${folderName}:`, junkFiles);
+            await reply(`*Junk files in the ${folderName} folder:*\n${junkFiles.join("\n")}`);
+
+        } catch (err) {
+            console.error(`Error scanning ${folderName} folder:`, err);
+            reply(`Unable to scan ${folderName} folder: ${err.message}`);
+        }
+    };
+
+    // Listing session junk files
+    await listJunkFiles("./session", ["pre-key", "sender-key", "session-", "app-state"], "session");
+
+    // Listing tmp junk files
+    const tmpDir = path.resolve("./tmp");
+    await listJunkFiles(tmpDir, ["gif", "png", "mp3", "mp4", "opus", "jpg", "webp", "webm", "zip"], "tmp");
+});
+
+keith({
+    pattern: "deljunk",
+    alias: ["deletejunk", "clearjunk"],
+    desc: "Clear junk files",
+    category: "System",
+    react: "🗑️",
+    filename: __filename
+}, async (context) => {
+    const { reply, isOwner } = context;
+
+    if (!isOwner) {
+        return reply("You need owner privileges to execute this command!");
+    }
+
+    await reply("Scanning for junk files...");
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Function to clean junk files from a directory
+    const cleanJunkFiles = async (dir, filters, folderName) => {
+        try {
+            const files = await fsp.readdir(dir);
+            const junkFiles = files.filter(item => filters.some(filter => item.startsWith(filter) || item.endsWith(filter)));
+
+            console.log(`${junkFiles.length} junk files found in ${folderName}`);
+            await sleep(2000);
+            reply(`*Clearing ${junkFiles.length} junk files in the ${folderName} folder...*`);
+
+            for (const file of junkFiles) {
+                await fsp.unlink(`${dir}/${file}`);
+            }
+
+            await sleep(2000);
+            reply(`*Successfully cleared all junk files in the ${folderName} folder!*`);
+        } catch (err) {
+            console.error(`Error scanning ${folderName} folder:`, err);
+            reply(`Unable to scan ${folderName} folder: ${err.message}`);
+        }
+    };
+
+    // Cleaning session junk
+    await cleanJunkFiles("./session", ["pre-key", "sender-key", "session-", "app-state"], "session");
+
+    // Cleaning tmp junk
+    const tmpDir = path.resolve("./tmp");
+    await cleanJunkFiles(tmpDir, ["gif", "png", "mp3", "mp4", "opus", "jpg", "webp", "webm", "zip"], "tmp");
+});
 
 keith({
     pattern: "disk",
