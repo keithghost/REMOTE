@@ -300,6 +300,16 @@ async function startKeith() {
             const sender = m.sender;
             const qmsg = quoted;
             const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
+            const participants = m.isGroup && groupMetadata
+  ? groupMetadata.participants
+      .filter(p => p.pn)
+      .map(p => p.pn)
+  : [];
+            const groupAdmin = m.isGroup
+  ? groupMetadata.participants
+      .filter(p => p.admin && p.pn)
+      .map(p => p.pn)
+  : [];
             const groupSender = m.isGroup && groupMetadata
   ? (() => {
       const found = groupMetadata.participants.find(p => 
@@ -316,8 +326,8 @@ async function startKeith() {
             const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
 
             const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-            const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
-            const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
+            //const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
+           // const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
             const isOwner = superUserNumbers.includes(groupSender); 
             const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
             const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
