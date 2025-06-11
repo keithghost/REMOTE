@@ -60,7 +60,7 @@ async function sendFacebookResponse(context, fbData) {
 ║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗕𝗘𝗟𝗢𝗪 𝗡𝗨𝗠𝗕𝗘𝗥𝗦
 ║ 1. HD Quality (MP4)
 ║ 2. SD Quality (MP4)
-║ 3. Video Thumbnail
+║ 3. AUDIO
 ╰═════════════════⊷`;
 
         const message = await client.sendMessage(m.chat, {
@@ -103,8 +103,8 @@ async function sendFacebookResponse(context, fbData) {
                             
                         case '3': // Thumbnail
                             await client.sendMessage(chatId, {
-                                image: { url: fbData.thumbnail },
-                                caption: `Thumbnail for: ${fbData.title}`
+                                audio: { url: fbData.sdUrl },
+                                mimetype: 'audio/mp4',
                             }, { quoted: messageContent });
                             break;
                             
