@@ -242,7 +242,7 @@ async function startKeith() {
     // Message handler
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
-            const sender = m.sender;
+            
             const mek = chatUpdate.messages[0];
             if (!mek.message) return;
             mek.message = mek.message.ephemeralMessage?.message || mek.message;
@@ -297,6 +297,7 @@ async function startKeith() {
             };
 
             const mime = quoted.mimetype || "";
+            const sender = m.sender;
             const qmsg = quoted;
             const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
             const groupSender = m.isGroup && groupMetadata
