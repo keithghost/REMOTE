@@ -7,6 +7,41 @@ const fsp = require('fs').promises;
 const path = require('path');
 
 keith({
+    pattern: "disk",
+    alias: ["storage", "space"],
+    desc: "Check disk usage",
+    category: "System",
+    react: "💾",
+    filename: __filename
+}, async (context) => {
+    const { reply, isOwner } = context;
+
+    if (!isOwner) {
+        return reply("You need owner privileges to execute this command!");
+    }
+
+    await reply("Checking disk usage, please wait...");
+
+    try {
+        const { stdout, stderr } = await execAsync('du -h --max-depth=1');
+
+        if (stdout.trim()) {
+            const lines = stdout.trim().split("\n");
+            const totalUsage = lines.pop(); // Last line contains total disk usage
+
+            await reply(`${lines.join("\n")}\n\n*Total Disk Usage:* ${totalUsage}`);
+        }
+
+        if (stderr.trim()) {
+            await reply(stderr);
+        }
+    } catch (error) {
+        console.error("Error executing disk command:", error);
+        await reply("An error occurred while checking disk usage.");
+    }
+});
+
+keith({
     pattern: "listjunk",
     alias: ["junklist", "showjunk"],
     desc: "List junk files before deletion",
@@ -97,37 +132,7 @@ keith({
     await cleanJunkFiles(tmpDir, ["gif", "png", "mp3", "mp4", "opus", "jpg", "webp", "webm", "zip"], "tmp");
 });
 
-keith({
-    pattern: "disk",
-    alias: ["storage", "space"],
-    desc: "Check disk usage",
-    category: "System",
-    react: "💾",
-    filename: __filename
-}, async (context) => {
-    const { reply, isOwner } = context;
 
-    if (!isOwner) {
-        return reply("You need owner privileges to execute this command!");
-    }
-
-    await reply("Checking disk usage, please wait...");
-
-    try {
-        const { stdout, stderr } = await execAsync('cd && du -h --max-depth=1');
-
-        if (stdout.trim()) {
-            reply(stdout);
-        }
-
-        if (stderr.trim()) {
-            reply(stderr);
-        }
-    } catch (error) {
-        console.error("Error executing disk command:", error);
-        reply("An error occurred while checking disk usage.");
-    }
-});
 
 keith({
     pattern: "restart",
