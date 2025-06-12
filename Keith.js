@@ -182,9 +182,14 @@ async function authenticationn() {
 // Command handler setup
 //========================================================================================================================
 const { keith, commands } = require('./commandHandler');
-const { prefix, dev, botname, author, mode, url } = require('./settings');
+const { dev, botname, author, mode, url } = require('./settings');
 //========================================================================================================================
 // Load all commands from the Commands directory
+//========================================================================================================================
+//prefix integration 
+//========================================================================================================================
+const { getPrefix } = require('./database/prefix');
+const prefix = await getPrefix();
 //========================================================================================================================
 function loadAllCommands() {
     const cmdsDir = path.join(__dirname, 'Cmds');
@@ -226,6 +231,7 @@ const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
 const { initModeDB } = require('./database/mode');
+const { initPrefixDB } = require('./database/prefix');
 
 //========================================================================================================================
 //========================================================================================================================
@@ -234,6 +240,7 @@ initAutoViewDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
 initModeDB().catch(console.error);
+initPrefixDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initPresenceDB().catch(console.error);
 initAntiBadDB().catch(console.error);
@@ -850,12 +857,12 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                 if (currentHour >= 18 && currentHour < 22) return "Good evening 🌆";
                 return "Good night 😴";
             };
-            const modeStatus = settings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
+           // const modeStatus = settings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
             
 
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
-                `║ ᴍᴏᴅᴇ ${modeStatus}\n` +
+                `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
                 `║ ʟɪʙʀᴀʀʏ Baileys\n` +
