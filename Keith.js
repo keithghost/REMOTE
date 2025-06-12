@@ -349,6 +349,57 @@ client.ev.on('call', async (callData) => {
             
             const m = smsg(client, mek, store);
             KeithLogger.logMessage(m);
+            //========================================================================================================================
+              // Status reaction handler
+//========================================================================================================================
+client.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const mek = messages[0];
+        if (!mek.key || mek.key.remoteJid !== 'status@broadcast') return;
+
+        const { getAutoLikeStatusSettings } = require('./database/autolikestatus');
+        const settings = await getAutoLikeStatusSettings();
+        
+        if (!settings.status || !settings.emojis || settings.emojis.length === 0) return;
+
+        const keithlike = await client.decodeJid(client.user.id);
+        const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
+
+        await client.sendMessage(mek.key.remoteJid, {
+            react: {
+                text: randomEmoji,
+                key: mek.key,
+            }
+        }, { statusJidList: [mek.key.participant, keithlike] });
+        
+        if (settings.delay > 0) {
+            await new Promise(resolve => setTimeout(resolve, settings.delay));
+        }
+    } catch (error) {
+        console.error('Error handling status reaction:', error);
+    }
+});
+            //========================================================================================================================
+            //========================================================================================================================
+              // Status view handler
+client.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const mek = messages[0];
+        if (!mek.key || mek.key.remoteJid !== 'status@broadcast') return;
+
+        const { getAutoViewSettings } = require('./database/autoview');
+        const settings = await getAutoViewSettings();
+        
+        if (settings.status) {
+            await client.readMessages([mek.key]);
+          //  console.log('Status automatically viewed');
+        }
+    } catch (error) {
+        console.error('Error handling status view:', error);
+    }
+});
+            //========================================================================================================================
+            //========================================================================================================================
 
             const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
