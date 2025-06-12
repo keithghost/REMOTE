@@ -1,3 +1,5 @@
+//========================================================================================================================
+//========================================================================================================================
 const fs = require('fs');
 const zlib = require('zlib');
 const { session } = require("./settings");
@@ -28,8 +30,9 @@ const { sendReply, sendMediaMessage } = require("./lib/context");
 const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
 const ytmp3 = require("./lib/ytmp3");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require("./lib/exif");
-
+//========================================================================================================================
 // Custom chalk colors
+//========================================================================================================================
 const keithPurple = chalk.hex('#A020F0');
 const keithBlue = chalk.hex('#1DA1F2');
 const keithPink = chalk.hex('#FF69B4');
@@ -38,8 +41,9 @@ const keithOrange = chalk.hex('#FFA500');
 const keithGold = chalk.hex('#FFD700');
 const keithRed = chalk.hex('#E74C3C');
 const keithYellow = chalk.hex('#F1C40F');
-
+//========================================================================================================================
 // Unicode symbols
+//========================================================================================================================
 const BOT_SYMBOL = '✦';
 const MESSAGE_SYMBOL = '✉';
 const USER_SYMBOL = '👤';
@@ -49,14 +53,16 @@ const CONTENT_SYMBOL = '📝';
 const ERROR_SYMBOL = '⚠️';
 const SUCCESS_SYMBOL = '✅';
 const WARNING_SYMBOL = '⚠️';
-
+//========================================================================================================================
 // Create logs directory if it doesn't exist
+//========================================================================================================================
 const logsDir = path.join(__dirname, 'logs');
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir);
 }
-
+//========================================================================================================================
 // Enhanced logger clas
+//========================================================================================================================
 class KeithLogger {
     static logMessage(m) {
         const verifGroupe = m.isGroup;
@@ -133,8 +139,9 @@ class KeithLogger {
         fs.appendFileSync(logFile, logEntry);
     }
 }
-
+//========================================================================================================================
 // Authentication function
+//========================================================================================================================
 async function authenticationn() {
     try {
         const credsPath = "./session/creds.json";
@@ -171,12 +178,14 @@ async function authenticationn() {
         return;
     }
 }
-
+//========================================================================================================================
 // Command handler setup
+//========================================================================================================================
 const { keith, commands } = require('./commandHandler');
 const { prefix, dev, botname, author, mode, url } = require('./settings');
-
+//========================================================================================================================
 // Load all commands from the Commands directory
+//========================================================================================================================
 function loadAllCommands() {
     const cmdsDir = path.join(__dirname, 'Cmds');
     
@@ -391,6 +400,8 @@ AutoBioDB.afterUpdate(async (instance) => {
 
 
             const IsGroup = m.chat?.endsWith("@g.us");
+            //========================================================================================================================
+            //========================================================================================================================
             if (!cmd) return;
 
             const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
@@ -410,6 +421,8 @@ AutoBioDB.afterUpdate(async (instance) => {
                             }
                         });
                     }
+                    //========================================================================================================================
+                    //========================================================================================================================
 
                     await commandHandler.function({
                         client,
@@ -501,8 +514,9 @@ AutoBioDB.afterUpdate(async (instance) => {
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
     client.ev.on("group-participants.update", (m) => groupEvents(client, m));
-
+//========================================================================================================================
     // Connection event handler
+//========================================================================================================================
     client.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         
@@ -527,7 +541,7 @@ AutoBioDB.afterUpdate(async (instance) => {
                 startKeith();
             }
         } else if (connection === "open") {
-            //await setupAutoBio(client);
+           
             await client.newsletterFollow("120363266249040649@newsletter");
 
             KeithLogger.success("Connected to Keith server");
@@ -554,8 +568,9 @@ AutoBioDB.afterUpdate(async (instance) => {
             KeithLogger.info(message);
         }
     });
-
+    //========================================================================================================================
     // Credentials update handler
+//========================================================================================================================
     client.ev.on("creds.update", saveCreds);
 
     client.downloadMediaMessage = async (message) => {
@@ -568,7 +583,8 @@ AutoBioDB.afterUpdate(async (instance) => {
         }
         return buffer;
     };
-
+    //========================================================================================================================
+//========================================================================================================================
     client.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
         const quoted = message.msg || message;
         const mime = (message.msg || message).mimetype || "";
@@ -583,16 +599,18 @@ AutoBioDB.afterUpdate(async (instance) => {
         await fs.writeFileSync(trueFileName, buffer);
         return trueFileName;
     };
-
+//========================================================================================================================
     // Start Express server
+//========================================================================================================================
     const app = express();
     const port = process.env.PORT || 10000;
 
     app.use(express.static("public"));
     app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
     app.listen(port, () => KeithLogger.info(`Server listening on port http://localhost:${port}`));
-
+//========================================================================================================================
     // Watch for file changes
+//========================================================================================================================
     let file = require.resolve(__filename);
     fs.watchFile(file, () => {
         fs.unwatchFile(file);
@@ -601,11 +619,13 @@ AutoBioDB.afterUpdate(async (instance) => {
         require(file);
     });
 }
-
+//========================================================================================================================
 // Start the bot
+//========================================================================================================================
 startKeith().catch(err => {
     KeithLogger.error("Failed to start bot", err);
     process.exit(1);
 });
 
 module.exports = startKeith;
+//========================================================================================================================
