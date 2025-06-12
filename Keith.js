@@ -400,7 +400,34 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 });
             //========================================================================================================================
             //========================================================================================================================
+              // Message read handler
+client.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const mek = messages[0];
+        if (!mek.key?.remoteJid) return;
 
+        const { getAutoReadSettings } = require('./database/autoread');
+        const settings = await getAutoReadSettings();
+        
+        if (!settings.status) return;
+
+        const isPrivate = mek.key.remoteJid.endsWith('@s.whatsapp.net');
+        const isGroup = mek.key.remoteJid.endsWith('@g.us');
+        
+        const shouldReadPrivate = settings.chatTypes.includes('private') && isPrivate;
+        const shouldReadGroup = settings.chatTypes.includes('group') && isGroup;
+
+        if (shouldReadPrivate || shouldReadGroup) {
+            await client.readMessages([mek.key]);
+            //console.log(`Message marked as read in ${isPrivate ? 'private' : 'group'} chat`);
+        }
+    } catch (error) {
+        console.error('Error handling auto-read:', error);
+    }
+});
+ //========================================================================================================================           
+    //========================================================================================================================        
+//========================================================================================================================
             const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
                 m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
