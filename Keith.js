@@ -283,7 +283,7 @@ async function setupAutoBio(client) {
         bioInterval = setInterval(async () => {
             try {
                 await client.updateProfileStatus(settings.message);
-                console.log('Auto-bio updated:', settings.message);
+                //console.log('Auto-bio updated:', settings.message);
             } catch (error) {
                 console.error('Error updating bio:', error);
             }
