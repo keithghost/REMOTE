@@ -682,9 +682,23 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 
             const IsGroup = m.chat?.endsWith("@g.us");
             //========================================================================================================================
+         //mode integration 
             //========================================================================================================================
-            if (!cmd) return;
+            if (!cmd){
+            // In your command handler (where you have the mode check)
 
+
+    const modeSettings = await getModeSettings();
+    if (modeSettings.mode === "private" && !itsMe && !isOwner && m.sender !== daddy) {
+        // Check if user is in allowed list
+        if (!modeSettings.allowedUsers.includes(m.sender)) {
+            return;
+        }
+    }
+}
+        
+//========================================================================================================================
+         
             const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
             
             const commandHandler = commands.find(cmd => 
@@ -839,7 +853,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
-                `║ ᴍᴏᴅᴇ ${mode}\n` +
+                `║ ᴍᴏᴅᴇ ${modeSettings}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
                 `║ ʟɪʙʀᴀʀʏ Baileys\n` +
