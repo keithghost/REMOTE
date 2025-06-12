@@ -8,47 +8,37 @@ const {
     addAllowedUser,
     removeAllowedUser
 } = require('../database/mode');
-
-const { getPrefix, setPrefix, DEFAULT_PREFIX } = require('../database/prefix');
+const { getPrefix, setPrefix } = require('../database/prefix');
 
 keith({
     pattern: "prefix",
     alias: ["setprefix"],
-    desc: "Change bot's command prefix",
+    desc: "Change the bot's command prefix",
     category: "Settings",
     react: "🔠",
     filename: __filename
 }, async (context) => {
     await ownerMiddleware(context, async () => {
-        const { args, reply } = context;
-        const currentPrefix = await getPrefix();
-        const newPrefix = args[0]?.trim();
+        const { args, prefix: currentPrefix, reply } = context;
+        const newPrefix = args[0];
 
         if (!newPrefix) {
-            return reply(
+            const current = await getPrefix();
+            return await reply(
                 `*🔠 Prefix Settings*\n\n` +
-                `Current prefix: *${currentPrefix}*\n` +
-                `Default prefix: *${DEFAULT_PREFIX}*\n\n` +
-                `Usage: *${currentPrefix}prefix <new_prefix>*\n` +
+                `Current prefix: *${current}*\n\n` +
+                `To change: *${currentPrefix}prefix <new_prefix>*\n` +
                 `Example: *${currentPrefix}prefix !*`
             );
         }
 
-        try {
-            const updatedPrefix = await setPrefix(newPrefix);
-            return reply(
-                `✅ Prefix updated successfully!\n\n` +
-                `Old prefix: *${currentPrefix}*\n` +
-                `New prefix: *${updatedPrefix}*\n\n` +
-                `Now try: *${updatedPrefix}ping*`
-            );
-        } catch (error) {
-            return reply(
-                `❌ Failed to update prefix!\n` +
-                `Reason: *${error.message}*\n\n` +
-                `Prefix must be 1-5 characters long.`
-            );
+        if (newPrefix.length > 5) {
+            return await reply('❌ Prefix must be 1-5 characters long');
         }
+
+        await setPrefix(newPrefix);
+        return await reply(`✅ Prefix changed to *${newPrefix}*\n\n` +
+                         `Now use commands like: *${newPrefix}ping*`);
     });
 });
 keith({
