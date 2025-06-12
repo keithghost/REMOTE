@@ -224,7 +224,6 @@ initAntiLinkDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initPresenceDB().catch(console.error);
 initAntiBadDB().catch(console.error);
-initAutoDownloadStatusDB().catch(console.error);
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
 //========================================================================================================================
