@@ -221,7 +221,6 @@ const { initAutoReadDB } = require('./database/autoread');
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
-initAntiDeleteDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initPresenceDB().catch(console.error);
 initAntiBadDB().catch(console.error);
