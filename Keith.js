@@ -225,7 +225,7 @@ const { initAutoViewDB } = require('./database/autoview');
 const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
-
+const { getModeSettings } = require('./database/mode');
 //========================================================================================================================
 //========================================================================================================================
 initAutoReadDB().catch(console.error);
