@@ -26,7 +26,7 @@ const { TelegraPh, UploadFileUgu } = require("./lib/toUrl");
 const uploadtoimgur = require("./lib/Imgur");
 
 const { sendReply, sendMediaMessage } = require("./lib/context");
-
+const daddy = "254748387615@s.whatsapp.net";
 const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
 const ytmp3 = require("./lib/ytmp3");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require("./lib/exif");
