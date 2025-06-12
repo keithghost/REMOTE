@@ -302,7 +302,44 @@ AutoBioDB.afterUpdate(async (instance) => {
 
  //========================================================================================================================
   //========================================================================================================================  
+    // Also call whenever settings change
+    
+    // Add this near your other event handlers
+let lastTextTime = 0;
+const messageDelay = 5000;
+
+client.ev.on('call', async (callData) => {
+    try {
+        const { getAntiCallSettings } = require('./database/anticall');
+        const settings = await getAntiCallSettings();
+        
+        if (settings.status) {
+            const callId = callData[0].id;
+            const callerId = callData[0].from;
+
+            if (settings.action === 'block') {
+                await client.updateBlockStatus(callerId, 'block');
+            } else {
+                await client.rejectCall(callId, callerId);
+            }
+
+            const currentTime = Date.now();
+            if (currentTime - lastTextTime >= messageDelay) {
+                await client.sendMessage(callerId, {
+                    text: settings.message
+                });
+                lastTextTime = currentTime;
+            } else {
+                console.log('Message skipped to prevent overflow');
+            }
+        }
+    } catch (error) {
+        console.error('Error handling call:', error);
+    }
+});
+    //========================================================================================================================
     // Message handler
+//========================================================================================================================
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             
