@@ -189,7 +189,11 @@ const { dev, botname, author, mode, url } = require('./settings');
 //prefix integration 
 //========================================================================================================================
 const { getPrefix } = require('./database/prefix');
-const prefix = await getPrefix();
+
+const prefixPromise = getPrefix(); // store the promise
+
+// When you need the value:
+const prefix = await prefixPromise;
 //========================================================================================================================
 function loadAllCommands() {
     const cmdsDir = path.join(__dirname, 'Cmds');
