@@ -2,7 +2,94 @@
 const { keith } = require('../commandHandler');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { getAntiDeleteSettings, updateAntiDeleteSettings } = require('../database/antidelete');
+const { 
+    getModeSettings, 
+    updateModeSettings,
+    addAllowedUser,
+    removeAllowedUser
+} = require('../database/mode');
 
+keith({
+    pattern: "mode",
+    alias: ["botmode", "setmode"],
+    desc: "Manage bot mode (public/private)",
+    category: "Settings",
+    react: "🔒",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply, sender, mentionByTag } = context;
+        const subcommand = args[0]?.toLowerCase();
+        const value = args[1]?.toLowerCase();
+
+        const settings = await getModeSettings();
+
+        if (!subcommand) {
+            // Show current mode
+            const modeStatus = settings.mode === 'private' ? '🔒 PRIVATE' : '🌍 PUBLIC';
+            const allowedCount = settings.allowedUsers.length;
+            
+            return await reply(
+                `*🔒 Bot Mode Settings*\n\n` +
+                `🔹 *Current Mode:* ${modeStatus}\n` +
+                `🔹 *Allowed Users:* ${allowedCount}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}mode public* - Set bot to public mode\n` +
+                `▸ *${prefix}mode private* - Set bot to private mode\n` +
+                `▸ *${prefix}mode allow @user* - Allow user in private mode\n` +
+                `▸ *${prefix}mode disallow @user* - Remove user access\n\n` +
+                `*💡 Mode Differences:*\n` +
+                `🌍 Public: Anyone can use commands\n` +
+                `🔒 Private: Only owner & allowed users can use commands`
+            );
+        }
+
+        switch (subcommand) {
+            case 'public':
+            case 'private': {
+                if (settings.mode === subcommand) {
+                    return await reply(`⚠️ Bot is already in ${subcommand} mode.`);
+                }
+                await updateModeSettings({ mode: subcommand });
+                return await reply(`✅ Bot mode changed to *${subcommand}*`);
+            }
+
+            case 'allow': {
+                if (settings.mode !== 'private') {
+                    return await reply('⚠️ Bot must be in private mode to manage allowed users.');
+                }
+                const userToAdd = mentionByTag[0] || value;
+                if (!userToAdd) {
+                    return await reply('❌ Please mention or provide the user ID to allow.');
+                }
+                await addAllowedUser(userToAdd);
+                return await reply(`✅ User ${userToAdd} added to allowed list.`);
+            }
+
+            case 'disallow':
+            case 'remove': {
+                if (settings.mode !== 'private') {
+                    return await reply('⚠️ Bot must be in private mode to manage allowed users.');
+                }
+                const userToRemove = mentionByTag[0] || value;
+                if (!userToRemove) {
+                    return await reply('❌ Please mention or provide the user ID to remove.');
+                }
+                await removeAllowedUser(userToRemove);
+                return await reply(`✅ User ${userToRemove} removed from allowed list.`);
+            }
+
+            default:
+                return await reply(
+                    '❌ Invalid subcommand. Available options:\n\n' +
+                    `▸ *${prefix}mode public*\n` +
+                    `▸ *${prefix}mode private*\n` +
+                    `▸ *${prefix}mode allow @user*\n` +
+                    `▸ *${prefix}mode disallow @user*`
+                );
+        }
+    });
+});
 keith({
     pattern: "antidelete",
     alias: ["deleteset", "antideletesetting"],
