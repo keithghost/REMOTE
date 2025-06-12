@@ -39,7 +39,7 @@ const keithGold = chalk.hex('#FFD700');
 const keithRed = chalk.hex('#E74C3C');
 const keithYellow = chalk.hex('#F1C40F');
 
-// Unicode symbol
+// Unicode symbols
 const BOT_SYMBOL = '✦';
 const MESSAGE_SYMBOL = '✉';
 const USER_SYMBOL = '👤';
