@@ -190,10 +190,14 @@ const { dev, botname, author, mode, url } = require('./settings');
 //========================================================================================================================
 const { getPrefix } = require('./database/prefix');
 
-const prefixPromise = getPrefix(); // store the promise
+let prefix; 
 
-// When you need the value:
-const prefix = await prefixPromise;
+(async () => {
+    prefix = await getPrefix(); 
+   
+})();
+
+// Note: Any code using `prefix` needs to wait for the async assignment
 //========================================================================================================================
 function loadAllCommands() {
     const cmdsDir = path.join(__dirname, 'Cmds');
