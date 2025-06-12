@@ -56,7 +56,7 @@ if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir);
 }
 
-// Enhanced logger class
+// Enhanced logger clas
 class KeithLogger {
     static logMessage(m) {
         const verifGroupe = m.isGroup;
