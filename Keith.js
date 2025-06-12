@@ -201,9 +201,37 @@ function loadAllCommands() {
     }
     
     loadCommandsFromDirectory(cmdsDir);
+    
     KeithLogger.success(`Successfully loaded ${commands.length} commands`);
 }
-
+//========================================================================================================================
+//========================================================================================================================
+const { initAntiCallDB } = require('./database/anticall');
+const { initAutoBioDB } = require('./database/autobio');
+const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
+const { initAntiLinkDB } = require('./database/antilink');
+const { initAutoLikeStatusDB } = require('./database/autolikestatus');
+const { initAntiBadDB } = require('./database/antibad');
+const { initAutoViewDB } = require('./database/autoview');
+const { initAntiDeleteDB } = require('./database/antidelete');
+const { initPresenceDB } = require('./database/presence');
+const { initGroupDB } = require('./database/group');
+const { cleanupOldMessages } = require('./utility/messageStorage');
+const { initAutoReadDB } = require('./database/autoread');
+//========================================================================================================================
+//========================================================================================================================
+initAutoReadDB().catch(console.error);
+initAutoViewDB().catch(console.error);
+initAntiLinkDB().catch(console.error);
+initAntiDeleteDB().catch(console.error);
+initAutoLikeStatusDB().catch(console.error);
+initPresenceDB().catch(console.error);
+initAntiBadDB().catch(console.error);
+initAutoDownloadStatusDB().catch(console.error);
+initAutoBioDB().catch(console.error);
+initAntiCallDB().catch(console.error);
+//========================================================================================================================
+//========================================================================================================================
 // Main bot function
 async function startKeith() {
     await authenticationn();
@@ -236,10 +264,43 @@ async function startKeith() {
     });
 
     store.bind(client.ev);
+    //========================================================================================================================
+   //========================================================================================================================
+     // Auto-bio handler
+let bioInterval;
+async function setupAutoBio(client) {
+    const { getAutoBioSettings } = require('./database/autobio');
+    const settings = await getAutoBioSettings();
+    
+    if (bioInterval) clearInterval(bioInterval);
+    
+    if (settings.status) {
+        bioInterval = setInterval(async () => {
+            try {
+                await client.updateProfileStatus(settings.message);
+                console.log('Auto-bio updated:', settings.message);
+            } catch (error) {
+                console.error('Error updating bio:', error);
+            }
+        }, settings.interval * 1000);
+    }
+}
 
+// Initialize auto-bio on startup
+setupAutoBio(client).catch(console.error);
+
+// Listen for changes in auto-bio settings
+const { AutoBioDB } = require('./database/autobio');
+AutoBioDB.afterUpdate(async (instance) => {
+    await setupAutoBio(client);
+});
+
+ //========================================================================================================================
+  //========================================================================================================================  
     // Message handler
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
+            
             const mek = chatUpdate.messages[0];
             if (!mek.message) return;
             mek.message = mek.message.ephemeralMessage?.message || mek.message;
@@ -260,17 +321,7 @@ async function startKeith() {
             const Ghost2 = "254110190196";
             const Ghost3 = "254748387615";
             const Ghost4 = "254786989022";
-            
-            // Clean and normalize numbers
-            const cleanNumber = (num) => num.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
-            const superUserNumbers = [
-                servBot, 
-                Ghost, 
-                Ghost2, 
-                Ghost3, 
-                Ghost4, 
-                dev
-            ].map(cleanNumber);
+            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
             
             const isBotMessage = m.sender === botNumber;  
             const itsMe = m.sender === botNumber;
@@ -288,11 +339,10 @@ async function startKeith() {
             const getGroupAdmins = (participants) => {
                 let admins = [];
                 for (let i of participants) {
-                    if (i.admin === "superadmin" || i.admin === "admin") {
-                        admins.push(i.id);
-                    }
+                    if (i.admin === "superadmin") admins.push(i.id);
+                    if (i.admin === "admin") admins.push(i.id);
                 }
-                return admins;
+                return admins || [];
             };
 
             const keizzah = m.quoted || m;
@@ -307,22 +357,42 @@ async function startKeith() {
             const mime = quoted.mimetype || "";
             const sender = m.sender;
             const qmsg = quoted;
-            const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => null) : null;
-            
-            // Fixed participant and admin handling
-            const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
-            const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-            
-            const groupSender = m.isGroup ? m.sender : sender;
-            
-            // Fixed isOwner detection
-            const isOwner = superUserNumbers.includes(groupSender);
+            const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
+            const participants = m.isGroup && groupMetadata
+  ? groupMetadata.participants
+      .filter(p => p.pn)
+      .map(p => p.pn)
+  : [];
+            const groupAdmin = m.isGroup
+  ? groupMetadata.participants
+      .filter(p => p.admin && p.pn)
+      .map(p => p.pn)
+  : [];
+            const groupSender = m.isGroup && groupMetadata
+  ? (() => {
+      const found = groupMetadata.participants.find(p => 
+        p.id === sender || client.decodeJid(p.id) === client.decodeJid(sender)
+      );
+      return found?.pn || sender;
+    })()
+  : sender;
+            const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
+            const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
+            const IsNewsletter = m.chat?.endsWith("@newsletter");
+            const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
+            const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
+            const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
+
+            const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
+            //const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
+           // const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
+            const isOwner = superUserNumbers.includes(groupSender); 
             const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
             const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
-            
-            const reply = (teks) => {
-                client.sendMessage(m.chat, { text: teks }, { quoted: mek });
-            };
+             const reply = (teks) => {
+      client.sendMessage(m.chat, { text: teks }, { quoted: mek });
+    };
+
 
             const IsGroup = m.chat?.endsWith("@g.us");
             if (!cmd) return;
@@ -353,9 +423,11 @@ async function startKeith() {
                         searchYouTube, 
                         searchSoundCloud, 
                         searchSpotify, 
-                        subscribers: [], 
+                        subscribers, 
                         fetchLogoUrl, 
-                        
+                        newsletterMetadata, 
+                        isNewsletterAdmin, 
+                        isNewsletterBotAdmin, 
                         isOwner, 
                         fetchJson, 
                         exec,
@@ -381,7 +453,7 @@ async function startKeith() {
                         prefix, 
                         groupAdmin, 
                         getGroupAdmins, 
-                        groupName: m.isGroup && groupMetadata ? groupMetadata.subject : "", 
+                        groupName, 
                         groupMetadata, 
                         participants, 
                         pushname, 
@@ -459,6 +531,7 @@ async function startKeith() {
                 startKeith();
             }
         } else if (connection === "open") {
+            //await setupAutoBio(client);
             await client.newsletterFollow("120363266249040649@newsletter");
 
             KeithLogger.success("Connected to Keith server");
