@@ -836,6 +836,9 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                 startKeith();
             }
         } else if (connection === "open") {
+                  const modeSettings = await getModeSettings();
+            const modeDisplay = modeSettings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
+            
            
             await client.newsletterFollow("120363266249040649@newsletter");
 
@@ -853,7 +856,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
-                `║ ᴍᴏᴅᴇ ${modeSettings}\n` +
+                `║ ᴍᴏᴅᴇ ${modeDisplay}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
                 `║ ʟɪʙʀᴀʀʏ Baileys\n` +
