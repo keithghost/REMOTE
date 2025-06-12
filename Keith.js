@@ -836,10 +836,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                 startKeith();
             }
         } else if (connection === "open") {
-                  const modeSettings = await getModeSettings();
-            const modeDisplay = modeSettings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
-            
-           
+                  
             await client.newsletterFollow("120363266249040649@newsletter");
 
             KeithLogger.success("Connected to Keith server");
@@ -853,10 +850,12 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                 if (currentHour >= 18 && currentHour < 22) return "Good evening 🌆";
                 return "Good night 😴";
             };
+            const modeStatus = settings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
+            
 
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
-                `║ ᴍᴏᴅᴇ ${modeDisplay}\n` +
+                `║ ᴍᴏᴅᴇ ${modeStatus}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
                 `║ ʟɪʙʀᴀʀʏ Baileys\n` +
