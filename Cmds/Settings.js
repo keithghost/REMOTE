@@ -5,6 +5,94 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { getAntiCallSettings, updateAntiCallSettings } = require('../database/anticall');
 const { getAutoLikeStatusSettings, updateAutoLikeStatusSettings } = require('../database/autolikestatus');
 const { getAutoViewSettings, updateAutoViewSettings } = require('../database/autoview');
+const { getAutoReadSettings, updateAutoReadSettings } = require('../database/autoread');
+//========================================================================================================================
+//========================================================================================================================
+keith({
+    pattern: "autoread",
+    alias: ["readmessages", "setread"],
+    desc: "Manage auto-read settings",
+    category: "Settings",
+    react: "👓",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const subcommand = args[0]?.toLowerCase();
+        const value = args.slice(1).join(" ");
+
+        const settings = await getAutoReadSettings();
+
+        if (!subcommand) {
+            // Show current settings
+            const status = settings.status ? '✅ ON' : '❌ OFF';
+            const types = settings.chatTypes.length > 0 ? settings.chatTypes.join(', ') : '*No types set*';
+
+            return await reply(
+                `*👓 Auto-Read Settings*\n\n` +
+                `🔹 *Status:* ${status}\n` +
+                `🔹 *Chat Types:* ${types}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}autoread on/off* - Toggle auto-read\n` +
+                `▸ *${prefix}autoread types <private/group/both>* - Set chat types\n` +
+                `▸ *${prefix}autoread addtype <type>* - Add chat type\n` +
+                `▸ *${prefix}autoread removetype <type>* - Remove chat type`
+            );
+        }
+
+        switch (subcommand) {
+            case 'on':
+            case 'off': {
+                const newStatus = subcommand === 'on';
+                await updateAutoReadSettings({ status: newStatus });
+                return await reply(`✅ Auto-read has been ${newStatus ? 'enabled' : 'disabled'}.`);
+            }
+
+            case 'types': {
+                if (!['private', 'group', 'both'].includes(value)) {
+                    return await reply('❌ Invalid type. Use "private", "group", or "both".');
+                }
+                const types = value === 'both' ? ['private', 'group'] : [value];
+                await updateAutoReadSettings({ chatTypes: types });
+                return await reply(`✅ Auto-read set for: ${types.join(', ')}`);
+            }
+
+            case 'addtype': {
+                if (!['private', 'group'].includes(value)) {
+                    return await reply('❌ Invalid type. Use "private" or "group".');
+                }
+                if (settings.chatTypes.includes(value)) {
+                    return await reply(`⚠️ Type ${value} is already included.`);
+                }
+                const updatedTypesAdd = [...settings.chatTypes, value];
+                await updateAutoReadSettings({ chatTypes: updatedTypesAdd });
+                return await reply(`✅ Added ${value} to auto-read types.`);
+            }
+
+            case 'removetype': {
+                if (!['private', 'group'].includes(value)) {
+                    return await reply('❌ Invalid type. Use "private" or "group".');
+                }
+                if (!settings.chatTypes.includes(value)) {
+                    return await reply(`⚠️ Type ${value} is not currently included.`);
+                }
+                const updatedTypesRemove = settings.chatTypes.filter(t => t !== value);
+                await updateAutoReadSettings({ chatTypes: updatedTypesRemove });
+                return await reply(`✅ Removed ${value} from auto-read types.`);
+            }
+
+            default:
+                return await reply(
+                    '❌ Invalid command. Available options:\n\n' +
+                    `▸ *${prefix}autoread on/off*\n` +
+                    `▸ *${prefix}autoread types <private/group/both>*\n` +
+                    `▸ *${prefix}autoread addtype <type>*\n` +
+                    `▸ *${prefix}autoread removetype <type>*`
+                );
+        }
+    });
+});
+
 //========================================================================================================================
 //========================================================================================================================
 keith({
