@@ -3,6 +3,144 @@ const { keith } = require('../commandHandler');
 const { getAutoBioSettings, updateAutoBioSettings } = require('../database/autobio');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { getAntiCallSettings, updateAntiCallSettings } = require('../database/anticall');
+const { getAutoLikeStatusSettings, updateAutoLikeStatusSettings } = require('../database/autolikestatus');
+const { getAutoViewSettings, updateAutoViewSettings } = require('../database/autoview');
+//========================================================================================================================
+//========================================================================================================================
+keith({
+    pattern: "autoview",
+    alias: ["viewstatus", "statusview"],
+    desc: "Manage auto-view settings",
+    category: "Settings",
+    react: "👀",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const subcommand = args[0]?.toLowerCase();
+
+        const settings = await getAutoViewSettings();
+
+        if (!subcommand) {
+            // Show current settings
+            const status = settings.status ? '✅ ON' : '❌ OFF';
+
+            return await reply(
+                `*👀 Auto-View Status Settings*\n\n` +
+                `🔹 *Status:* ${status}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}autoview on* - Enable auto-view\n` +
+                `▸ *${prefix}autoview off* - Disable auto-view`
+            );
+        }
+
+        switch (subcommand) {
+            case 'on': {
+                if (settings.status) {
+                    return await reply('⚠️ Auto-view is already enabled.');
+                }
+                await updateAutoViewSettings({ status: true });
+                return await reply('✅ Auto-view has been enabled. The bot will now automatically view statuses.');
+            }
+
+            case 'off': {
+                if (!settings.status) {
+                    return await reply('⚠️ Auto-view is already disabled.');
+                }
+                await updateAutoViewSettings({ status: false });
+                return await reply('✅ Auto-view has been disabled.');
+            }
+
+            default:
+                return await reply(
+                    '❌ Invalid command. Available options:\n\n' +
+                    `▸ *${prefix}autoview on*\n` +
+                    `▸ *${prefix}autoview off*`
+                );
+        }
+    });
+});
+
+//========================================================================================================================
+//========================================================================================================================
+keith({
+    pattern: "autolikestatus",
+    alias: ["autolike", "setlike"],
+    desc: "Manage auto-like settings",
+    category: "Settings",
+    react: "❤️",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const subcommand = args[0]?.toLowerCase();
+        const value = args.slice(1).join(" ");
+
+        const settings = await getAutoLikeStatusSettings();
+
+        if (!subcommand) {
+            // Show current settings
+            const status = settings.status ? '✅ ON' : '❌ OFF';
+            const emojiList = settings.emojis.length > 0 ? settings.emojis.join(' ') : '*No emojis set*';
+
+            return await reply(
+                `*❤️ Auto-Like Status Settings*\n\n` +
+                `🔹 *Status:* ${status}\n` +
+                `🔹 *Reaction Delay:* ${settings.delay}ms\n` +
+                `🔹 *Emojis:* ${emojiList}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}autolikestatus on/off* - Toggle auto-like\n` +
+                `▸ *${prefix}autolikestatus delay <ms>* - Set reaction delay\n` +
+                `▸ *${prefix}autolikestatus emojis 😂 😉 💔* - Set custom emojis\n` +
+                `▸ *${prefix}autolikestatus resetemojis* - Reset to default emojis`
+            );
+        }
+
+        switch (subcommand) {
+            case 'on':
+            case 'off': {
+                const newStatus = subcommand === 'on';
+                if (settings.status === newStatus) {
+                    return await reply(`⚠️ Auto-like is already ${newStatus ? 'enabled' : 'disabled'}.`);
+                }
+                await updateAutoLikeStatusSettings({ status: newStatus });
+                return await reply(`✅ Auto-like has been ${newStatus ? 'enabled' : 'disabled'}.`);
+            }
+
+            case 'delay': {
+                const delay = parseInt(value);
+                if (isNaN(delay)) return await reply('❌ Please provide a valid number.');
+                if (delay < 1000) return await reply('❌ Minimum delay is 1000ms.');
+                await updateAutoLikeStatusSettings({ delay });
+                return await reply(`✅ Reaction delay set to: ${delay}ms`);
+            }
+
+            case 'emojis': {
+                if (!value) return await reply('❌ Please provide at least one emoji.');
+                const emojis = args.slice(1).filter(e => e.trim());
+                if (emojis.length === 0) return await reply('❌ No valid emojis provided.');
+                await updateAutoLikeStatusSettings({ emojis });
+                return await reply(`✅ Emoji list updated to:\n\n${emojis.join(' ')}`);
+            }
+
+            case 'resetemojis': {
+                const defaultEmojis = ['😂', '😥', '😇', '🥹', '💥', '💯', '🔥', '💫', '👽', '💗', '❤️‍🔥', '👁️', '👀', '🙌', '🙆', '🌟', '💧', '🎇', '🎆', '♂️', '✅'];
+                await updateAutoLikeStatusSettings({ emojis: defaultEmojis });
+                return await reply(`✅ Emoji list reset to default:\n\n${defaultEmojis.join(' ')}`);
+            }
+
+            default:
+                return await reply(
+                    '❌ Invalid subcommand. Available options:\n\n' +
+                    `▸ *${prefix}autolikestatus on/off*\n` +
+                    `▸ *${prefix}autolikestatus delay <ms>*\n` +
+                    `▸ *${prefix}autolikestatus emojis 😂 😉 💔*\n` +
+                    `▸ *${prefix}autolikestatus resetemojis*`
+                );
+        }
+    });
+});
+
 //========================================================================================================================
 //========================================================================================================================
 keith({
