@@ -225,13 +225,15 @@ const { initAutoViewDB } = require('./database/autoview');
 const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
-const { getModeSettings } = require('./database/mode');
+const { initModeDB } = require('./database/mode');
+
 //========================================================================================================================
 //========================================================================================================================
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
+initModeDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initPresenceDB().catch(console.error);
 initAntiBadDB().catch(console.error);
@@ -684,10 +686,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
             //========================================================================================================================
          //mode integration 
             //========================================================================================================================
-            if (!cmd){
-            // In your command handler (where you have the mode check)
-
-
+    const { getModeSettings } = require('./database/mode');       
+ if (!cmd){
     const modeSettings = await getModeSettings();
     if (modeSettings.mode === "private" && !itsMe && !isOwner && m.sender !== daddy) {
         // Check if user is in allowed list
