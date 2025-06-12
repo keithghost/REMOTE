@@ -222,7 +222,6 @@ const { initAntiLinkDB } = require('./database/antilink');
 const { initAutoLikeStatusDB } = require('./database/autolikestatus');
 const { initAntiBadDB } = require('./database/antibad');
 const { initAutoViewDB } = require('./database/autoview');
-const { initAntiDeleteDB } = require('./database/antidelete');
 const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
