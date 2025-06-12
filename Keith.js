@@ -215,7 +215,6 @@ const { initAntiBadDB } = require('./database/antibad');
 const { initAutoViewDB } = require('./database/autoview');
 const { initAntiDeleteDB } = require('./database/antidelete');
 const { initPresenceDB } = require('./database/presence');
-const { initGroupDB } = require('./database/group');
 const { cleanupOldMessages } = require('./utility/messageStorage');
 const { initAutoReadDB } = require('./database/autoread');
 //========================================================================================================================
