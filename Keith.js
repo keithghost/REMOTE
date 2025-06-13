@@ -15,7 +15,7 @@ const express = require("express");
 const util = require("util");
 const speed = require("performance-now");
 const { smsg } = require('./lib/smsg');
-const { store } = require('./lib/store');
+const makeInMemoryStore = require('./lib/store');
 const fetchLogoUrl = require('./lib/ephoto');
 const {
     smsgsmsg, formatp, tanggal, formatDate, getTime, sleep, clockString,
@@ -183,20 +183,20 @@ async function authenticationn() {
 // Command handler setup
 //========================================================================================================================
 const { keith, commands } = require('./commandHandler');
-const { dev, botname, author, mode, url } = require('./settings');
+const { dev, botname, prefix, author, mode, url } = require('./settings');
 //========================================================================================================================
 // Load all commands from the Commands directory
 //========================================================================================================================
 //prefix integration 
 //========================================================================================================================
-const { getPrefix } = require('./database/prefix');
+/*const { getPrefix } = require('./database/prefix');
 
 let prefix; 
 
 (async () => {
     prefix = await getPrefix(); 
    
-})();
+})();*/
 
 // Note: Any code using `prefix` needs to wait for the async assignment
 //========================================================================================================================
@@ -240,7 +240,7 @@ const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
 const { initModeDB } = require('./database/mode');
-const { initPrefixDB } = require('./database/prefix');
+//const { initPrefixDB } = require('./database/prefix');
 
 //========================================================================================================================
 //========================================================================================================================
@@ -263,7 +263,7 @@ async function startKeith() {
     loadAllCommands();
 
     const { state, saveCreds } = await useMultiFileAuthState("session");
-   // const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
+    const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
     
     const { default: KeithConnect, downloadContentFromMessage, jidDecode } = require("@whiskeysockets/baileys");
     const client = KeithConnect({
@@ -288,7 +288,7 @@ async function startKeith() {
         },
     });
 
-   // store.bind(client.ev);
+   store.bind(client.ev);
     //========================================================================================================================
    //========================================================================================================================
      // Auto-bio handler
