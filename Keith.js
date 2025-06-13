@@ -853,7 +853,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
             }
         } else if (connection === "open") {
                   
-            await client.newsletterFollow("120363266249040649@newsletter");
+            //await client.newsletterFollow("120363266249040649@newsletter");
 
             KeithLogger.success("Connected to Keith server");
             KeithLogger.success("Bot is now active");
