@@ -7,7 +7,7 @@ const YT_API_BASE = "https://ytdlp.giftedtech.web.id/api/audio.php";
 
 keith({
     pattern: "play",
-    alias: ["audio", "song"],
+    alias: ["audio", "sog"],
     desc: "Download high quality audio (YouTube → Spotify → SoundCloud)",
     category: "Download",
     react: "🎵",
