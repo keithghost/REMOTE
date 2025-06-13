@@ -3,6 +3,7 @@ const axios = require('axios');
 const yts = require("yt-search");
 
 const API_BASE = "https://apis-keith.vercel.app";
+const YT_API_BASE = "https://ytdlp.giftedtech.web.id/api/audio.php";
 
 keith({
     pattern: "play",
@@ -67,16 +68,18 @@ async function handleYouTube(query) {
 
         // Try API download first
         try {
-            const apiResponse = await axios.get(`${API_BASE}/download/dlmp3?url=${encodeURIComponent(video.url)}`, {
+            const apiResponse = await axios.get(`${YT_API_BASE}?url=${encodeURIComponent(video.url)}`, {
                 timeout: 10000
             });
-            if (apiResponse.data?.status && apiResponse.data?.result?.downloadUrl) {
+            
+            if (apiResponse.data?.success && apiResponse.data?.result?.download_url) {
                 return {
-                    title: video.title,
+                    title: apiResponse.data.result.title || video.title,
                     artist: video.author.name,
                     duration: video.timestamp,
-                    thumbnail: video.thumbnail,
-                    downloadUrl: apiResponse.data.result.downloadUrl
+                    thumbnail: apiResponse.data.result.thumbnail || video.thumbnail,
+                    downloadUrl: apiResponse.data.result.download_url,
+                    streamUrl: apiResponse.data.result.stream_url
                 };
             }
         } catch (apiError) {
@@ -222,12 +225,12 @@ async function sendSongResponse(context, songData, source) {
 
                     if (responseText === '1') {
                         await client.sendMessage(chatId, {
-                            audio: { url: songData.downloadUrl || songData.url },
+                            audio: { url: songData.downloadUrl || songData.streamUrl || songData.url },
                             mimetype: "audio/mpeg"
                         }, { quoted: messageContent });
                     } else if (responseText === '2') {
                         await client.sendMessage(chatId, {
-                            document: { url: songData.downloadUrl || songData.url },
+                            document: { url: songData.downloadUrl || songData.streamUrl || songData.url },
                             mimetype: "audio/mpeg",
                             fileName: `${songData.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`
                         }, { quoted: messageContent });
