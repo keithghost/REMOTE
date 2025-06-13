@@ -15,6 +15,7 @@ const express = require("express");
 const util = require("util");
 const speed = require("performance-now");
 const { smsg } = require('./lib/smsg');
+const { store } = require('./lib/store');
 const fetchLogoUrl = require('./lib/ephoto');
 const {
     smsgsmsg, formatp, tanggal, formatDate, getTime, sleep, clockString,
