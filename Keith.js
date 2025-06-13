@@ -262,7 +262,7 @@ async function startKeith() {
     loadAllCommands();
 
     const { state, saveCreds } = await useMultiFileAuthState("session");
-    const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
+   // const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
     
     const { default: KeithConnect, downloadContentFromMessage, jidDecode } = require("@whiskeysockets/baileys");
     const client = KeithConnect({
@@ -279,7 +279,7 @@ async function startKeith() {
         keepAliveIntervalMs: 30000,
         auth: state,
         getMessage: async (key) => {
-            if (store) {
+           /* if (store) {
                 const msg = await store.loadMessage(key.remoteJid, key.id);
                 return msg.message || undefined;
             }
@@ -287,7 +287,7 @@ async function startKeith() {
         },
     });
 
-    store.bind(client.ev);
+    store.bind(client.ev);*/
     //========================================================================================================================
    //========================================================================================================================
      // Auto-bio handler
