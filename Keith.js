@@ -263,7 +263,7 @@ async function startKeith() {
     loadAllCommands();
 
     const { state, saveCreds } = await useMultiFileAuthState("session");
-    const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
+   // const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
     
     const { default: KeithConnect, downloadContentFromMessage, jidDecode } = require("@whiskeysockets/baileys");
     const client = KeithConnect({
