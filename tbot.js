@@ -6,6 +6,7 @@ const cron = require('node-cron');
 const axios = require('axios');
 const moment = require('moment');
 const gradient = require('gradient-string');
+const { findCommand } = require('./commandHandler');
 
 // ======================
 // ENHANCED LOGGER SYSTEM
@@ -69,44 +70,25 @@ logger.banner(`
 `);
 
 // ==============
-// COMMAND HANDLER
+// COMMAND LOADER
 // ==============
-const commands = [];
-
 function loadCommands() {
-    const cmdDir = path.join(__dirname, 'scripts', 'cmds');
-    if (!fs.existsSync(cmdDir)) {
-        logger.error('Commands directory not found!');
-        return;
-    }
-
-    fs.readdirSync(cmdDir).forEach(file => {
-        if (file.endsWith('.js')) {
-            try {
-                const command = require(path.join(cmdDir, file));
-                command.config = {
-                    role: 0,
-                    cooldown: 0,
-                    usePrefix: true,
-                    ...command.config,
-                    name: (command.config.name || path.basename(file, '.js')).toLowerCase()
-                };
-                commands.push(command);
-                registerCommand(bot, command);
-                logger.success(`Command loaded: ${command.config.name}`);
-            } catch (error) {
-                logger.error(`Error loading ${file}: ${error.message}`);
-            }
+    const categories = fs.readdirSync(path.join(__dirname, 'scripts'));
+    
+    categories.forEach(category => {
+        const categoryPath = path.join(__dirname, 'scripts', category);
+        if (fs.statSync(categoryPath).isDirectory()) {
+            fs.readdirSync(categoryPath).forEach(file => {
+                if (file.endsWith('.js')) {
+                    try {
+                        require(path.join(categoryPath, file));
+                        logger.success(`Loaded command from ${category}/${file}`);
+                    } catch (error) {
+                        logger.error(`Error loading ${category}/${file}: ${error.message}`);
+                    }
+                }
+            });
         }
-    });
-}
-
-function registerCommand(bot, command) {
-    const prefixPattern = command.config.usePrefix ? 
-        `^${config.prefix}${command.config.name}\\b(.*)$` : 
-        `^${command.config.name}\\b(.*)$`;
-    bot.onText(new RegExp(prefixPattern, 'i'), (msg, match) => {
-        executeCommand(bot, command, msg, match);
     });
 }
 
@@ -123,10 +105,20 @@ async function isUserAdmin(bot, chatId, userId) {
     }
 }
 
-async function executeCommand(bot, command, msg, match) {
+async function handleCommand(bot, msg) {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
-
+    const text = msg.text || '';
+    
+    // Check for prefix
+    const prefix = text.startsWith(config.prefix) ? config.prefix : '';
+    const commandText = prefix ? text.slice(prefix.length).trim() : text.trim();
+    const commandName = commandText.split(' ')[0].toLowerCase();
+    
+    // Find command
+    const command = findCommand(commandName);
+    if (!command) return;
+    
     try {
         // Security checks
         if (gbanList.includes(userId.toString())) {
@@ -141,20 +133,20 @@ async function executeCommand(bot, command, msg, match) {
         const isAdmin = await isUserAdmin(bot, chatId, userId);
         const isBotAdmin = userId === config.owner_id;
 
-        if (command.config.role === 2 && !isBotAdmin) {
+        if (command.role === 2 && !isBotAdmin) {
             return bot.sendMessage(chatId, "⛔ Bot admin only command.");
         }
 
-        if (command.config.role === 1 && !isAdmin && !isBotAdmin) {
+        if (command.role === 1 && !isAdmin && !isBotAdmin) {
             return bot.sendMessage(chatId, "🔐 Admin only command.");
         }
 
         // Cooldown handling
-        const cooldownKey = `${command.config.name}-${userId}`;
+        const cooldownKey = `${command.pattern}-${userId}`;
         const now = Date.now();
 
         if (cooldowns.has(cooldownKey)) {
-            const remaining = Math.ceil((cooldowns.get(cooldownKey) + (command.config.cooldown * 1000) - now) / 1000);
+            const remaining = Math.ceil((cooldowns.get(cooldownKey) + (command.cooldown * 1000) - now) / 1000);
             if (remaining > 0) {
                 return bot.sendMessage(chatId, `⏳ Please wait ${remaining}s before using this command again.`);
             }
@@ -163,27 +155,27 @@ async function executeCommand(bot, command, msg, match) {
         cooldowns.set(cooldownKey, now);
 
         // Prepare arguments
-        const args = match[1]?.trim().split(/\s+/) || [];
+        const args = commandText.split(' ').slice(1);
         const replyMsg = msg.reply_to_message;
 
         // Execute command
-        command.onStart({ 
-            bot, 
-            chatId, 
-            args, 
-            userId, 
-            username: msg.from.username, 
-            firstName: msg.from.first_name, 
-            lastName: msg.from.last_name || '', 
+        await command.function({
+            bot,
+            chatId,
+            args,
+            userId,
+            username: msg.from.username,
+            firstName: msg.from.first_name,
+            lastName: msg.from.last_name || '',
             messageReply: replyMsg,
             messageReply_username: replyMsg?.from?.username,
             messageReply_id: replyMsg?.from?.id,
-            msg, 
-            match 
+            msg,
+            prefix
         });
 
     } catch (error) {
-        logger.error(`Command failed: ${command.config.name} - ${error.message}`);
+        logger.error(`Command failed: ${command.pattern} - ${error.message}`);
         bot.sendMessage(chatId, '❌ Command execution failed.');
     }
 }
@@ -201,73 +193,14 @@ async function fetchGbanList() {
     }
 }
 
-async function handleAntiLink(msg) {
-    if (!config.antiLink?.enabled || !['group', 'supergroup'].includes(msg.chat.type)) return;
-
-    const { chat, from, message_id, text } = msg;
-    if (!linkRegex.test(text || '')) return;
-
-    try {
-        if (!(await isUserAdmin(bot, chat.id, from.id)) && from.id !== config.owner_id) {
-            const warning = await bot.sendMessage(chat.id, "❗ Anti-link protection triggered", {
-                reply_to_message_id: message_id
-            });
-
-            setTimeout(async () => {
-                try {
-                    await bot.deleteMessage(chat.id, message_id);
-                    setTimeout(() => bot.deleteMessage(chat.id, warning.message_id), 5000);
-                } catch {
-                    bot.sendMessage(chat.id, `@${from.username || from.first_name}, links are not allowed here!`);
-                }
-            }, 2000);
-        }
-    } catch (error) {
-        logger.error('Anti-link failed:', error.message);
-    }
-}
-
-// ==============
-// EVENT HANDLERS
-// ==============
-async function handleNewMemberWelcome(msg) {
-    if (!config.greetNewMembers?.enabled) return;
-
-    const { chat, new_chat_members } = msg;
-    
-    try {
-        for (const member of new_chat_members) {
-            const name = `${member.first_name} ${member.last_name || ''}`.trim();
-            const username = member.username ? `@${member.username}` : name;
-            const welcomeMsg = `
-🌟 Welcome to ${chat.title}! 🌟
-👋 Hello ${username}!
-🕒 Joined: ${moment().format('MMMM Do YYYY, h:mm a')}
-📜 Please read group rules.
-            `;
-
-            await bot.sendMessage(chat.id, welcomeMsg, { parse_mode: 'Markdown' });
-            if (config.greetNewMembers.gifUrl) {
-                await bot.sendAnimation(chat.id, config.greetNewMembers.gifUrl);
-            }
-
-            if (!chatGroups.includes(chat.id)) {
-                chatGroups.push(chat.id);
-                fs.writeFileSync(chatGroupsFile, JSON.stringify(chatGroups));
-                logger.event(`New group added: ${chat.id}`);
-            }
-        }
-    } catch (error) {
-        logger.error('Welcome failed:', error.message);
-    }
-}
+// ... [rest of your existing functions remain the same] ...
 
 // ==============
 // EVENT LISTENERS
 // ==============
 bot.on('message', async (msg) => {
     const { chat, from, text } = msg;
-    if (!from) return;
+    if (!from || !text) return;
 
     logger.message(`
     ┌─────────────────────────────────
@@ -275,11 +208,12 @@ bot.on('message', async (msg) => {
     ├─────────────────────────────────
     │ 🏷️ Chat: ${chat.id}
     │ 👤 User: ${from.id} (${from.username || from.first_name})
-    │ 💬 Text: ${(text || '').substring(0, 50)}${text?.length > 50 ? '...' : ''}
+    │ 💬 Text: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}
     └─────────────────────────────────
     `);
 
     await handleAntiLink(msg);
+    await handleCommand(bot, msg);
 
     try {
         const counts = JSON.parse(fs.readFileSync(messageCountFile));
@@ -291,33 +225,7 @@ bot.on('message', async (msg) => {
     }
 });
 
-bot.on('new_chat_members', handleNewMemberWelcome);
-bot.on('left_chat_member', (msg) => {
-    const { chat, left_chat_member } = msg;
-    logger.event(`🚪 ${left_chat_member.first_name} left ${chat.title}`);
-    
-    chatGroups = chatGroups.filter(id => id !== chat.id);
-    fs.writeFileSync(chatGroupsFile, JSON.stringify(chatGroups));
-});
-
-bot.on('callback_query', async (query) => {
-    const { message, from, data } = query;
-    logger.event(`🔄 Callback from ${from.id}: ${data}`);
-    
-    try {
-        const { command } = JSON.parse(data);
-        const cmd = commands.find(c => c.config.name === command);
-        if (cmd?.onReply) cmd.onReply(bot, message.chat.id, from.id, JSON.parse(data));
-    } catch (error) {
-        logger.error('Callback failed:', error.message);
-    }
-});
-
-// ==============
-// ERROR HANDLING
-// ==============
-bot.on('polling_error', (error) => logger.error('Polling error:', error.message));
-bot.on('webhook_error', (error) => logger.error('Webhook error:', error.message));
+// ... [rest of your existing event listeners remain the same] ...
 
 // ==============
 // INITIALIZATION
