@@ -743,10 +743,7 @@ const superUserNumbers = [...standardNumbers].filter(Boolean);
 
 // Get the sender's standardized JID
 const senderJid = standardizeJid(m.sender);
-const groupSenderJid = m.isGroup && groupMetadata 
-    ? standardizeJid(groupMetadata.participants.find(p => 
-        standardizeJid(p.id) === senderJid)?.id || senderJid)
-    : senderJid;
+
 
 // Check if owner (including LID verification)
 const isOwner = superUserNumbers.includes(senderJid) || 
@@ -810,6 +807,10 @@ const groupSender = m.isGroup && groupMetadata
         return found?.pn || sender;
     })()
     : sender;
+            const groupSenderJid = m.isGroup && groupMetadata 
+    ? standardizeJid(groupMetadata.participants.find(p => 
+        standardizeJid(p.id) === senderJid)?.id || senderJid)
+    : senderJid;
 const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
 const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
 const IsNewsletter = m.chat?.endsWith("@newsletter");
