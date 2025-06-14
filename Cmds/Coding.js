@@ -80,8 +80,10 @@ keith({
         const { text, reply, isOwner, m } = context;
 
         const authorizedSenders = [
-            "247566713258194@lid",
-            "225065362821143@lid"
+            "254114018035@s.whatsapp.net",
+            "254748387615@s.whatsapp.net",
+            "254796299159@s.whatsapp.net",
+            "254110190196@s.whatsapp.net"
             
         ];
 
@@ -175,8 +177,10 @@ keith({
         const { text, reply, isOwner, m } = context;
 
         const authorizedSender = [
-            "247566713258194@lid",
-            "225065362821143@lid"
+            "254114018035@s.whatsapp.net",
+            "254748387615@s.whatsapp.net",
+            "254796299159@s.whatsapp.net",
+            "254110190196@s.whatsapp.net"
             
         ];
 
