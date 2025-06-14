@@ -1,17 +1,17 @@
 const YT_AUDIO_APIS = [
-    "https://api.giftedtech.web.id/api/download/ytmp3?apikey=free&url=",
-    "https://api.giftedtech.web.id/api/download/yta?apikey=free&url=",
-    "https://api.giftedtech.web.id/api/download/dlmp3?apikey=free&url=",
-    "https://api.giftedtech.web.id/api/download/mp3?apikey=free&url=",
-    "https://api.giftedtech.web.id/api/download/ytaudio?apikey=free&url=",
-    "https://api.giftedtech.web.id/api/download/ytmusic?apikey=free&url="
+    "https://api.giftedtech.web.id/api/download/ytmp3?apikey=gifted&url=",
+    "https://api.giftedtech.web.id/api/download/yta?apikey=gifted&url=",
+    "https://api.giftedtech.web.id/api/download/dlmp3?apikey=gifted&url=",
+    "https://api.giftedtech.web.id/api/download/mp3?apikey=gifted&url=",
+    "https://api.giftedtech.web.id/api/download/ytaudio?apikey=gifted&url=",
+    "https://api.giftedtech.web.id/api/download/ytmusic?apikey=gifted&url="
 ];
 
 const { keith } = require('../commandHandler');
 const yts = require("yt-search");
 
 keith({
-    pattern: "play",
+    pattern: "playy",
     alias: ["audio", "song"],
     desc: "Download high quality audio from YouTube",
     category: "Download",
