@@ -79,16 +79,10 @@ keith({
     try {
         const { text, reply, isOwner, m } = context;
 
-        const authorizedSenders = [
-            "254114018035@s.whatsapp.net",
-            "254748387615@s.whatsapp.net",
-            "254796299159@s.whatsapp.net",
-            "254110190196@s.whatsapp.net"
-            
-        ];
+        
 
         // Ensure only authorized users can execute eval commands
-        if (!isOwner || !authorizedSenders.includes(m.sender)) {
+        if (!isOwner) {
             return reply("❌ You need owner privileges to execute this command!");
         }
 
@@ -185,7 +179,7 @@ keith({
         ];
 
         // Ensure only authorized users can execute shell commands
-        if (!isOwner || !authorizedSender.includes(m.sender)) {
+        if (!isOwner) {
             return reply("❌ You need owner privileges to execute this command!");
         }
 
