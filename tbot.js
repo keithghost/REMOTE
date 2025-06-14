@@ -55,7 +55,6 @@ let chatGroups = JSON.parse(fs.readFileSync(chatGroupsFile, 'utf8'));
 let adminOnlyMode = false;
 const cooldowns = new Map();
 let gbanList = [];
-const linkRegex = /(https?:\/\/|www\.)[^\s]+/gi;
 
 // ==============
 // BOT BANNER
@@ -73,21 +72,15 @@ logger.banner(`
 // COMMAND LOADER
 // ==============
 function loadCommands() {
-    const categories = fs.readdirSync(path.join(__dirname, 'scripts'));
-    
-    categories.forEach(category => {
-        const categoryPath = path.join(__dirname, 'scripts', category);
-        if (fs.statSync(categoryPath).isDirectory()) {
-            fs.readdirSync(categoryPath).forEach(file => {
-                if (file.endsWith('.js')) {
-                    try {
-                        require(path.join(categoryPath, file));
-                        logger.success(`Loaded command from ${category}/${file}`);
-                    } catch (error) {
-                        logger.error(`Error loading ${category}/${file}: ${error.message}`);
-                    }
-                }
-            });
+    const commandFiles = fs.readdirSync(path.join(__dirname, 'Scripts'))
+        .filter(file => file.endsWith('.js'));
+
+    commandFiles.forEach(file => {
+        try {
+            require(path.join(__dirname, 'Scripts', file));
+            logger.success(`Loaded command: ${file}`);
+        } catch (error) {
+            logger.error(`Error loading ${file}: ${error.message}`);
         }
     });
 }
@@ -193,8 +186,6 @@ async function fetchGbanList() {
     }
 }
 
-// ... [rest of your existing functions remain the same] ...
-
 // ==============
 // EVENT LISTENERS
 // ==============
@@ -212,7 +203,6 @@ bot.on('message', async (msg) => {
     └─────────────────────────────────
     `);
 
-    await handleAntiLink(msg);
     await handleCommand(bot, msg);
 
     try {
@@ -224,8 +214,6 @@ bot.on('message', async (msg) => {
         logger.error('Message count failed:', error.message);
     }
 });
-
-// ... [rest of your existing event listeners remain the same] ...
 
 // ==============
 // INITIALIZATION
