@@ -746,12 +746,6 @@ const senderJid = standardizeJid(m.sender);
 
 
 // Check if owner (including LID verification)
-const isOwner = superUserNumbers.includes(senderJid) || 
-               superUserNumbers.includes(groupSenderJid) ||
-               (senderJid.endsWith('@lid') && superUserNumbers.some(num => 
-                   num.startsWith(senderJid.split('@')[0]))) ||
-               (groupSenderJid.endsWith('@lid') && superUserNumbers.some(num => 
-                   num.startsWith(groupSenderJid.split('@')[0])));
 
 // Rest of your code remains the same...
 const isBotMessage = m.sender === botNumber;  
@@ -811,6 +805,14 @@ const groupSender = m.isGroup && groupMetadata
     ? standardizeJid(groupMetadata.participants.find(p => 
         standardizeJid(p.id) === senderJid)?.id || senderJid)
     : senderJid;
+            
+            const isOwner = superUserNumbers.includes(senderJid) || 
+               superUserNumbers.includes(groupSenderJid) ||
+               (senderJid.endsWith('@lid') && superUserNumbers.some(num => 
+                   num.startsWith(senderJid.split('@')[0]))) ||
+               (groupSenderJid.endsWith('@lid') && superUserNumbers.some(num => 
+                   num.startsWith(groupSenderJid.split('@')[0])));
+
 const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
 const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
 const IsNewsletter = m.chat?.endsWith("@newsletter");
