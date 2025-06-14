@@ -239,7 +239,7 @@ const { initAutoViewDB } = require('./database/autoview');
 const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
-const { initModeDB } = require('./database/mode');
+//const { initModeDB } = require('./database/mode');
 //const { initPrefixDB } = require('./database/prefix');
 
 //========================================================================================================================
@@ -248,7 +248,7 @@ initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
-initModeDB().catch(console.error);
+//initModeDB().catch(console.error);
 //initPrefixDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initPresenceDB().catch(console.error);
@@ -702,19 +702,16 @@ client.ev.on('messages.upsert', async ({ messages }) => {
             //========================================================================================================================
          //mode integration 
             //========================================================================================================================
-    const { getModeSettings } = require('./database/mode');       
- if (!cmd){
-    const modeSettings = await getModeSettings();
-    if (modeSettings.mode === "private" && !itsMe && !isOwner && m.sender !== daddy) {
-        // Check if user is in allowed list
-        if (!modeSettings.allowedUsers.includes(m.sender)) {
-            return;
-        }
-    }
-}
-        
+    
+        if (cmd && mode === "private" && !itsMe && m.sender !== daddy) return;
+      
 //========================================================================================================================
-         
+         if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
+        await m.reply("You are blocked from using bot commands.");
+        return;
+    }
+//========================================================================================================================            
+//========================================================================================================================
             const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
             
             const commandHandler = commands.find(cmd => 
