@@ -612,7 +612,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
  //========================================================================================================================           
     //========================================================================================================================        
 //========================================================================================================================
-            const body = m.mtype === "conversation" ? m.message.conversation :
+           /* const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
                 m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
 
@@ -698,7 +698,133 @@ client.ev.on('messages.upsert', async ({ messages }) => {
     };
 
 
-            const IsGroup = m.chat?.endsWith("@g.us");
+            const IsGroup = m.chat?.endsWith("@g.us");*/
+            // Add this function at the top of your code
+function standardizeJid(jid) {
+    if (!jid) return '';
+    try {
+        jid = typeof jid === 'string' ? jid : 
+             (jid.decodeJid ? jid.decodeJid() : String(jid));
+        jid = jid.split(':')[0].split('/')[0];
+        
+        // Handle both @s.whatsapp.net and @lid cases
+        if (!jid.includes('@')) {
+            jid += '@s.whatsapp.net';
+        } else if (jid.endsWith('@lid')) {
+            // Keep @lid as is
+            return jid.toLowerCase();
+        }
+        
+        return jid.toLowerCase();
+    } catch (e) {
+        console.error("JID standardization error:", e);
+        return '';
+    }
+}
+
+// Then modify your existing code like this:
+const body = m.mtype === "conversation" ? m.message.conversation :
+    m.mtype === "imageMessage" ? m.message.imageMessage.caption :
+    m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
+
+const cmd = body.startsWith(prefix);
+const args = body.trim().split(/ +/).slice(1);
+const pushname = m.pushName || "No Name";
+const botNumber = await client.decodeJid(client.user.id);
+const servBot = botNumber.split('@')[0];
+const Ghost = "225065362821143"; 
+const Ghost2 = "247566713258194";
+const Ghost3 = "254748387615";
+const Ghost4 = "254786989022";
+
+// Standardize all numbers including LIDs
+const standardNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map(v => standardizeJid(v));
+const superUserNumbers = [...standardNumbers].filter(Boolean);
+
+// Get the sender's standardized JID
+const senderJid = standardizeJid(m.sender);
+const groupSenderJid = m.isGroup && groupMetadata 
+    ? standardizeJid(groupMetadata.participants.find(p => 
+        standardizeJid(p.id) === senderJid)?.id || senderJid)
+    : senderJid;
+
+// Check if owner (including LID verification)
+const isOwner = superUserNumbers.includes(senderJid) || 
+               superUserNumbers.includes(groupSenderJid) ||
+               (senderJid.endsWith('@lid') && superUserNumbers.some(num => 
+                   num.startsWith(senderJid.split('@')[0]))) ||
+               (groupSenderJid.endsWith('@lid') && superUserNumbers.some(num => 
+                   num.startsWith(groupSenderJid.split('@')[0])));
+
+// Rest of your code remains the same...
+const isBotMessage = m.sender === botNumber;  
+const itsMe = m.sender === botNumber;
+const text = args.join(" ");
+const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
+    ? m.message.extendedTextMessage.contextInfo.mentionedJid
+    : [];
+
+let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
+let budy = typeof m.text === "string" ? m.text : "";
+
+const timestamp = speed();
+const Keithspeed = speed() - timestamp;
+
+const getGroupAdmins = (participants) => {
+    let admins = [];
+    for (let i of participants) {
+        if (i.admin === "superadmin") admins.push(i.id);
+        if (i.admin === "admin") admins.push(i.id);
+    }
+    return admins || [];
+};
+
+const keizzah = m.quoted || m;
+const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
+    keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
+        keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
+
+const color = (text, color) => {
+    return color ? chalk.keyword(color)(text) : chalk.green(text);
+};
+
+const mime = quoted.mimetype || "";
+const sender = m.sender;
+const qmsg = quoted;
+const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
+const participants = m.isGroup && groupMetadata
+    ? groupMetadata.participants
+        .filter(p => p.pn)
+        .map(p => p.pn)
+    : [];
+const groupAdmin = m.isGroup
+    ? groupMetadata.participants
+        .filter(p => p.admin && p.pn)
+        .map(p => p.pn)
+    : [];
+const groupSender = m.isGroup && groupMetadata
+    ? (() => {
+        const found = groupMetadata.participants.find(p => 
+            p.id === sender || client.decodeJid(p.id) === client.decodeJid(sender)
+        );
+        return found?.pn || sender;
+    })()
+    : sender;
+const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
+const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
+const IsNewsletter = m.chat?.endsWith("@newsletter");
+const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
+const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
+const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
+
+const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
+const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
+const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
+const reply = (teks) => {
+    client.sendMessage(m.chat, { text: teks }, { quoted: mek });
+};
+
+const IsGroup = m.chat?.endsWith("@g.us");
             //========================================================================================================================
          //mode integration 
             //========================================================================================================================
