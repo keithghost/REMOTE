@@ -7,7 +7,6 @@ const YT_API_BASE = "https://ytdlp.giftedtech.web.id/api/audio.php";
 
 // List of fallback APIs for YouTube audio
 const YT_AUDIO_APIS = [
-    `${YT_API_BASE}?url=`,
     "https://api.giftedtech.web.id/api/download/ytmp3?apikey=free&url=",
     "https://api.giftedtech.web.id/api/download/yta?apikey=free&url=",
     "https://api.giftedtech.web.id/api/download/dlmp3?apikey=free&url=",
