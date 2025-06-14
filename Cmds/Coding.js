@@ -9,6 +9,64 @@ const { exec } = require("child_process");
 const axios = require("axios");
 //const { keith } = require('../commandHandler');
 const util = require('util');
+const { parse } = require('@babel/parser');
+const generate = require('@babel/generator').default;
+const traverse = require('@babel/traverse').default;
+
+keith({
+    pattern: "decrypt",
+    alias: ["dec", "deobfuscate"],
+    desc: "Deobfuscate JavaScript code",
+    category: "Coding",
+    react: "🔓",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { reply, m } = context;
+
+        if (m.quoted && m.quoted.text) {
+            const obfuscatedCode = m.quoted.text;
+
+            // Step 1: Parse the obfuscated code into AST
+            const ast = parse(obfuscatedCode, {
+                sourceType: 'script' // or 'module' if needed
+            });
+
+            // Step 2: Simplify the AST (remove obfuscation tricks)
+            traverse(ast, {
+                StringLiteral(path) {
+                    if (path.node.extra?.raw) {
+                        path.node.value = path.node.extra.raw
+                            .replace(/\\x([a-fA-F0-9]{2})/g, (_, hex) => 
+                                String.fromCharCode(parseInt(hex, 16)))
+                            .replace(/\\u([a-fA-F0-9]{4})/g, (_, hex) => 
+                                String.fromCharCode(parseInt(hex, 16)));
+                        delete path.node.extra;
+                    }
+                },
+                NumericLiteral(path) {
+                    if (path.node.extra?.raw) {
+                        delete path.node.extra;
+                    }
+                }
+            });
+
+            // Step 3: Regenerate clean code
+            const deobfuscatedCode = generate(ast, {
+                compact: false,
+                comments: true
+            }).code;
+
+            console.log("Successfully deobfuscated the code");
+            reply(deobfuscatedCode);
+        } else {
+            reply("❌ Please quote an obfuscated JavaScript code to decrypt.");
+        }
+    } catch (error) {
+        console.error("Error in decrypt command:", error);
+        reply("❌ Failed to deobfuscate. Is the code heavily obfuscated?");
+    }
+});
 
 keith({
     pattern: "eval",
