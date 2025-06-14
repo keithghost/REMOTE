@@ -5,9 +5,20 @@ const yts = require("yt-search");
 const API_BASE = "https://apis-keith.vercel.app";
 const YT_API_BASE = "https://ytdlp.giftedtech.web.id/api/audio.php";
 
+// List of fallback APIs for YouTube audio
+const YT_AUDIO_APIS = [
+    `${YT_API_BASE}?url=`,
+    "https://api.giftedtech.web.id/api/download/ytmp3?apikey=free&url=",
+    "https://api.giftedtech.web.id/api/download/yta?apikey=free&url=",
+    "https://api.giftedtech.web.id/api/download/dlmp3?apikey=free&url=",
+    "https://api.giftedtech.web.id/api/download/mp3?apikey=free&url=",
+    "https://api.giftedtech.web.id/api/download/ytaudio?apikey=free&url=",
+    "https://api.giftedtech.web.id/api/download/ytmusic?apikey=free&url="
+];
+
 keith({
     pattern: "play",
-    alias: ["audio", "sog"],
+    alias: ["audio", "song"],
     desc: "Download high quality audio (YouTube → Spotify → SoundCloud)",
     category: "Download",
     react: "🎵",
@@ -66,33 +77,39 @@ async function handleYouTube(query) {
         const video = search.all[0];
         if (!video) throw new Error("No YouTube results found");
 
-        // Try API download first
-        try {
-            const apiResponse = await axios.get(`${YT_API_BASE}?url=${encodeURIComponent(video.url)}`, {
-                timeout: 10000
-            });
-            
-            if (apiResponse.data?.success && apiResponse.data?.result?.download_url) {
-                return {
-                    title: apiResponse.data.result.title || video.title,
-                    artist: video.author.name,
-                    duration: video.timestamp,
-                    thumbnail: apiResponse.data.result.thumbnail || video.thumbnail,
-                    downloadUrl: apiResponse.data.result.download_url,
-                    streamUrl: apiResponse.data.result.stream_url
-                };
+        // Try all audio APIs in sequence
+        for (const api of YT_AUDIO_APIS) {
+            try {
+                const apiUrl = api + encodeURIComponent(video.url);
+                const apiResponse = await axios.get(apiUrl, { timeout: 10000 });
+                
+                if (apiResponse.data?.success || apiResponse.data?.status) {
+                    const result = apiResponse.data.result || apiResponse.data;
+                    if (result.download_url || result.url || result.stream_url) {
+                        return {
+                            title: result.title || video.title,
+                            artist: video.author.name,
+                            duration: video.timestamp,
+                            thumbnail: result.thumbnail || video.thumbnail,
+                            downloadUrl: result.download_url || result.url,
+                            streamUrl: result.stream_url
+                        };
+                    }
+                }
+            } catch (apiError) {
+                console.error(`API ${api} failed:`, apiError.message);
+                continue;
             }
-        } catch (apiError) {
-            console.error("YouTube API failed, using basic info");
-            // Fallback to basic video info if API fails
-            return {
-                title: video.title,
-                artist: video.author.name,
-                duration: video.timestamp,
-                thumbnail: video.thumbnail,
-                url: video.url
-            };
         }
+
+        // If all APIs fail, return basic video info
+        return {
+            title: video.title,
+            artist: video.author.name,
+            duration: video.timestamp,
+            thumbnail: video.thumbnail,
+            url: video.url
+        };
     } catch (error) {
         console.error("YouTube handler error:", error);
         throw error;
