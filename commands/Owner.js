@@ -11,7 +11,23 @@ const { writeFile, mkdir } = require("fs/promises");
 const fs = require('fs-extra');
 const moment = require("moment-timezone");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
+keith({
+  nomCom: "clear",
+  categorie: "Owner"
+}, async (dest, zk, command) => {
+  const { ms, repondre, arg } = command;
+  
+  
+  await zk.sendMessage({
+    delete: true,
+    lastMessages: [{
+      key: ms.key,
+      messageTimestamp: ms.messageTimestamp
+    }]
+  }, dest);
+  
+  await repondre("The chat has been cleared of all messages");
+});
 keith({
   nomCom: 'post',
   aliases: ['status', 'poststatus'],
