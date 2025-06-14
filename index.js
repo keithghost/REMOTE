@@ -976,7 +976,7 @@ zk.ev.on('messages.upsert', async (msg) => {
     }
 });
 
-zk.ev.on("messages.upsert", async (m) => {
+/*zk.ev.on("messages.upsert", async (m) => {
     const { messages } = m;
     const ms = messages[0];
     if (!ms.message)
@@ -1108,7 +1108,7 @@ zk.ev.on("messages.upsert", async (m) => {
         const lienAleatoire = lien[indiceAleatoire];
         return lienAleatoire;
     }
-});
+});*/
         
 
         
@@ -1116,7 +1116,7 @@ zk.ev.on("messages.upsert", async (m) => {
         
 
                
-       /* zk.ev.on("messages.upsert", async (m) => {
+        zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;
             const ms = messages[0];
             if (!ms.message)
@@ -1197,7 +1197,7 @@ zk.ev.on("messages.upsert", async (m) => {
                 const indiceAleatoire = Math.floor(Math.random() * lien.length);
                 const lienAleatoire = lien[indiceAleatoire];
                 return lienAleatoire;
-            }*/
+            }
             var commandeOptions = {
                 superUser, dev,
                 verifGroupe,
