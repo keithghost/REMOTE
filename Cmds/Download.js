@@ -16,7 +16,7 @@ const YT_AUDIO_APIS = [
 ];
 
 keith({
-    pattern: "play",
+    pattern: "playy",
     alias: ["audio", "song"],
     desc: "Download high quality audio (YouTube → Spotify → SoundCloud)",
     category: "Download",
