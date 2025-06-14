@@ -9,87 +9,101 @@ const YT_AUDIO_APIS = [
 
 const { keith } = require('../commandHandler');
 const yts = require("yt-search");
-const axios = require("axios");
+
 keith({
-    pattern: "playy",
+    pattern: "play",
     alias: ["audio", "song"],
-    desc: "Download high quality audio (YouTube → Spotify → SoundCloud)",
+    desc: "Download high quality audio from YouTube",
     category: "Download",
     react: "🎵",
     filename: __filename
 }, async (context) => {
-    
-  const { client, m, text, fetchJson, botname, sendReply, sendMediaMessage } = context;
+    const { client, m, text, fetchJson, botname, sendReply, sendMediaMessage } = context;
 
-  try {
-    if (!text) return sendReply(client, m, "What song do you want to download?");
+    try {
+        if (!text) return sendReply(client, m, "Please provide a song name to download.");
 
-    let search = await yts(text);
-    let link = search.all[0].url;
+        // Search YouTube for the song
+        const search = await yts(text);
+        if (!search.all.length) return sendReply(client, m, "No results found.");
+        
+        const video = search.all[0];
+        const videoUrl = video.url;
+        const apis = YT_AUDIO_APIS.map(api => api + encodeURIComponent(videoUrl));
 
-    // Combine all available APIs
-    const apis = [
-      `https://apis.davidcyriltech.my.id/youtube/mp3?url=${link}`,
-      `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${link}`,
-      ...YT_AUDIO_APIS.map(api => api + link)
-    ];
+        let success = false;
+        
+        for (const api of apis) {
+            try {
+                const response = await fetchJson(api);
+                
+                // Handle different API response formats
+                const audioUrl = response.result?.url || 
+                                response.url || 
+                                response.link || 
+                                response.result?.downloadUrl;
+                
+                if (!audioUrl) continue;
 
-    for (const api of apis) {
-      try {
-        let data = await fetchJson(api);
+                // Send song info
+                await sendMediaMessage(client, m, {
+                    image: { url: video.thumbnail },
+                    caption: `
+╭═════════════════⊷
+║ *Title*: *${video.title}*
+║ *Artist*: *${video.author?.name || "Unknown"}*
+║ *Duration*: ${video.timestamp || "N/A"}
+║ *Views*: ${video.views || "N/A"}
+║ *Url*: ${videoUrl}
+╰═════════════════⊷
+*Powered by ${botname}*`
+                }, { quoted: m });
 
-        // Checking if the API response is successful
-        if (data.status === 200 || data.success || data.result) {
-          let videoUrl = data.result?.downloadUrl || data.url || data.result?.url || data.link;
+                // Send as audio
+                await client.sendMessage(
+                    m.chat,
+                    {
+                        audio: { url: audioUrl },
+                        mimetype: "audio/mp4",
+                        contextInfo: {
+                            externalAdReply: {
+                                title: video.title,
+                                body: video.author?.name || "",
+                                thumbnailUrl: video.thumbnail,
+                                mediaType: 2,
+                                mediaUrl: videoUrl
+                            }
+                        }
+                    },
+                    { quoted: m }
+                );
 
-          let songData = {
-            title: data.result?.title || search.all[0].title,
-            artist: data.result?.author || search.all[0].author?.name || "Unknown Artist",
-            thumbnail: data.result?.image || search.all[0].thumbnail,
-            videoUrl: link
-          };
+                // Send as downloadable file
+                await client.sendMessage(
+                    m.chat,
+                    {
+                        document: { url: audioUrl },
+                        mimetype: "audio/mp3",
+                        fileName: `${video.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
+                    },
+                    { quoted: m }
+                );
 
-          await sendMediaMessage(client, m, {
-            image: { url: songData.thumbnail },
-            caption: `
-     ╭═════════════════⊷
-     ║ *Title*: *${songData.title}*
-     ║ *Artist*: *${songData.artist}*
-     ║ *Url*: *${songData.videoUrl}*
-     ╰═════════════════⊷
-      *Powered by ${botname}*`
-          }, { quoted: m });
-
-          await client.sendMessage(
-            m.chat,
-            {
-              audio: { url: videoUrl },
-              mimetype: "audio/mp4",
-            },
-            { quoted: m }
-          );
-
-          await client.sendMessage(
-            m.chat,
-            {
-              document: { url: videoUrl },
-              mimetype: "audio/mp3",
-              fileName: `${songData.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`,
-            },
-            { quoted: m }
-          );
-
-          return;
+                success = true;
+                break;
+                
+            } catch (error) {
+                console.error(`API ${api} failed:`, error);
+                continue;
+            }
         }
-      } catch (e) {
-        // Continue to the next API if one fails
-        continue;
-      }
-    }
 
-    // If no APIs succeeded
-    sendReply(client, m, "An error occurred. All APIs might be down or unable to process the request.");
-  } catch (error) {
-    sendReply(client, m, "Download failed\n" + error.message);
-  }
+        if (!success) {
+            return sendReply(client, m, "Failed to download audio. All APIs are currently unavailable.");
+        }
+
+    } catch (error) {
+        console.error("Error in playy command:", error);
+        sendReply(client, m, `An error occurred: ${error.message}`);
+    }
 });
