@@ -975,6 +975,140 @@ zk.ev.on('messages.upsert', async (msg) => {
         console.error('AntiLink error:', error);
     }
 });
+
+zk.ev.on("messages.upsert", async (m) => {
+    const { messages } = m;
+    const ms = messages[0];
+    if (!ms.message)
+        return;
+    
+    // Standardize JID function to handle both regular numbers and LIDs
+    const standardizeJid = (jid) => {
+        if (!jid) return jid;
+        try {
+            jid = typeof jid === 'string' ? jid : 
+                 (jid.decodeJid ? jid.decodeJid() : String(jid));
+            jid = jid.split(':')[0].split('/')[0];
+            
+            // Handle both @s.whatsapp.net and @lid cases
+            if (!jid.includes('@')) {
+                jid += '@s.whatsapp.net';
+            } else if (jid.endsWith('@lid')) {
+                // Keep @lid as is
+                return jid.toLowerCase();
+            }
+            
+            return jid.toLowerCase();
+        } catch (e) {
+            console.error("JID standardization error:", e);
+            return jid;
+        }
+    };
+
+    const decodeJid = (jid) => {
+        if (!jid)
+            return jid;
+        if (/:\d+@/gi.test(jid)) {
+            let decode = (0, baileys_1.jidDecode)(jid) || {};
+            return decode.user && decode.server && decode.user + '@' + decode.server || jid;
+        }
+        else
+            return jid;
+    };
+    
+    var mtype = (0, baileys_1.getContentType)(ms.message);
+    var texte = mtype == "conversation" ? ms.message.conversation : 
+                mtype == "imageMessage" ? ms.message.imageMessage?.caption : 
+                mtype == "videoMessage" ? ms.message.videoMessage?.caption : 
+                mtype == "extendedTextMessage" ? ms.message?.extendedTextMessage?.text : 
+                mtype == "buttonsResponseMessage" ? ms?.message?.buttonsResponseMessage?.selectedButtonId : 
+                mtype == "listResponseMessage" ? ms.message?.listResponseMessage?.singleSelectReply?.selectedRowId : 
+                mtype == "messageContextInfo" ? (ms?.message?.buttonsResponseMessage?.selectedButtonId || 
+                ms.message?.listResponseMessage?.singleSelectReply?.selectedRowId || ms.text) : "";
+    
+    var origineMessage = standardizeJid(ms.key.remoteJid);
+    var idBot = standardizeJid(zk.user.id);
+    var servBot = idBot.split('@')[0];
+    const verifGroupe = origineMessage?.endsWith("@g.us");
+    var infosGroupe = verifGroupe ? await zk.groupMetadata(origineMessage) : "";
+    var nomGroupe = verifGroupe ? infosGroupe.subject : "";
+    var msgRepondu = ms.message.extendedTextMessage?.contextInfo?.quotedMessage;
+    var auteurMsgRepondu = standardizeJid(ms.message?.extendedTextMessage?.contextInfo?.participant);
+    var mr = ms.message?.extendedTextMessage?.contextInfo?.mentionedJid;
+    var utilisateur = mr ? mr : msgRepondu ? auteurMsgRepondu : "";
+    var auteurMessage = verifGroupe ? standardizeJid(ms.key.participant ? ms.key.participant : ms.participant) : origineMessage;
+    
+    if (ms.key.fromMe) {
+        auteurMessage = idBot;
+    }
+    
+    var membreGroupe = verifGroupe ? standardizeJid(ms.key.participant) : '';
+    const nomAuteurMessage = ms.pushName;
+    
+    // Super user numbers
+    const FranceKing = '254748387615';
+    const FranceKing1 = '254796299159';
+    const FranceKing2 = "254743995989";
+    const FranceKing3 = '254752925938';
+    
+    const { getAllSudoNumbers } = require("./database/sudo");
+    const sudo = await getAllSudoNumbers();
+    
+    // Standardize all numbers including LIDs
+    const baseSuperUsers = [servBot, FranceKing, FranceKing1, FranceKing2, FranceKing3, conf.NUMERO_OWNER]
+        .map(v => standardizeJid(v.replace(/[^0-9]/g, '')));
+    
+    const sudoNumbers = sudo.map(v => standardizeJid(v.replace(/[^0-9]/g, '')));
+    const allAllowedNumbers = [...baseSuperUsers, ...sudoNumbers].filter(Boolean);
+    
+    // Check if super user (including LID verification)
+    const isSuperUser = allAllowedNumbers.includes(auteurMessage) || 
+                      (auteurMessage.endsWith('@lid') && allAllowedNumbers.some(num => 
+                          num.startsWith(auteurMessage.split('@')[0])));
+    
+    var dev = [FranceKing, FranceKing1, FranceKing2, FranceKing3]
+        .map(t => standardizeJid(t.replace(/[^0-9]/g, '')))
+        .includes(auteurMessage);
+    
+    function repondre(mes) { 
+        zk.sendMessage(origineMessage, { text: mes }, { quoted: ms }); 
+    }
+    
+    console.log("\t [][]...{ALPHA-MD}...[][]");
+    console.log("=========== New Message ===========");
+    if (verifGroupe) {
+        console.log("Message from the group: " + nomGroupe);
+    }
+    console.log("Message sent by: " + "[" + nomAuteurMessage + " : " + auteurMessage.split("@")[0] + " ]");
+    console.log("Message type: " + mtype);
+    console.log("------ Message Content ------");
+    console.log(texte);
+    
+    function groupeAdmin(membreGroupe) {
+        let admin = [];
+        for (m of membreGroupe) {
+            if (m.admin == null)
+                continue;
+            admin.push(standardizeJid(m.id));
+        }
+        return admin;
+    }
+    
+    const mbre = verifGroupe ? await infosGroupe.participants : '';
+    let admins = verifGroupe ? groupeAdmin(mbre) : '';
+    const verifAdmin = verifGroupe ? admins.includes(auteurMessage) : false;
+    var verifZokouAdmin = verifGroupe ? admins.includes(idBot) : false;
+    const arg = texte ? texte.trim().split(/ +/).slice(1) : null;
+    const verifCom = texte ? texte.startsWith(prefixe) : false;
+    const com = verifCom ? texte.slice(1).trim().split(/ +/).shift().toLowerCase() : false;
+    const lien = conf.URL.split(',');
+    
+    function mybotpic() {
+        const indiceAleatoire = Math.floor(Math.random() * lien.length);
+        const lienAleatoire = lien[indiceAleatoire];
+        return lienAleatoire;
+    }
+});
         
 
         
@@ -982,7 +1116,7 @@ zk.ev.on('messages.upsert', async (msg) => {
         
 
                
-        zk.ev.on("messages.upsert", async (m) => {
+       /* zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;
             const ms = messages[0];
             if (!ms.message)
@@ -1063,7 +1197,7 @@ zk.ev.on('messages.upsert', async (msg) => {
                 const indiceAleatoire = Math.floor(Math.random() * lien.length);
                 const lienAleatoire = lien[indiceAleatoire];
                 return lienAleatoire;
-            }
+            }*/
             var commandeOptions = {
                 superUser, dev,
                 verifGroupe,
