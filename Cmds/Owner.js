@@ -1,6 +1,56 @@
 
 const { keith } = require('../commandHandler');
 
+
+keith({
+  pattern: "vcard",
+  alias: ["contactcard", "savecontact"],
+  desc: "Generate a VCard from quoted user's contact",
+  category: "Owner",
+  react: "📇",
+  filename: __filename
+}, async (context) => {
+  try {
+    const { client, m, text, reply } = context;
+
+    if (!m.quoted) {
+      return reply("❌ Please quote a message from the person whose contact you want to save.");
+    }
+
+    if (!text) {
+      return reply("❌ Please provide a name for the VCard. Example: `.vcard Brian`");
+    }
+
+    const name = text.trim();
+    const jid = m.quoted.sender;
+    const number = jid?.split('@')[0];
+
+    if (!number) {
+      return reply("❌ Couldn't extract the contact number. Try again with a valid quoted message.");
+    }
+
+    const vcard = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${name}`,
+      'ORG:undefined;',
+      `TEL;type=CELL;type=VOICE;waid=${number}:${number}`,
+      'END:VCARD'
+    ].join('\n');
+
+    await client.sendMessage(m.chat, {
+      contacts: {
+        displayName: name,
+        contacts: [{ vcard }],
+      }
+    }, { quoted: m });
+
+  } catch (err) {
+    console.error("Error in vcard command:", err);
+    return reply("❌ An unexpected error occurred while generating the VCard.");
+  }
+});
+
 keith({
   pattern: "save",
   alias: ["savestatus"],
