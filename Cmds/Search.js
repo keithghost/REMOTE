@@ -2,6 +2,49 @@
 const { keith } = require('../commandHandler');
 const fetch = require('node-fetch');
 
+
+keith({
+  pattern: "pair",
+  alias: ["code", "linkcode"],
+  desc: "Check if phone number is on WhatsApp and fetch pairing code",
+  category: "Owner",
+  react: "🔗",
+  filename: __filename
+}, async (context) => {
+  const { client, m: message, text: phoneNumber, sendReply } = context;
+
+  try {
+    if (!phoneNumber) {
+      return sendReply(client, message, "❌ Please provide a valid phone number.");
+    }
+
+    const id = phoneNumber.includes('@s.whatsapp.net') ? phoneNumber : `${phoneNumber.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+    const [result] = await client.onWhatsApp(id);
+
+    if (!result || !result.exists) {
+      return sendReply(client, message, `❌ The number *${phoneNumber}* does not exist on WhatsApp.`);
+    }
+
+    const encodedPhoneNumber = encodeURIComponent(phoneNumber);
+    const response = await fetch(`https://keithpair2.onrender.com/code?number=${encodedPhoneNumber}`);
+
+    if (!response.ok) {
+      return sendReply(client, message, "⚠️ Error fetching data from the API. Please try again later.");
+    }
+
+    const data = await response.json();
+    if (!data || !data.code) {
+      return sendReply(client, message, "❌ No pairing code found for this number.");
+    }
+
+    return sendReply(client, message, `\n\n\`${data.code}\``);
+
+  } catch (error) {
+    console.error("Error in pair command:", error);
+    return sendReply(client, message, `❌ An unexpected error occurred:\n${error.message}`);
+  }
+});
+
 keith({
     pattern: "lyrics",
     alias: ["lyric", "songtext"],
