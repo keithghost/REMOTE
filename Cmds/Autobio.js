@@ -1,68 +1,47 @@
 const { keith } = require('../commandHandler');
-const { parse, generate } = require('@babel/core');
-const { default: traverse } = require('@babel/traverse');
+const ownerMiddleware = require('../../utility/botUtil/Ownermiddleware');
+const fs = require('fs');
+const PDFDocument = require('pdfkit');
 
 keith({
-    pattern: "decrypt",
-    alias: ["dec", "deobfuscate"],
-    desc: "Deobfuscate JavaScript code",
-    category: "Coding",
-    react: "🔓",
-    filename: __filename
+  pattern: "topdf",
+  alias: ["quoted2pdf", "makedoc"],
+  desc: "Convert quoted text message to a PDF",
+  category: "Utility",
+  react: "📄",
+  filename: __filename
 }, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
     try {
-        const { reply, m } = context;
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a text message to convert to PDF.");
+      }
 
-        if (m.quoted && m.quoted.text) {
-            const obfuscatedCode = m.quoted.text;
+      const quotedText = msgKeith.conversation.trim();
+      const fileName = `./temp-${Date.now()}.pdf`;
 
-            // Step 1: Parse the obfuscated code into AST
-            const ast = parse(obfuscatedCode, {
-                sourceType: 'script', // or 'module' if needed
-            });
+      // Create a PDF with the quoted text
+      const doc = new PDFDocument();
+      doc.pipe(fs.createWriteStream(fileName));
+      doc.fontSize(14).text(quotedText, { align: 'left' });
+      doc.end();
 
-            // Step 2: Simplify the AST (remove obfuscation tricks)
-            traverse(ast, {
-                // Fix hex/unicode strings (e.g., "\x68\x65\x6c\x6c\x6f" → "hello")
-                StringLiteral(path) {
-                    if (path.node.extra?.raw) {
-                        path.node.value = path.node.extra.raw
-                            .replace(/\\x([a-fA-F0-9]{2})/g, (_, hex) => 
-                                String.fromCharCode(parseInt(hex, 16))
-                            .replace(/\\u([a-fA-F0-9]{4})/g, (_, hex) => 
-                                String.fromCharCode(parseInt(hex, 16)));
-                        delete path.node.extra; // Clean up
-                    }
-                },
-                // Simplify numeric expressions (e.g., 0x2a → 42)
-                NumericLiteral(path) {
-                    if (path.node.extra?.raw) {
-                        delete path.node.extra;
-                    }
-                },
-                // Reverse simple array-based string lookups
-                MemberExpression(path) {
-                    if (path.node.property?.type === 'NumericLiteral' &&
-                        path.node.object?.type === 'Identifier') {
-                        // Replace arr[0] with actual strings if possible
-                        // (Advanced: Map array references to their values)
-                    }
-                }
-            });
+      // Wait for the file to finish writing before sending
+      doc.on('finish', async () => {
+        await client.sendMessage(m.chat, {
+          document: { url: fileName },
+          mimetype: 'application/pdf',
+          fileName: 'quoted-message.pdf'
+        }, { quoted: m });
 
-            // Step 3: Regenerate clean code
-            const deobfuscatedCode = generate(ast, {
-                compact: false, // Pretty-print
-                comments: true,  // Preserve comments
-            }).code;
+        fs.unlinkSync(fileName);
+      });
 
-            console.log("Successfully deobfuscated the code");
-            reply(deobfuscatedCode);
-        } else {
-            reply("❌ Please quote an obfuscated JavaScript code to decrypt.");
-        }
-    } catch (error) {
-        console.error("Error in .decrypt command:", error);
-        reply("❌ Failed to deobfuscate. Is the code heavily obfuscated?");
+    } catch (err) {
+      console.error("Error creating PDF:", err);
+      reply("❌ Failed to convert message to PDF. Try again.");
     }
+  });
 });
