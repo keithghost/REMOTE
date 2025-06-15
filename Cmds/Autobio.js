@@ -3,6 +3,86 @@ const ownerMiddleware = require('../../utility/botUtil/Ownermiddleware');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 
+const { Document, Packer, Paragraph, TextRun } = require('docx');
+
+keith({
+  pattern: "todocx",
+  alias: ["quoted2docx", "makedocx"],
+  desc: "Convert quoted text message to a DOCX document",
+  category: "Utility",
+  react: "📝",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a text message to convert to DOCX.");
+      }
+
+      const quotedText = msgKeith.conversation.trim();
+      const doc = new Document({
+        sections: [{
+          children: [new Paragraph({ children: [new TextRun(quotedText)] })]
+        }]
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      const filePath = `./quoted-${Date.now()}.docx`;
+      fs.writeFileSync(filePath, buffer);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        fileName: 'quoted-text.docx'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error converting to DOCX:", err);
+      reply("❌ Failed to generate DOCX file. Try again.");
+    }
+  });
+});
+
+keith({
+  pattern: "tojs",
+  alias: ["code2js", "scriptify"],
+  desc: "Convert quoted JavaScript code to a .js file",
+  category: "Utility",
+  react: "📜",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a message containing JavaScript code.");
+      }
+
+      const jsCode = msgKeith.conversation.trim();
+      const filePath = `./script-${Date.now()}.js`;
+
+      fs.writeFileSync(filePath, jsCode);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/javascript',
+        fileName: 'quoted-script.js'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error creating JS file:", err);
+      reply("❌ Failed to convert message to .js file.");
+    }
+  });
+});
+
 keith({
   pattern: "topdf",
   alias: ["quoted2pdf", "makedoc"],
