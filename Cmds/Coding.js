@@ -21,9 +21,9 @@ keith({
   react: "⚡",
   filename: __filename
 }, async (context) => {
-  const { client, m, reply, react, msgKeith, isSuperUser } = context;
+  const { client, m, reply, react, msgKeith, isOwner } = context;
 
-  if (!isSuperUser) {
+  if (!isOwner) {
     return reply("❌ Owner Only Command!");
   }
 
