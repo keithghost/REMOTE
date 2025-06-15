@@ -43,7 +43,7 @@ keith({
 
   } catch (err) {
     console.error("Error dumping message:", err);
-    reply("❌ Failed to process the message structure.");
+    
   }
 });
 
