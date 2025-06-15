@@ -5,7 +5,7 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 keith({
   pattern: "blocklist",
   alias: ["blocked", "blockedusers"],
-  desc: "List all blocked contacts with JID and names",
+  desc: "List all blocked contacts by JID",
   category: "Owner",
   react: "📛",
   filename: __filename
@@ -20,22 +20,13 @@ keith({
         return reply("✅ You have no blocked contacts.");
       }
 
-      await reply(`🔒 You have blocked *${blocklist.length}* contact(s). Fetching details...\nPlease wait.`);
+      await reply(`🔒 You have blocked *${blocklist.length}* contact(s):`);
 
       let result = `*Blocked Contacts:*\n\n`;
-
-      for (const jid of blocklist) {
-        const number = jid.split("@")[0];
-        let displayName;
-
-        try {
-          displayName = await client.fetchName(jid); // Try to fetch name
-        } catch {
-          displayName = "Unknown";
-        }
-
-        result += `🛑 +${number} ${displayName ? `| ${displayName}` : ""}\n`;
-      }
+      blocklist.forEach((jid, i) => {
+        const number = jid.split('@')[0];
+        result += `${i + 1}. +${number}\n`;
+      });
 
       await m.reply(result);
 
