@@ -1,34 +1,47 @@
 
 const { keith } = require('../commandHandler');
-
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 
 keith({
-  pattern: "setname",
-  alias: ["myname", "updatename"],
-  desc: "Update bot profile name (owner only)",
+  pattern: "blocklist",
+  alias: ["blocked", "blockedusers"],
+  desc: "List all blocked contacts with JID and names",
   category: "Owner",
-  react: "📝",
+  react: "📛",
   filename: __filename
 }, async (context) => {
   await ownerMiddleware(context, async () => {
-    const { client, m, text, isOwner, reply } = context;
+    const { client, m, reply } = context;
 
     try {
-      if (!isOwner) {
-        return reply("❌ You do not have permission to perform this action.");
+      const blocklist = await client.fetchBlocklist();
+
+      if (!blocklist || blocklist.length === 0) {
+        return reply("✅ You have no blocked contacts.");
       }
 
-      if (!text) {
-        return reply("❌ Please provide a name to update the profile.");
+      await reply(`🔒 You have blocked *${blocklist.length}* contact(s). Fetching details...\nPlease wait.`);
+
+      let result = `*Blocked Contacts:*\n\n`;
+
+      for (const jid of blocklist) {
+        const number = jid.split("@")[0];
+        let displayName;
+
+        try {
+          displayName = await client.fetchName(jid); // Try to fetch name
+        } catch {
+          displayName = "Unknown";
+        }
+
+        result += `🛑 +${number} ${displayName ? `| ${displayName}` : ""}\n`;
       }
 
-      const name = text.trim();
-      await client.updateProfileName(name);
-      reply(`✅ Profile name updated to: *${name}*`);
-    } catch (error) {
-      console.error("Error in setname command:", error);
-      reply("❌ An error occurred while updating profile name. Please try again later.");
+      await m.reply(result);
+
+    } catch (err) {
+      console.error("Error fetching blocklist:", err);
+      return reply("❌ Failed to fetch blocked contacts. Please try again.");
     }
   });
 });
