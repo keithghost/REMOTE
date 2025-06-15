@@ -4,7 +4,7 @@ const getFBInfo = require("@xaviabot/fb-downloader");
 const { Catbox } = require("node-catbox");
 const fs = require('fs-extra');
 const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
-
+const acrcloud = require("acrcloud");
 const catbox = new Catbox();
 
 async function uploadToCatbox(filePath) {
@@ -17,6 +17,63 @@ async function uploadToCatbox(filePath) {
     throw new Error(String(error));
   }
 }
+
+
+keith({
+    pattern: "shazam",
+    alias: ["arcloud", "arc"],
+    desc: "Identify music artist",
+    category: "Download",
+    react: "🎵",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { m, mime, reply } = context;
+
+        if (!/video|audio/.test(mime)) {
+            return reply("Please tag an audio or short video message so I can analyze it.");
+        }
+
+        const acr = new acrcloud({
+            host: 'identify-ap-southeast-1.acrcloud.com',
+            access_key: '26afd4eec96b0f5e5ab16a7e6e05ab37',
+            access_secret: 'wXOZIqdMNZmaHJP1YDWVyeQLg579uK2CfY6hWMN8'
+        });
+
+        const targetMsg = m.quoted ? m.quoted : m;
+        let buffer;
+
+        try {
+            buffer = await targetMsg.download();
+        } catch {
+            return reply("Failed to download media. Please try again.");
+        }
+
+        const result = await acr.identify(buffer);
+        const { status, metadata } = result;
+
+        if (status.code !== 0) {
+            return reply(`Recognition failed: ${status.msg}`);
+        }
+
+        if (!metadata?.music?.length) {
+            return reply("No recognizable song found.");
+        }
+
+        const song = metadata.music[0];
+        const txt = [
+            `🎶 *Title:* ${song.title}`,
+            song.artists ? `👤 *Artists:* ${song.artists.map(a => a.name).join(', ')}` : '',
+            song.album ? `💿 *Album:* ${song.album.name}` : '',
+            song.genres ? `🎧 *Genres:* ${song.genres.map(g => g.name).join(', ')}` : '',
+            `📅 *Release Date:* ${song.release_date}`
+        ].filter(Boolean).join('\n');
+
+        reply(txt);
+    } catch (error) {
+        reply("Song not recognizable or an error occurred.");
+    }
+});
 
 keith({
   pattern: "url",
