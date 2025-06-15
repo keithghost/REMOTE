@@ -14,6 +14,40 @@ const generate = require('@babel/generator').default;
 const traverse = require('@babel/traverse').default;
 
 keith({
+  pattern: "return",
+  alias: ["details", "det", "ret"],
+  desc: "Displays raw quoted message in JSON format",
+  category: "Coding",
+  react: "⚡",
+  filename: __filename
+}, async (context) => {
+  const { client, m, reply, react, msgKeith, isSuperUser } = context;
+
+  if (!isSuperUser) {
+    return reply("❌ Owner Only Command!");
+  }
+
+  if (!msgKeith) {
+    return reply("❌ Please reply to a message to inspect it.");
+  }
+
+  try {
+    const json = JSON.stringify(msgKeith, null, 2);
+    const chunks = json.match(/[\s\S]{1,100000}/g) || [];
+
+    for (const chunk of chunks) {
+      const formatted = "```json\n" + chunk + "\n```";
+      await client.sendMessage(m.chat, { text: formatted }, { quoted: m });
+      await react("✅");
+    }
+
+  } catch (err) {
+    console.error("Error dumping message:", err);
+    reply("❌ Failed to process the message structure.");
+  }
+});
+
+keith({
     pattern: "decrypt",
     alias: ["dec", "deobfuscate"],
     desc: "Deobfuscate JavaScript code",
