@@ -1,6 +1,37 @@
 
 const { keith } = require('../commandHandler');
 
+const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
+
+keith({
+  pattern: "setname",
+  alias: ["myname", "updatename"],
+  desc: "Update bot profile name (owner only)",
+  category: "Owner",
+  react: "📝",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, text, isOwner, reply } = context;
+
+    try {
+      if (!isOwner) {
+        return reply("❌ You do not have permission to perform this action.");
+      }
+
+      if (!text) {
+        return reply("❌ Please provide a name to update the profile.");
+      }
+
+      const name = text.trim();
+      await client.updateProfileName(name);
+      reply(`✅ Profile name updated to: *${name}*`);
+    } catch (error) {
+      console.error("Error in setname command:", error);
+      reply("❌ An error occurred while updating profile name. Please try again later.");
+    }
+  });
+});
 
 keith({
   pattern: "vcard",
