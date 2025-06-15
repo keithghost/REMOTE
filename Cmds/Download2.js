@@ -42,11 +42,11 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, sendReply } = context;
+        const { client, m, reply } = context;
         const quotedMessage = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
 
         if (!quotedMessage) {
-            return await sendReply("Please quote a document, image, video, audio, or any file to upload.");
+            return await reply("Please quote a document, image, video, audio, or any file to upload.");
         }
 
         // Check for any type of media/document message
@@ -61,7 +61,7 @@ keith({
         const messageType = messageTypes.find(type => quotedMessage[type]);
         
         if (!messageType) {
-            return await sendReply("Unsupported message type. Please quote a document, image, video, audio, or any file to upload.");
+            return await reply("Unsupported message type. Please quote a document, image, video, audio, or any file to upload.");
         }
 
         try {
@@ -69,7 +69,7 @@ keith({
             const filePath = await client.downloadAndSaveMediaMessage(quotedMessage);
             
             if (!filePath) {
-                return await sendReply("Failed to download the file.");
+                return await reply("Failed to download the file.");
             }
 
             // Get the file name if it's a document
@@ -83,11 +83,11 @@ keith({
             
             // Send the result with appropriate message
             const fileExtension = path.extname(filePath).toUpperCase().replace('.', '') || 'FILE';
-            await sendReply(`✅ ${fileExtension} Uploaded Successfully!\n\n📁 Name: ${fileName}\n🔗 URL: ${link}`);
+            await reply(`✅ ${fileExtension} Uploaded Successfully!\n\n📁 Name: ${fileName}\n🔗 URL: ${link}`);
 
         } catch (uploadError) {
             console.error('Upload error:', uploadError);
-            await sendReply(`Failed to upload file. Error: ${uploadError.message}`);
+            await reply(`Failed to upload file. Error: ${uploadError.message}`);
         }
 
     } catch (error) {
