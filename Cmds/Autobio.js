@@ -1,5 +1,5 @@
 const { keith } = require('../commandHandler');
-const ownerMiddleware = require('../../utility/botUtil/Ownermiddleware');
+const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 
