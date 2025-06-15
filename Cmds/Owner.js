@@ -1,6 +1,52 @@
 
 const { keith } = require('../commandHandler');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
+const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
+const fs = require("fs");
+
+keith({
+  pattern: "fullpp",
+  alias: ["setppfull", "setprofile"],
+  desc: "Update bot full profile picture from quoted image",
+  category: "Owner",
+  react: "🖼️",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, generateProfilePicture, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.imageMessage) {
+        return reply("❌ Please quote a valid image to set as full profile picture.");
+      }
+
+      const media = msgKeith.imageMessage;
+      const downloadedPath = await client.downloadAndSaveMediaMessage(media);
+      const { img } = await generateProfilePicture(downloadedPath);
+
+      await client.query({
+        tag: 'iq',
+        attrs: {
+          to: S_WHATSAPP_NET,
+          type: 'set',
+          xmlns: 'w:profile:picture'
+        },
+        content: [{
+          tag: 'picture',
+          attrs: { type: 'image' },
+          content: img
+        }]
+      });
+
+      fs.unlinkSync(downloadedPath);
+      reply("✅ Bot profile picture updated successfully.");
+
+    } catch (error) {
+      console.error("Error setting full profile picture:", error);
+      reply("❌ Failed to update profile picture. Please try again.");
+    }
+  });
+});
 
 keith({
   pattern: "blocklist",
