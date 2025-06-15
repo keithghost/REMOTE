@@ -1,7 +1,100 @@
 const { keith } = require('../commandHandler');
 const axios = require('axios');
 const getFBInfo = require("@xaviabot/fb-downloader");
+//const { keith } = require('../commandHandler');
+const { Catbox } = require("node-catbox");
+const fs = require('fs-extra');
+const path = require('path');
 
+// Initialize Catbox
+const catbox = new Catbox();
+
+// Function to upload a file to Catbox and return the URL
+async function uploadToCatbox(filePath) {
+    if (!fs.existsSync(filePath)) {
+        throw new Error("File does not exist");
+    }
+    try {
+        const uploadResult = await catbox.uploadFile({ path: filePath });
+        if (uploadResult) {
+            return uploadResult;
+        } else {
+            throw new Error("Error retrieving file link");
+        }
+    } catch (error) {
+        throw new Error(`Upload failed: ${error.message}`);
+    } finally {
+        // Clean up the temporary file
+        try {
+            await fs.unlink(filePath);
+        } catch (cleanupError) {
+            console.error('Error cleaning up temp file:', cleanupError);
+        }
+    }
+}
+
+keith({
+    pattern: "url",
+    alias: ["upload", "urlconvert"],
+    desc: "Convert any document to URL",
+    category: "Download",
+    react: "🔗",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, sendReply } = context;
+        const quotedMessage = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+        if (!quotedMessage) {
+            return await sendReply("Please quote a document, image, video, audio, or any file to upload.");
+        }
+
+        // Check for any type of media/document message
+        const messageTypes = [
+            'imageMessage',
+            'videoMessage',
+            'documentMessage',
+            'audioMessage',
+            'stickerMessage'
+        ];
+
+        const messageType = messageTypes.find(type => quotedMessage[type]);
+        
+        if (!messageType) {
+            return await sendReply("Unsupported message type. Please quote a document, image, video, audio, or any file to upload.");
+        }
+
+        try {
+            // Download the media/document
+            const filePath = await client.downloadAndSaveMediaMessage(quotedMessage);
+            
+            if (!filePath) {
+                return await sendReply("Failed to download the file.");
+            }
+
+            // Get the file name if it's a document
+            let fileName = "file";
+            if (quotedMessage.documentMessage) {
+                fileName = quotedMessage.documentMessage.fileName || "document";
+            }
+
+            // Upload to Catbox
+            const link = await uploadToCatbox(filePath);
+            
+            // Send the result with appropriate message
+            const fileExtension = path.extname(filePath).toUpperCase().replace('.', '') || 'FILE';
+            await sendReply(`✅ ${fileExtension} Uploaded Successfully!\n\n📁 Name: ${fileName}\n🔗 URL: ${link}`);
+
+        } catch (uploadError) {
+            console.error('Upload error:', uploadError);
+            await sendReply(`Failed to upload file. Error: ${uploadError.message}`);
+        }
+
+    } catch (error) {
+        console.error('Command error:', error);
+        await context.sendReply(`An error occurred: ${error.message}`);
+    }
+});
 keith({
     pattern: "spotify",
     alias: ["sp", "spotifydl"],
