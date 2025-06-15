@@ -5,6 +5,107 @@ const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const fs = require("fs");
 
 keith({
+  pattern: "profile",
+  alias: ["whois", "ppinfo"],
+  desc: "Fetch user's profile picture and about info",
+  category: "General",
+  react: "🧾",
+  filename: __filename
+}, async (context) => {
+  const { client, m, reply } = context;
+
+  try {
+    const target = m.quoted?.sender || m.sender;
+    const displayName = m.quoted ? `@${target.split("@")[0]}` : m.pushName;
+
+    let ppUrl;
+    try {
+      ppUrl = await client.profilePictureUrl(target, 'image');
+    } catch {
+      ppUrl = "https://telegra.ph/file/95680cd03e012bb08b9e6.jpg"; // Fallback image
+    }
+
+    let about;
+    try {
+      const status = await client.fetchStatus(target);
+      about = status.status || "No about info.";
+    } catch {
+      about = "About not accessible due to user privacy.";
+    }
+
+    const message = {
+      image: { url: ppUrl },
+      caption: `*Name*: ${displayName}\n*About*: ${about}`,
+      ...(m.quoted && { mentions: [target] })
+    };
+
+    await client.sendMessage(m.chat, message, { quoted: m });
+
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    reply("❌ Failed to retrieve profile information.");
+  }
+});
+
+
+keith({
+  pattern: "mygroups",
+  alias: ["listgroups", "groupz"],
+  desc: "List all groups the bot is participating in",
+  category: "Owner",
+  react: "👥",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, reply } = context;
+
+    try {
+      const groupData = await client.groupFetchAllParticipating();
+      const groups = Object.values(groupData);
+
+      if (groups.length === 0) {
+        return reply("🤖 Bot is currently not part of any groups.");
+      }
+
+      await reply(`📦 Bot is in *${groups.length}* group(s). Fetching details...`);
+
+      let result = `*📋 My Groups:*\n\n`;
+
+      for (const group of groups) {
+        result += `📌 *Subject*: ${group.subject}\n👥 *Members*: ${group.participants.length}\n🔗 *JID*: ${group.id}\n\n`;
+      }
+
+      await m.reply(result);
+
+    } catch (error) {
+      console.error("Error fetching group list:", error);
+      reply(`❌ Failed to fetch group list:\n${error.message}`);
+    }
+  });
+});
+
+keith({
+  pattern: "rpp",
+  alias: ["removepp", "delpp"],
+  desc: "Remove bot's profile picture",
+  category: "Owner",
+  react: "🚫",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, reply } = context;
+
+    try {
+      await client.rPP();
+      reply("✅ Profile picture removed successfully.");
+    } catch (error) {
+      console.error("Error removing profile picture:", error);
+      reply("❌ Failed to remove profile picture. Please try again later.");
+    }
+  });
+});
+
+keith({
   pattern: "fullpp",
   alias: ["setppfull", "setprofile"],
   desc: "Update bot full profile picture from quoted image",
