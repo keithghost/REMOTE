@@ -1,6 +1,66 @@
 const { keith } = require('../commandHandler');
 const axios = require('axios');
 const getFBInfo = require("@xaviabot/fb-downloader");
+const { Catbox } = require("node-catbox");
+const fs = require('fs-extra');
+const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
+
+const catbox = new Catbox();
+
+async function uploadToCatbox(filePath) {
+  if (!fs.existsSync(filePath)) throw new Error("File does not exist");
+  try {
+    const uploadResult = await catbox.uploadFile({ path: filePath });
+    if (uploadResult) return uploadResult;
+    else throw new Error("Error retrieving file link");
+  } catch (error) {
+    throw new Error(String(error));
+  }
+}
+
+keith({
+  pattern: "url",
+  alias: ["upload", "urlconvert"],
+  desc: "convert to url",
+  category: "Download",
+  react: "🎵",
+  filename: __filename
+}, async (context) => {
+  try {
+    const { client, m, sendReply } = context;
+    const quotedMessage = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+    if (quotedMessage) {
+      let filePath;
+
+      if (quotedMessage.imageMessage) {
+        filePath = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
+      } else if (quotedMessage.videoMessage) {
+        filePath = await client.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
+      } else if (quotedMessage.stickerMessage) {
+        filePath = await client.downloadAndSaveMediaMessage(quotedMessage.stickerMessage);
+      } else if (quotedMessage.audioMessage) {
+        filePath = await client.downloadAndSaveMediaMessage(quotedMessage.audioMessage);
+      } else if (quotedMessage.documentMessage) {
+        filePath = await client.downloadAndSaveMediaMessage(quotedMessage.documentMessage);
+      } else {
+        return sendReply(client, m, "Please quote a supported file (image, video, audio, document, etc.) to upload.");
+      }
+
+      try {
+        const link = await uploadToCatbox(filePath);
+        await sendReply(client, m, `📁 File Uploaded:\n\n${link}`);
+      } catch (error) {
+        await sendReply(client, m, '❌ Error uploading file:\n' + error);
+        console.error(error);
+      }
+    } else {
+      return sendReply(client, m, "📌 Please quote a media or document message to upload.");
+    }
+  } catch (err) {
+    console.error("Unexpected error:", err);
+  }
+});
 
 
 keith({
