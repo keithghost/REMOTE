@@ -3,7 +3,7 @@ const { keith } = require('../commandHandler');
 
 keith({
   pattern: "vv",
-  alias: ["viewonce", "retrieve"],
+  alias: ["wow", "retrieve"],
   desc: "Retrieve media message including image, video, and audio",
   category: "Owner",
   react: "⬇️",
