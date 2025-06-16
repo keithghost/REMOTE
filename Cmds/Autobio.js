@@ -15,13 +15,13 @@ keith({
   filename: __filename
 }, async (context) => {
   await ownerMiddleware(context, async () => {
-    const { client, m, quoted, mime, reply, mess } = context;
+    const { client, m, quoted, mime, reply } = context;
 
     if (!quoted) return reply("❌ Reply to an image, video, or audio to make it view-once.");
 
     const media = await client.downloadAndSaveMediaMessage(quoted);
     const options = { quoted: m };
-    const caption = mess?.done || "✅ View-once sent";
+    const caption = "✅ Sent as view-once";
 
     if (/image/.test(mime)) {
       await client.sendMessage(m.chat, {
