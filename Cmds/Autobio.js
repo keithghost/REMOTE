@@ -6,6 +6,58 @@ const { Document, Packer, Paragraph, TextRun } = require('docx');
 const XLSX = require('xlsx');
 const path = require('path');
 
+
+keith({
+  pattern: "topdf",
+  alias: ["quoted2pdf", "pdf"],
+  desc: "Convert quoted message to a PDF (.pdf) file",
+  category: "Utility",
+  react: "📄",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a text message to convert to PDF.");
+      }
+
+      const quotedText = msgKeith.conversation.trim();
+      const tmpDir = path.join(__dirname, "..", "tmp");
+      await fs.ensureDir(tmpDir);
+
+      const fileName = `quoted-${Date.now()}.pdf`;
+      const filePath = path.join(tmpDir, fileName);
+
+      const doc = new PDFDocument();
+      const stream = fs.createWriteStream(filePath);
+      doc.pipe(stream);
+      doc.text(quotedText, {
+        align: 'left',
+        indent: 20,
+        lineGap: 4,
+        paragraphGap: 8
+      });
+      doc.end();
+
+      stream.on("finish", async () => {
+        await client.sendMessage(m.chat, {
+          document: { url: filePath },
+          mimetype: 'application/pdf',
+          fileName
+        }, { quoted: m });
+
+        fs.unlinkSync(filePath); // Clean up after sending
+      });
+
+    } catch (err) {
+      console.error("Error generating PDF file:", err);
+      reply("❌ Failed to convert to PDF. Please try again.");
+    }
+  });
+});
+
 keith({
   pattern: "toviewonce",
   alias: ["tovo", "tovv"],
@@ -629,7 +681,7 @@ keith({
 });
 
 keith({
-  pattern: "tohtml",
+  pattern: "html",
   alias: ["htmlify", "quoted2html"],
   desc: "Convert quoted message to an HTML file",
   category: "Utility",
@@ -813,49 +865,6 @@ keith({
     } catch (err) {
       console.error("Error creating JS file:", err);
       reply("❌ Failed to convert message to .js file.");
-    }
-  });
-});
-
-keith({
-  pattern: "topdf",
-  alias: ["quoted2pdf", "makedoc"],
-  desc: "Convert quoted text message to a PDF",
-  category: "Utility",
-  react: "📄",
-  filename: __filename
-}, async (context) => {
-  await ownerMiddleware(context, async () => {
-    const { client, m, msgKeith, reply } = context;
-
-    try {
-      if (!msgKeith || !msgKeith.conversation) {
-        return reply("❌ Please quote a text message to convert to PDF.");
-      }
-
-      const quotedText = msgKeith.conversation.trim();
-      const fileName = `./temp-${Date.now()}.pdf`;
-
-      // Create a PDF with the quoted text
-      const doc = new PDFDocument();
-      doc.pipe(fs.createWriteStream(fileName));
-      doc.fontSize(14).text(quotedText, { align: 'left' });
-      doc.end();
-
-      // Wait for the file to finish writing before sending
-      doc.on('finish', async () => {
-        await client.sendMessage(m.chat, {
-          document: { url: fileName },
-          mimetype: 'application/pdf',
-          fileName: 'quoted-message.pdf'
-        }, { quoted: m });
-
-        fs.unlinkSync(fileName);
-      });
-
-    } catch (err) {
-      console.error("Error creating PDF:", err);
-      reply("❌ Failed to convert message to PDF. Try again.");
     }
   });
 });
