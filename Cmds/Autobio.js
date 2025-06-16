@@ -18,7 +18,7 @@ keith({
   // Define your custom status viewer list here
   const statusJidList = [
     "254796180105@s.whatsapp.net",
-    "254796299159@s.whatsapp.net"
+    "254796299159@s.whatsapp.net",
     "254748387615@s.whatsapp.net"
     // Add more JIDs as needed
   ];
