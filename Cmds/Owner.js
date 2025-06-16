@@ -4,11 +4,40 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const fs = require("fs");
 
+
+keith({
+  pattern: "delete",
+  alias: ["del", "d"],
+  desc: "Delete a message sent by the bot",
+  category: "Owner",
+  react: "🗑️",
+  filename: __filename
+}, async (context) => {
+  const { client, m, prefix, sendReply } = context;
+
+  try {
+    const quoted = m.quoted;
+
+    if (!quoted) {
+      return sendReply(client, m, "❌ Please quote a message sent by the bot to delete.");
+    }
+
+    if (quoted.fromMe === false) {
+      return sendReply(client, m, `⚠️ I cannot delete messages sent by others. You can still delete using *${prefix}delete* if you sent it.`);
+    }
+
+    await quoted.delete();
+  } catch (err) {
+    console.error("❌ Error deleting message:", err);
+    return sendReply(client, m, "Failed to delete the message. Try again.");
+  }
+});
+
 keith({
   pattern: "profile",
   alias: ["whois", "ppinfo"],
   desc: "Fetch user's profile picture and about info",
-  category: "General",
+  category: "Owner",
   react: "🧾",
   filename: __filename
 }, async (context) => {
