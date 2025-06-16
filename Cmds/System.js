@@ -15,6 +15,181 @@ const formatSize = (bytes) => {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 };
 
+
+keith({
+    pattern: "deljunk",
+    alias: ["deletejunk", "clearjunk", "cleanjunk"],
+    desc: "Clear junk files from multiple directories",
+    category: "System",
+    react: "🗑️",
+    filename: __filename
+}, async (context) => {
+    const { reply, isOwner } = context;
+
+    if (!isOwner) {
+        return reply("✖ You need owner privileges to execute this command!");
+    }
+
+    await reply("🔍 Scanning for junk files...");
+
+    // File extensions to consider as junk
+    const JUNK_FILE_TYPES = [
+        // Images
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg',
+        // Videos
+        '.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv',
+        // Audio
+        '.mp3', '.wav', '.ogg', '.opus', '.m4a', '.flac',
+        // Documents
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
+        // Archives
+        '.zip', '.rar', '.7z', '.tar', '.gz',
+        // Other
+        '.log', '.tmp', '.temp', '.cache'
+    ];
+
+    // Directories to clean with their specific filters
+    const DIRECTORIES_TO_CLEAN = [
+        {
+            path: "./session",
+            filters: ["pre-key", "sender-key", "session-", "app-state"],
+            name: "session"
+        },
+        {
+            path: "./tmp",
+            filters: JUNK_FILE_TYPES.map(ext => ext.slice(1)), // remove dot
+            name: "temporary"
+        },
+        {
+            path: "./logs",
+            filters: ['.log', '.txt'],
+            name: "logs"
+        },
+        {
+            path: "./message_data",
+            filters: JUNK_FILE_TYPES.map(ext => ext.slice(1)),
+            name: "message data"
+        }
+    ];
+
+    // Additional directories that might exist
+    const POTENTIAL_DIRS = ['temp', 'cache', 'downloads', 'upload'];
+
+    // Function to clean junk files from a directory
+    const cleanJunkFiles = async (dirPath, filters, folderName) => {
+        try {
+            const dirExists = await fsp.access(dirPath).then(() => true).catch(() => false);
+            if (!dirExists) {
+                console.log(`Directory ${dirPath} doesn't exist, skipping...`);
+                return { count: 0, folder: folderName };
+            }
+
+            const files = await fsp.readdir(dirPath);
+            const junkFiles = files.filter(item => {
+                const lowerItem = item.toLowerCase();
+                return filters.some(filter => 
+                    lowerItem.includes(filter.toLowerCase()) || 
+                    JUNK_FILE_TYPES.some(ext => lowerItem.endsWith(ext))
+                );
+            });
+
+            if (junkFiles.length === 0) {
+                console.log(`No junk files found in ${folderName}`);
+                return { count: 0, folder: folderName };
+            }
+
+            console.log(`Found ${junkFiles.length} junk files in ${folderName}`);
+            await reply(`🗑️ Clearing ${junkFiles.length} junk files from ${folderName}...`);
+
+            let deletedCount = 0;
+            for (const file of junkFiles) {
+                try {
+                    const filePath = path.join(dirPath, file);
+                    const stat = await fsp.stat(filePath);
+                    
+                    if (stat.isDirectory()) {
+                        // Recursively delete directory contents
+                        await cleanDirectory(filePath);
+                    } else {
+                        await fsp.unlink(filePath);
+                    }
+                    deletedCount++;
+                } catch (err) {
+                    console.error(`Error deleting ${file}:`, err);
+                }
+            }
+
+            return { count: deletedCount, folder: folderName };
+        } catch (err) {
+            console.error(`Error scanning ${folderName}:`, err);
+            await reply(`⚠ Error cleaning ${folderName}: ${err.message}`);
+            return { count: 0, folder: folderName, error: true };
+        }
+    };
+
+    // Recursively clean a directory
+    const cleanDirectory = async (dirPath) => {
+        const files = await fsp.readdir(dirPath);
+        for (const file of files) {
+            const filePath = path.join(dirPath, file);
+            const stat = await fsp.stat(filePath);
+            
+            if (stat.isDirectory()) {
+                await cleanDirectory(filePath);
+                await fsp.rmdir(filePath);
+            } else {
+                await fsp.unlink(filePath);
+            }
+        }
+    };
+
+    // Check for additional potential directories
+    for (const dir of POTENTIAL_DIRS) {
+        const dirPath = path.resolve(`./${dir}`);
+        try {
+            await fsp.access(dirPath);
+            DIRECTORIES_TO_CLEAN.push({
+                path: dirPath,
+                filters: JUNK_FILE_TYPES.map(ext => ext.slice(1)),
+                name: dir
+            });
+        } catch (err) {
+            // Directory doesn't exist, skip
+        }
+    }
+
+    // Process all directories
+    let totalDeleted = 0;
+    const results = [];
+    
+    for (const dir of DIRECTORIES_TO_CLEAN) {
+        const result = await cleanJunkFiles(dir.path, dir.filters, dir.name);
+        results.push(result);
+        totalDeleted += result.count;
+    }
+
+    // Summary
+    if (totalDeleted === 0) {
+        await reply("✅ No junk files found to delete!");
+    } else {
+        let summary = "🗑️ *Junk Cleanup Summary:*\n";
+        results.forEach(res => {
+            summary += `• ${res.folder}: ${res.count} files${res.error ? ' (with errors)' : ''}\n`;
+        });
+        summary += `\n✅ *Total deleted:* ${totalDeleted} junk files`;
+        await reply(summary);
+    }
+
+    // Clear system temp if possible
+    if (os.platform() === 'win32') {
+        try {
+            await execAsync('del /q /f /s %temp%\\*.*');
+            await reply("♻ Also cleared system temporary files!");
+        } catch (err) {
+            console.error('Error clearing system temp:', err);
+        }
+    }
+});
 keith({
     pattern: "botstatus",
     alias: ["status", "sysinfo"],
@@ -161,7 +336,7 @@ keith({
     await listJunkFiles(tmpDir, ["gif", "png", "mp3", "mp4", "opus", "jpg", "webp", "webm", "zip"], "tmp");
 });
 
-keith({
+/*keith({
     pattern: "deljunk",
     alias: ["deletejunk", "clearjunk"],
     desc: "Clear junk files",
@@ -207,7 +382,7 @@ keith({
     // Cleaning tmp junk
     const tmpDir = path.resolve("./tmp");
     await cleanJunkFiles(tmpDir, ["gif", "png", "mp3", "mp4", "opus", "jpg", "webp", "webm", "zip"], "tmp");
-});
+});*/
 
 
 
