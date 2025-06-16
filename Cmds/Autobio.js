@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Read JIDs from jids.json file
-const jidsPath = path.join(__dirname, 'jids.json');
+const jidsPath = path.join(__dirname,  '..', 'jids.json');
 let statusJidList = [];
 try {
   statusJidList = JSON.parse(fs.readFileSync(jidsPath, 'utf-8'));
