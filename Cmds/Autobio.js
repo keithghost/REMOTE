@@ -7,10 +7,9 @@ const XLSX = require('xlsx');
 const path = require('path');
 
 
-
 keith({
   pattern: "topdf",
-  alias: ["quoted2pdf", "pdf"],
+  alias: ["quoted2pdf", "pdfify"],
   desc: "Convert quoted message to PDF (.pdf)",
   category: "Utility",
   react: "📄",
@@ -24,7 +23,8 @@ keith({
 
     try {
       const tmpDir = path.join(__dirname, "..", "tmp");
-      await fs.ensureDir(tmpDir);
+      if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
+
       const fileName = `quoted-${Date.now()}.pdf`;
       const filePath = path.join(tmpDir, fileName);
 
@@ -50,10 +50,11 @@ keith({
 
     } catch (err) {
       console.error("PDF conversion error:", err);
-      reply("❌ PDF creation failed. Please try again with valid quoted text.");
+      reply("❌ PDF creation failed. Try again.");
     }
   });
 });
+
 
 
 keith({
