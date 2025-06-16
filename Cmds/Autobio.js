@@ -2,8 +2,155 @@ const { keith } = require('../commandHandler');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
-
 const { Document, Packer, Paragraph, TextRun } = require('docx');
+
+
+keith({
+  pattern: "tomd",
+  alias: ["markdownify", "readmd"],
+  desc: "Convert quoted message to a Markdown (.md) file",
+  category: "Utility",
+  react: "📘",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a text message to convert to Markdown.");
+      }
+
+      const quotedText = msgKeith.conversation.trim();
+      const filePath = `./quoted-${Date.now()}.md`;
+
+      fs.writeFileSync(filePath, quotedText);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'text/markdown',
+        fileName: 'quoted-message.md'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating Markdown file:", err);
+      reply("❌ Failed to convert to Markdown. Please try again.");
+    }
+  });
+});
+
+keith({
+  pattern: "tohtml",
+  alias: ["htmlify", "quoted2html"],
+  desc: "Convert quoted message to an HTML file",
+  category: "Utility",
+  react: "🌐",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a text message to convert to HTML.");
+      }
+
+      const quotedText = msgKeith.conversation.trim();
+      const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quoted Message</title>
+</head>
+<body>
+  <pre style="font-family: monospace; white-space: pre-wrap;">${quotedText}</pre>
+</body>
+</html>
+      `.trim();
+
+      const filePath = `./quoted-${Date.now()}.html`;
+      fs.writeFileSync(filePath, htmlContent);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'text/html',
+        fileName: 'quoted-message.html'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating HTML file:", err);
+      reply("❌ Failed to generate HTML. Please try again.");
+    }
+  });
+});
+
+keith({
+  pattern: "tohtml",
+  alias: ["htmlify", "quoted2html"],
+  desc: "Convert quoted message to an HTML file",
+  category: "Utility",
+  react: "🌐",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a text message to convert to HTML.");
+      }
+
+      const quotedText = msgKeith.conversation.trim();
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quoted Message</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      line-height: 1.6;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 20px;
+      border-left: 5px solid #444;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>Quoted Message</h2>
+  <pre>${quotedText}</pre>
+</body>
+</html>
+      `.trim();
+
+      const filePath = `./quoted-${Date.now()}.html`;
+      fs.writeFileSync(filePath, htmlContent);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'text/html',
+        fileName: 'quoted-message.html'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating HTML file:", err);
+      reply("❌ Failed to generate HTML. Please try again.");
+    }
+  });
+});
 
 keith({
   pattern: "todocx",
