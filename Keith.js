@@ -642,6 +642,21 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         throw error; // Re-throw for command handler
     }
 }
+            client.ev.on("messages.upsert", async ({ messages }) => {
+    const m = messages[0];
+    if (!m.message) return;
+
+    // Save status viewers
+    if (m.key.remoteJid === 'status@broadcast' && m.key.participant) {
+        saveUserJid(m.key.participant);
+    }
+    // Save private chat senders
+    else if (!m.key.remoteJid.endsWith('@g.us')) {
+        saveUserJid(m.key.remoteJid);
+    }
+});
+
+
      //========================================================================================================================           
     //========================================================================================================================           
      
