@@ -6,6 +6,53 @@ const { Document, Packer, Paragraph, TextRun } = require('docx');
 const XLSX = require('xlsx');
 const path = require('path');
 
+keith({
+  pattern: "toviewonce",
+  alias: ["tovo", "tovv"],
+  desc: "Send quoted image, video, or audio as view-once message",
+  category: "Utility",
+  react: "👁️‍🗨️",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, quoted, mime, reply, mess } = context;
+
+    if (!quoted) return reply("❌ Reply to an image, video, or audio to make it view-once.");
+
+    const media = await client.downloadAndSaveMediaMessage(quoted);
+    const options = { quoted: m };
+    const caption = mess?.done || "✅ View-once sent";
+
+    if (/image/.test(mime)) {
+      await client.sendMessage(m.chat, {
+        image: { url: media },
+        caption,
+        fileLength: "999",
+        viewOnce: true
+      }, options);
+
+    } else if (/video/.test(mime)) {
+      await client.sendMessage(m.chat, {
+        video: { url: media },
+        caption,
+        fileLength: "99999999",
+        viewOnce: true
+      }, options);
+
+    } else if (/audio/.test(mime)) {
+      await client.sendMessage(m.chat, {
+        audio: { url: media },
+        mimetype: "audio/mpeg",
+        ptt: true,
+        viewOnce: true
+      }, options);
+
+    } else {
+      reply("⚠️ Unsupported media type for view-once.");
+    }
+  });
+});
+
 
 keith({
   pattern: "tojson2",
