@@ -6,6 +6,276 @@ const { Document, Packer, Paragraph, TextRun } = require('docx');
 const XLSX = require('xlsx');
 const path = require('path');
 
+
+keith({
+  pattern: "tojson2",
+  alias: ["quoted2json", "jsonify"],
+  desc: "Convert quoted message to a formatted JSON (.json) file",
+  category: "Utility",
+  react: "🧾",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a JSON object or array.");
+      }
+
+      let quoted = msgKeith.conversation.trim();
+      let parsed, wrapped = false;
+
+      try {
+        parsed = JSON.parse(quoted);
+      } catch (e) {
+        // Attempt to wrap as an object
+        try {
+          parsed = JSON.parse(`{${quoted}}`);
+          wrapped = true;
+        } catch (err) {
+          return reply("❌ That doesn't look like valid JSON. Try quoting a well-formed object or key-value lines.");
+        }
+      }
+
+      const filePath = `./quoted-${Date.now()}.json`;
+      fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2));
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/json',
+        fileName: 'quoted-message.json',
+        caption: wrapped ? "✅ Auto-wrapped in `{}` for valid JSON structure." : undefined
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating JSON file:", err);
+      reply("❌ Failed to write JSON file. Try again.");
+    }
+  });
+});
+
+keith({
+  pattern: "totoml",
+  alias: ["quoted2toml", "tomlify"],
+  desc: "Convert quoted message to TOML (.toml) file",
+  category: "Utility",
+  react: "📘",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a message formatted as TOML.");
+      }
+
+      const tomlText = msgKeith.conversation.trim();
+      const filePath = `./quoted-${Date.now()}.toml`;
+
+      fs.writeFileSync(filePath, tomlText);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/toml',
+        fileName: 'quoted-message.toml'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating TOML file:", err);
+      reply("❌ Failed to create TOML. Please ensure the syntax is valid.");
+    }
+  });
+});
+
+keith({
+  pattern: "toyaml",
+  alias: ["quoted2yaml", "yamlfy"],
+  desc: "Convert quoted message to YAML (.yaml) file",
+  category: "Utility",
+  react: "📙",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a YAML-formatted message.");
+      }
+
+      const yamlText = msgKeith.conversation.trim();
+      const filePath = `./quoted-${Date.now()}.yaml`;
+
+      fs.writeFileSync(filePath, yamlText);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/x-yaml',
+        fileName: 'quoted-message.yaml'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating YAML file:", err);
+      reply("❌ Failed to generate YAML file. Please ensure the syntax is valid.");
+    }
+  });
+});
+
+keith({
+  pattern: "toenv",
+  alias: ["quoted2env", "envify"],
+  desc: "Convert quoted message to .env config file",
+  category: "Utility",
+  react: "🔐",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a valid .env-style message.");
+      }
+
+      const envText = msgKeith.conversation.trim();
+      const filePath = `./env-${Date.now()}.env`;
+
+      fs.writeFileSync(filePath, envText);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/x-env',
+        fileName: 'quoted-config.env'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating .env file:", err);
+      reply("❌ Failed to generate .env file. Please ensure the quoted content is properly formatted.");
+    }
+  });
+});
+
+
+keith({
+  pattern: "tocsv",
+  alias: ["quoted2csv", "csvify"],
+  desc: "Convert quoted message to CSV (.csv) file",
+  category: "Utility",
+  react: "📄",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a message to convert to CSV.");
+      }
+
+      const quotedText = msgKeith.conversation.trim();
+      const filePath = `./quoted-${Date.now()}.csv`;
+
+      // Basic CSV — single column, one row
+      fs.writeFileSync(filePath, `"message"\n"${quotedText.replace(/"/g, '""')}"`);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'text/csv',
+        fileName: 'quoted-message.csv'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating CSV file:", err);
+      reply("❌ Failed to generate CSV file. Please try again.");
+    }
+  });
+});
+
+keith({
+  pattern: "toxml",
+  alias: ["quoted2xml", "xmlify"],
+  desc: "Convert quoted message to XML (.xml) file",
+  category: "Utility",
+  react: "🧩",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a message containing XML content.");
+      }
+
+      const xmlText = msgKeith.conversation.trim();
+      const filePath = `./quoted-${Date.now()}.xml`;
+
+      fs.writeFileSync(filePath, xmlText);
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/xml',
+        fileName: 'quoted-message.xml'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating XML file:", err);
+      reply("❌ Failed to create XML. Please ensure the quoted message is well-formed.");
+    }
+  });
+});
+
+keith({
+  pattern: "tojson",
+  alias: ["quoted2json", "jsonify"],
+  desc: "Convert quoted message to a JSON (.json) file",
+  category: "Utility",
+  react: "🧾",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    try {
+      if (!msgKeith || !msgKeith.conversation) {
+        return reply("❌ Please quote a message with valid JSON text.");
+      }
+
+      const jsonText = msgKeith.conversation.trim();
+      const parsed = JSON.parse(jsonText); // Validate
+
+      const filePath = `./quoted-${Date.now()}.json`;
+      fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2));
+
+      await client.sendMessage(m.chat, {
+        document: { url: filePath },
+        mimetype: 'application/json',
+        fileName: 'quoted-message.json'
+      }, { quoted: m });
+
+      fs.unlinkSync(filePath);
+
+    } catch (err) {
+      console.error("Error generating JSON file:", err);
+      reply("❌ Failed to convert message to valid JSON. Please ensure it's well-formed.");
+    }
+  });
+});
+
 keith({
   pattern: "tojpeg",
   alias: ["quoted2jpeg", "jpegify"],
