@@ -6,6 +6,20 @@ const fs = require('fs-extra');
 const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
 const acrcloud = require("acrcloud");
 const catbox = new Catbox();
+const path = require('path');
+
+/*async function uploadToCatbox(filePath) {
+  if (!fs.existsSync(filePath)) throw new Error("File does not exist");
+  try {
+    const uploadResult = await catbox.uploadFile({ path: filePath });
+    if (uploadResult) return uploadResult;
+    else throw new Error("Error retrieving file link");
+  } catch (error) {
+    throw new Error(String(error));
+  }
+}*/
+
+
 
 async function uploadToCatbox(filePath) {
   if (!fs.existsSync(filePath)) throw new Error("File does not exist");
@@ -17,6 +31,60 @@ async function uploadToCatbox(filePath) {
     throw new Error(String(error));
   }
 }
+
+function getMediaType(quoted) {
+  if (quoted.imageMessage) return "image";
+  if (quoted.videoMessage) return "video";
+  if (quoted.stickerMessage) return "sticker";
+  if (quoted.audioMessage) return "audio";
+  if (quoted.documentMessage) return "document";
+  return "unknown";
+}
+
+async function saveMediaToTemp(client, quotedMedia, type) {
+  const tmpDir = path.join(__dirname, "..", "tmp");
+  await fs.ensureDir(tmpDir);
+  const fileName = `${type}-${Date.now()}`;
+  const filePath = path.join(tmpDir, fileName);
+  const savedPath = await client.downloadAndSaveMediaMessage(quotedMedia, filePath);
+  return savedPath;
+}
+
+keith({
+  pattern: "url",
+  alias: ["upload", "urlconvert"],
+  desc: "Convert quoted media to Catbox URL",
+  category: "Download",
+  react: "📦",
+  filename: __filename
+}, async (context) => {
+  try {
+    const { client, m, sendReply } = context;
+    const quoted = m.msg?.contextInfo?.quotedMessage;
+
+    if (!quoted) return sendReply(client, m, "📌 Please quote a media or document message to upload.");
+
+    const type = getMediaType(quoted);
+    if (type === "unknown") {
+      return sendReply(client, m, "❌ Unsupported media type.");
+    }
+
+    const mediaNode = quoted[`${type}Message`];
+    const filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    try {
+      const link = await uploadToCatbox(filePath);
+      await sendReply(client, m, `✅ Uploaded to Catbox:\n\n${link}`);
+    } catch (err) {
+      await sendReply(client, m, "❌ Failed to upload. Error:\n" + err.message);
+    } finally {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+
+  } catch (err) {
+    console.error("Unexpected error in URL upload:", err);
+  }
+});
 
 
 keith({
@@ -74,7 +142,7 @@ keith({
         reply("Song not recognizable or an error occurred.");
     }
 });
-
+/*
 keith({
   pattern: "url",
   alias: ["upload", "urlconvert"],
@@ -118,7 +186,7 @@ keith({
     console.error("Unexpected error:", err);
   }
 });
-
+*/
 
 keith({
     pattern: "spotify",
