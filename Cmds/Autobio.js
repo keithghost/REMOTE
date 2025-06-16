@@ -332,76 +332,41 @@ keith({
   });
 });
 
+
 keith({
   pattern: "tojpeg",
-  alias: ["quoted2jpeg", "jpegify"],
-  desc: "Convert quoted image to JPEG file",
+  alias: ["tojpg", "tojpng", "jpegify"],
+  desc: "Convert quoted image to JPEG (.jpeg/.jpg/.jpng)",
   category: "Utility",
   react: "🖼️",
   filename: __filename
 }, async (context) => {
   await ownerMiddleware(context, async () => {
-    const { client, m, msgKeith, reply } = context;
+    const { client, m, reply } = context;
+    const quotedMessage = m.msg?.contextInfo?.quotedMessage;
+
+    if (!quotedMessage || !quotedMessage.imageMessage) {
+      return reply("❌ Reply to an image to convert it to JPEG.");
+    }
 
     try {
-      if (!msgKeith || !msgKeith.imageMessage) {
-        return reply("❌ Please quote an image to convert it to JPEG.");
-      }
-
-      const media = msgKeith.imageMessage;
       const fileName = `image-${Date.now()}.jpeg`;
       const filePath = path.resolve(`./${fileName}`);
+      const caption = quotedMessage.imageMessage.caption || "";
 
-      await client.downloadAndSaveMediaMessage(media, filePath);
+      const imagePath = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
 
       await client.sendMessage(m.chat, {
-        document: { url: filePath },
+        document: { url: imagePath },
         mimetype: 'image/jpeg',
-        fileName
+        fileName,
+        caption
       }, { quoted: m });
 
-      fs.unlinkSync(filePath);
-
+      fs.unlinkSync(imagePath);
     } catch (err) {
-      console.error("Error saving image as JPEG:", err);
-      reply("❌ Failed to generate JPEG. Please try again.");
-    }
-  });
-});
-
-keith({
-  pattern: "topng",
-  alias: ["quoted2png", "savepng"],
-  desc: "Convert quoted image to PNG file",
-  category: "Utility",
-  react: "🖼️",
-  filename: __filename
-}, async (context) => {
-  await ownerMiddleware(context, async () => {
-    const { client, m, msgKeith, reply } = context;
-
-    try {
-      if (!msgKeith || !msgKeith.imageMessage) {
-        return reply("❌ Please quote an image to convert it to PNG.");
-      }
-
-      const media = msgKeith.imageMessage;
-      const fileName = `image-${Date.now()}.png`;
-
-      const filePath = path.resolve(`./${fileName}`);
-      await client.downloadAndSaveMediaMessage(media, filePath);
-
-      await client.sendMessage(m.chat, {
-        document: { url: filePath },
-        mimetype: 'image/png',
-        fileName
-      }, { quoted: m });
-
-      fs.unlinkSync(filePath);
-
-    } catch (err) {
-      console.error("Error saving image as PNG:", err);
-      reply("❌ Failed to generate PNG. Please try again.");
+      console.error("Error converting image to JPEG:", err);
+      reply("❌ Failed to convert image to JPEG. Please try again.");
     }
   });
 });
