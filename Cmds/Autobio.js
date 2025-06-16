@@ -9,6 +9,54 @@ const path = require('path');
 
 
 keith({
+  pattern: "topdf",
+  alias: ["quoted2pdf", "pdf"],
+  desc: "Convert quoted message to PDF (.pdf)",
+  category: "Utility",
+  react: "📄",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { client, m, msgKeith, reply } = context;
+
+    const text = msgKeith?.conversation?.trim();
+    if (!text) return reply("❌ Please quote a text message to convert to PDF.");
+
+    try {
+      const tmpDir = path.join(__dirname, "..", "tmp");
+      await fs.ensureDir(tmpDir);
+      const fileName = `quoted-${Date.now()}.pdf`;
+      const filePath = path.join(tmpDir, fileName);
+
+      const doc = new PDFDocument();
+      const writeStream = fs.createWriteStream(filePath);
+
+      doc.pipe(writeStream);
+      doc.fontSize(12).text(text, {
+        align: "left",
+        lineGap: 4
+      });
+      doc.end();
+
+      writeStream.on('finish', async () => {
+        await client.sendMessage(m.chat, {
+          document: { url: filePath },
+          mimetype: 'application/pdf',
+          fileName
+        }, { quoted: m });
+
+        fs.unlinkSync(filePath);
+      });
+
+    } catch (err) {
+      console.error("PDF conversion error:", err);
+      reply("❌ PDF creation failed. Please try again with valid quoted text.");
+    }
+  });
+});
+
+
+keith({
   pattern: "toviewonce",
   alias: ["tovo", "tovv"],
   desc: "Send quoted media (image/video/audio) as view-once message",
@@ -630,53 +678,7 @@ keith({
   });
 });
 
-keith({
-  pattern: "html",
-  alias: ["htmlify", "quoted2html"],
-  desc: "Convert quoted message to an HTML file",
-  category: "Utility",
-  react: "🌐",
-  filename: __filename
-}, async (context) => {
-  await ownerMiddleware(context, async () => {
-    const { client, m, msgKeith, reply } = context;
 
-    try {
-      if (!msgKeith || !msgKeith.conversation) {
-        return reply("❌ Please quote a text message to convert to HTML.");
-      }
-
-      const quotedText = msgKeith.conversation.trim();
-      const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Quoted Message</title>
-</head>
-<body>
-  <pre style="font-family: monospace; white-space: pre-wrap;">${quotedText}</pre>
-</body>
-</html>
-      `.trim();
-
-      const filePath = `./quoted-${Date.now()}.html`;
-      fs.writeFileSync(filePath, htmlContent);
-
-      await client.sendMessage(m.chat, {
-        document: { url: filePath },
-        mimetype: 'text/html',
-        fileName: 'quoted-message.html'
-      }, { quoted: m });
-
-      fs.unlinkSync(filePath);
-
-    } catch (err) {
-      console.error("Error generating HTML file:", err);
-      reply("❌ Failed to generate HTML. Please try again.");
-    }
-  });
-});
 
 keith({
   pattern: "tohtml",
