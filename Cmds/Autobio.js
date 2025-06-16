@@ -9,51 +9,58 @@ const path = require('path');
 keith({
   pattern: "toviewonce",
   alias: ["tovo", "tovv"],
-  desc: "Send quoted media (image/video/audio) as view-once",
+  desc: "Send quoted media (image/video/audio) as view-once message",
   category: "Utility",
   react: "👁️‍🗨️",
   filename: __filename
 }, async (context) => {
-  await ownerMiddleware(context, async () => {
+  try {
     const { client, m, reply } = context;
     const quotedMessage = m.msg?.contextInfo?.quotedMessage;
 
-    if (!quotedMessage) return reply("❌ Please reply to a media message (image/video/audio).");
+    if (!quotedMessage) return reply("❌ Reply to an image, video, or audio message to make it view-once.");
 
-    const mediaType = Object.keys(quotedMessage)[0];
-    const mediaPath = await client.downloadAndSaveMediaMessage({ message: quotedMessage });
-
-    if (/image/.test(mediaType)) {
+    if (quotedMessage.imageMessage) {
+      const imageCaption = quotedMessage.imageMessage.caption || "";
+      const imagePath = await client.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
       await client.sendMessage(m.chat, {
-        image: { url: mediaPath },
-        caption: "✅ View-once image sent.",
+        image: { url: imagePath },
+        caption: imageCaption,
         viewOnce: true,
-        fileLength: "999"
+        fileLength: 999
       }, { quoted: m });
+      fs.unlinkSync(imagePath);
+    }
 
-    } else if (/video/.test(mediaType)) {
+    if (quotedMessage.videoMessage) {
+      const videoCaption = quotedMessage.videoMessage.caption || "";
+      const videoPath = await client.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
       await client.sendMessage(m.chat, {
-        video: { url: mediaPath },
-        caption: "✅ View-once video sent.",
+        video: { url: videoPath },
+        caption: videoCaption,
         viewOnce: true,
-        fileLength: "99999999"
+        fileLength: 99999999
       }, { quoted: m });
+      fs.unlinkSync(videoPath);
+    }
 
-    } else if (/audio/.test(mediaType)) {
+    if (quotedMessage.audioMessage) {
+      const audioPath = await client.downloadAndSaveMediaMessage(quotedMessage.audioMessage);
       await client.sendMessage(m.chat, {
-        audio: { url: mediaPath },
-        mimetype: "audio/mpeg",
+        audio: { url: audioPath },
+        mimetype: 'audio/mpeg',
         ptt: true,
         viewOnce: true
       }, { quoted: m });
-
-    } else {
-      reply("⚠️ Unsupported media type. Only image, video, or audio is allowed.");
+      fs.unlinkSync(audioPath);
     }
 
-    fs.unlinkSync(mediaPath);
-  });
+  } catch (err) {
+    console.error("Error in tovv command:", err);
+    return reply("❌ Couldn't send the media as view-once. Try again.");
+  }
 });
+
 
 
 keith({
