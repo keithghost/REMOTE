@@ -609,6 +609,42 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         console.error('Error handling auto-read:', error);
     }
 });
+     //========================================================================================================================           
+    //========================================================================================================================           
+    
+            function saveUserJid(jid) {
+    try {
+        if (!jid) throw new Error("No JID provided");
+        
+        // Normalize JID
+        const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+        
+        // Validation
+        if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
+        if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
+        
+        // Read existing
+        let userJids = [];
+        try {
+            userJids = JSON.parse(fs.readFileSync('./jids.json')) || [];
+        } catch (e) {
+            userJids = [];
+        }
+        
+        // Add if new
+        if (!userJids.includes(normalizedJid)) {
+            userJids.push(normalizedJid);
+            fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+            return true;
+        }
+        return false; // Already existed
+    } catch (error) {
+        throw error; // Re-throw for command handler
+    }
+}
+     //========================================================================================================================           
+    //========================================================================================================================           
+     
             // Improved JID standardization function
 function standardizeJid(jid) {
     if (!jid) return '';
@@ -1037,7 +1073,8 @@ const IsGroup = m.chat?.endsWith("@g.us");*/
                         args, 
                         url,
                         dev, 
-                        m, 
+                        m,
+                        saveUserJid,
                         mode, 
                         mime, 
                         qmsg, 
