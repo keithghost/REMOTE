@@ -9,47 +9,49 @@ const path = require('path');
 keith({
   pattern: "toviewonce",
   alias: ["tovo", "tovv"],
-  desc: "Send quoted image, video, or audio as view-once message",
+  desc: "Send quoted media (image/video/audio) as view-once",
   category: "Utility",
   react: "👁️‍🗨️",
   filename: __filename
 }, async (context) => {
   await ownerMiddleware(context, async () => {
-    const { client, m, quoted, mime, reply } = context;
+    const { client, m, reply } = context;
+    const quotedMessage = m.msg?.contextInfo?.quotedMessage;
 
-    if (!quoted) return reply("❌ Reply to an image, video, or audio to make it view-once.");
+    if (!quotedMessage) return reply("❌ Please reply to a media message (image/video/audio).");
 
-    const media = await client.downloadAndSaveMediaMessage(quoted);
-    const options = { quoted: m };
-    const caption = "✅ Sent as view-once";
+    const mediaType = Object.keys(quotedMessage)[0];
+    const mediaPath = await client.downloadAndSaveMediaMessage({ message: quotedMessage });
 
-    if (/image/.test(mime)) {
+    if (/image/.test(mediaType)) {
       await client.sendMessage(m.chat, {
-        image: { url: media },
-        caption,
-        fileLength: "999",
-        viewOnce: true
-      }, options);
+        image: { url: mediaPath },
+        caption: "✅ View-once image sent.",
+        viewOnce: true,
+        fileLength: "999"
+      }, { quoted: m });
 
-    } else if (/video/.test(mime)) {
+    } else if (/video/.test(mediaType)) {
       await client.sendMessage(m.chat, {
-        video: { url: media },
-        caption,
-        fileLength: "99999999",
-        viewOnce: true
-      }, options);
+        video: { url: mediaPath },
+        caption: "✅ View-once video sent.",
+        viewOnce: true,
+        fileLength: "99999999"
+      }, { quoted: m });
 
-    } else if (/audio/.test(mime)) {
+    } else if (/audio/.test(mediaType)) {
       await client.sendMessage(m.chat, {
-        audio: { url: media },
+        audio: { url: mediaPath },
         mimetype: "audio/mpeg",
         ptt: true,
         viewOnce: true
-      }, options);
+      }, { quoted: m });
 
     } else {
-      reply("⚠️ Unsupported media type for view-once.");
+      reply("⚠️ Unsupported media type. Only image, video, or audio is allowed.");
     }
+
+    fs.unlinkSync(mediaPath);
   });
 });
 
