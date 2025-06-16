@@ -296,7 +296,7 @@ keith({
 keith({
     pattern: "listjunk",
     alias: ["junklist", "showjunk"],
-    desc: "List junk files before deletion",
+    desc: "List junk files in all directories before deletion",
     category: "System",
     react: "📂",
     filename: __filename
@@ -304,86 +304,160 @@ keith({
     const { reply, isOwner } = context;
 
     if (!isOwner) {
-        return reply("You need owner privileges to execute this command!");
+        return reply("✖ You need owner privileges to execute this command!");
     }
 
-    await reply("Scanning for junk files...");
+    await reply("🔍 Scanning for junk files in all directories...");
 
-    // Function to list junk files
-    const listJunkFiles = async (dir, filters, folderName) => {
+    // File extensions to consider as junk
+    const JUNK_FILE_TYPES = [
+        // Images
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.svg',
+        // Videos
+        '.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv',
+        // Audio
+        '.mp3', '.wav', '.ogg', '.opus', '.m4a', '.flac',
+        // Documents
+        '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
+        // Archives
+        '.zip', '.rar', '.7z', '.tar', '.gz',
+        // Other
+        '.log', '.tmp', '.temp', '.cache'
+    ];
+
+    // Directories to scan with their specific filters
+    const DIRECTORIES_TO_SCAN = [
+        {
+            path: "./session",
+            filters: ["pre-key", "sender-key", "session-", "app-state"],
+            name: "session"
+        },
+        {
+            path: "./tmp",
+            filters: JUNK_FILE_TYPES.map(ext => ext.slice(1)), // remove dot
+            name: "temporary files"
+        },
+        {
+            path: "./logs",
+            filters: ['.log', '.txt'],
+            name: "logs"
+        },
+        {
+            path: "./message_data",
+            filters: JUNK_FILE_TYPES.map(ext => ext.slice(1)),
+            name: "message data"
+        }
+    ];
+
+    // Additional directories that might exist
+    const POTENTIAL_DIRS = ['temp', 'cache', 'downloads', 'upload'];
+
+    // Function to list junk files from a directory
+    const listJunkFiles = async (dirPath, filters, folderName) => {
         try {
-            const files = await fsp.readdir(dir);
-            const junkFiles = files.filter(item => filters.some(filter => item.startsWith(filter) || item.endsWith(filter)));
+            const dirExists = await fsp.access(dirPath).then(() => true).catch(() => false);
+            if (!dirExists) {
+                return { 
+                    folder: folderName, 
+                    files: [], 
+                    message: `📌 Directory '${folderName}' doesn't exist\n` 
+                };
+            }
+
+            const files = await fsp.readdir(dirPath);
+            const junkFiles = files.filter(item => {
+                const lowerItem = item.toLowerCase();
+                return filters.some(filter => 
+                    lowerItem.includes(filter.toLowerCase()) || 
+                    JUNK_FILE_TYPES.some(ext => lowerItem.endsWith(ext))
+                );
+            });
 
             if (junkFiles.length === 0) {
-                return reply(`*No junk files found in the ${folderName} folder!*`);
+                return { 
+                    folder: folderName, 
+                    files: [], 
+                    message: `✅ No junk files found in '${folderName}'\n` 
+                };
             }
 
-            console.log(`Junk files in ${folderName}:`, junkFiles);
-            await reply(`*Junk files in the ${folderName} folder:*\n${junkFiles.join("\n")}`);
+            // Format file list with sizes
+            const filesWithSizes = await Promise.all(
+                junkFiles.map(async file => {
+                    try {
+                        const filePath = path.join(dirPath, file);
+                        const stats = await fsp.stat(filePath);
+                        const size = (stats.size / 1024).toFixed(2); // KB
+                        return `${file} (${size} KB)`;
+                    } catch {
+                        return file;
+                    }
+                })
+            );
 
+            return {
+                folder: folderName,
+                files: filesWithSizes,
+                message: `📂 *${folderName}* (${junkFiles.length} files):\n` +
+                        `${filesWithSizes.slice(0, 20).join("\n")}` +
+                        (filesWithSizes.length > 20 ? `\n...and ${filesWithSizes.length - 20} more files` : "") +
+                        `\n\n`
+            };
         } catch (err) {
-            console.error(`Error scanning ${folderName} folder:`, err);
-            reply(`Unable to scan ${folderName} folder: ${err.message}`);
+            console.error(`Error scanning ${folderName}:`, err);
+            return {
+                folder: folderName,
+                files: [],
+                message: `⚠ Error scanning '${folderName}': ${err.message}\n`
+            };
         }
     };
 
-    // Listing session junk files
-    await listJunkFiles("./session", ["pre-key", "sender-key", "session-", "app-state"], "session");
-
-    // Listing tmp junk files
-    const tmpDir = path.resolve("./tmp");
-    await listJunkFiles(tmpDir, ["gif", "png", "mp3", "mp4", "opus", "jpg", "webp", "webm", "zip"], "tmp");
-});
-
-/*keith({
-    pattern: "deljunk",
-    alias: ["deletejunk", "clearjunk"],
-    desc: "Clear junk files",
-    category: "System",
-    react: "🗑️",
-    filename: __filename
-}, async (context) => {
-    const { reply, isOwner } = context;
-
-    if (!isOwner) {
-        return reply("You need owner privileges to execute this command!");
+    // Check for additional potential directories
+    for (const dir of POTENTIAL_DIRS) {
+        const dirPath = path.resolve(`./${dir}`);
+        try {
+            await fsp.access(dirPath);
+            DIRECTORIES_TO_SCAN.push({
+                path: dirPath,
+                filters: JUNK_FILE_TYPES.map(ext => ext.slice(1)),
+                name: dir
+            });
+        } catch (err) {
+            // Directory doesn't exist, skip
+        }
     }
 
-    await reply("Scanning for junk files...");
+    // Process all directories
+    let totalJunkFiles = 0;
+    let report = "🗑️ *Junk Files Report:*\n\n";
+    
+    for (const dir of DIRECTORIES_TO_SCAN) {
+        const result = await listJunkFiles(dir.path, dir.filters, dir.name);
+        report += result.message;
+        totalJunkFiles += result.files.length;
+    }
 
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    // Final summary
+    report += `📊 *Total junk files found:* ${totalJunkFiles}\n`;
+    report += `\nUse *${context.prefix}deljunk* to remove these files`;
 
-    // Function to clean junk files from a directory
-    const cleanJunkFiles = async (dir, filters, folderName) => {
-        try {
-            const files = await fsp.readdir(dir);
-            const junkFiles = files.filter(item => filters.some(filter => item.startsWith(filter) || item.endsWith(filter)));
-
-            console.log(`${junkFiles.length} junk files found in ${folderName}`);
-            await sleep(2000);
-            reply(`*Clearing ${junkFiles.length} junk files in the ${folderName} folder...*`);
-
-            for (const file of junkFiles) {
-                await fsp.unlink(`${dir}/${file}`);
-            }
-
-            await sleep(2000);
-            reply(`*Successfully cleared all junk files in the ${folderName} folder!*`);
-        } catch (err) {
-            console.error(`Error scanning ${folderName} folder:`, err);
-            reply(`Unable to scan ${folderName} folder: ${err.message}`);
+    // Split long messages to avoid getting blocked
+    const MAX_MESSAGE_LENGTH = 1500;
+    if (report.length > MAX_MESSAGE_LENGTH) {
+        const parts = [];
+        while (report.length > 0) {
+            parts.push(report.substring(0, MAX_MESSAGE_LENGTH));
+            report = report.substring(MAX_MESSAGE_LENGTH);
         }
-    };
-
-    // Cleaning session junk
-    await cleanJunkFiles("./session", ["pre-key", "sender-key", "session-", "app-state"], "session");
-
-    // Cleaning tmp junk
-    const tmpDir = path.resolve("./tmp");
-    await cleanJunkFiles(tmpDir, ["gif", "png", "mp3", "mp4", "opus", "jpg", "webp", "webm", "zip"], "tmp");
-});*/
-
+        for (const part of parts) {
+            await reply(part);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    } else {
+        await reply(report);
+    }
+});
 
 
 keith({
