@@ -239,6 +239,7 @@ const { initAutoViewDB } = require('./database/autoview');
 const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
+const { initAntiBadDB } = require('./database/antibad');
 //const { initModeDB } = require('./database/mode');
 //const { initPrefixDB } = require('./database/prefix');
 
@@ -251,6 +252,7 @@ initAntiDeleteDB().catch(console.error);
 //initModeDB().catch(console.error);
 //initPrefixDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
+initAntiBadDB().catch(console.error);
 initPresenceDB().catch(console.error);
 initAntiBadDB().catch(console.error);
 initAutoBioDB().catch(console.error);
@@ -1077,7 +1079,95 @@ const reply = (teks) => {
 
 const IsGroup = m.chat?.endsWith("@g.us");*/
             //========================================================================================================================
-         //mode integration 
+        
+            // At top of file
+const userWarnings = new Map();
+
+client.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const m = messages[0];
+        if (!m.message || !m.key) return;
+
+        const { getAntiBadSettings } = require('./database/antibad');
+        const settings = await getAntiBadSettings();
+        
+        if (!settings.status || !settings.forbiddenWords.length) return;
+
+        const body = m.message.conversation || 
+                    m.message.extendedTextMessage?.text || 
+                    m.message.imageMessage?.caption;
+        if (!body) return;
+
+        const containsBadWord = settings.forbiddenWords.some(word => 
+            body.toLowerCase().includes(word.toLowerCase())
+        );
+
+        if (containsBadWord) {
+            const sender = m.key.participant || m.key.remoteJid;
+            const isGroup = m.key.remoteJid.endsWith('@g.us');
+            
+            // Always delete the message in groups
+            if (isGroup) {
+                try {
+                    await client.sendMessage(m.key.remoteJid, {
+                        delete: {
+                            remoteJid: m.key.remoteJid,
+                            fromMe: false,
+                            id: m.key.id,
+                            participant: sender
+                        }
+                    });
+                } catch (deleteError) {
+                    console.error('Failed to delete message:', deleteError);
+                }
+            }
+
+            if (isGroup) {
+                const groupMetadata = await client.groupMetadata(m.key.remoteJid);
+                const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
+                const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
+
+                if (settings.groupAction === 'warn') {
+                    // Warn system with limits
+                    const warnings = (userWarnings.get(sender) || 0) + 1;
+                    userWarnings.set(sender, warnings);
+
+                    const warningMsg = `🚫 Bad word detected (${warnings}/${settings.warnLimit})\n\n@${sender.split('@')[0]}, this is warning ${warnings} of ${settings.warnLimit}!`;
+                    
+                    await client.sendMessage(
+                        m.key.remoteJid, 
+                        { 
+                            text: warningMsg,
+                            contextInfo: { mentionedJid: [sender] }
+                        }, 
+                        { quoted: m }
+                    );
+
+                    if (warnings >= settings.warnLimit && isBotAdmin && !isUserAdmin) {
+                        await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                        userWarnings.delete(sender);
+                    }
+                } 
+                else if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
+                    // Immediate remove
+                    await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                }
+            } 
+            else {
+                // Private chat - always block
+                await client.sendMessage(
+                    sender,
+                    { text: '🚫 You have been blocked for using banned words!' }
+                );
+                await client.updateBlockStatus(sender, 'block');
+            }
+        }
+    } catch (error) {
+        console.error('Anti-bad word error:', error);
+    }
+});
+
+
             //========================================================================================================================
     
         if (cmd && mode === "private" && !itsMe && m.sender !== daddy) return;
