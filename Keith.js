@@ -239,9 +239,7 @@ const { initAutoViewDB } = require('./database/autoview');
 const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
-const { initAntiBadDB } = require('./database/antibad');
-//const { initModeDB } = require('./database/mode');
-//const { initPrefixDB } = require('./database/prefix');
+
 
 //========================================================================================================================
 //========================================================================================================================
@@ -254,7 +252,6 @@ initAntiDeleteDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initAntiBadDB().catch(console.error);
 initPresenceDB().catch(console.error);
-initAntiBadDB().catch(console.error);
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
 //========================================================================================================================
