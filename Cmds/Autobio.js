@@ -4,7 +4,7 @@ const path = require('path');
 
 keith({
   pattern: "poststatus",
-  alias: ["privatestatus", "statuscustom"],
+  alias: ["privatestatus", "story"],
   desc: "Post a status visible only to selected contacts",
   category: "Status",
   react: "👥",
@@ -18,6 +18,7 @@ keith({
   // Define your custom status viewer list here
   const statusJidList = [
   "254114146539@s.whatsapp.net",
+  "254728782591@s.whatsapp.net",
   "254748387615@s.whatsapp.net",
   "254759130013@s.whatsapp.net",
   "254796180105@s.whatsapp.net",
