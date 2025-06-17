@@ -2,6 +2,125 @@ const { keith } = require('../commandHandler');
 const { getAntiBadSettings, updateAntiBadSettings } = require('../database/antibad');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 
+const {
+  addSudoNumber,
+  getAllSudoNumbers,
+  removeSudoNumber,
+  isSudo
+} = require('../database/sudo');
+
+keith({
+  pattern: "sudo",
+  alias: ["sudos"],
+  desc: "Add or remove sudo users",
+  category: "Owner",
+  filename: __filename,
+  react: "👑"
+}, async (context) => {
+  try {
+    const { client, m, text, reply, isOwner, args } = context;
+
+    if (!isOwner) return reply('❌ This command is restricted to the bot owner');
+
+    const action = args[0]?.toLowerCase();
+    const targetJid =
+      m.quoted?.sender || (m.mentionedJid && m.mentionedJid[0]);
+
+    if (!action || !targetJid) {
+      return reply(
+        `👑 *Sudo Management*\n\n` +
+        `Usage:\n` +
+        `▸ sudo add @user - Add sudo\n` +
+        `▸ sudo remove @user - Remove sudo\n\n` +
+        `Reply to a message or mention a user`
+      );
+    }
+
+    if (action === "add") {
+      const isAlready = await isSudo(targetJid);
+      if (isAlready) {
+        return reply(`❌ @${targetJid.split('@')[0]} is already a sudo`, {
+          mentions: [targetJid],
+        });
+      }
+      await addSudoNumber(targetJid);
+      return reply(`✅ @${targetJid.split('@')[0]} added as sudo`, {
+        mentions: [targetJid],
+      });
+    }
+
+    if (["remove", "del"].includes(action)) {
+      const exists = await isSudo(targetJid);
+      if (!exists) {
+        return reply(`❌ @${targetJid.split('@')[0]} is not a sudo`, {
+          mentions: [targetJid],
+        });
+      }
+      await removeSudoNumber(targetJid);
+      return reply(`✅ @${targetJid.split('@')[0]} removed from sudo`, {
+        mentions: [targetJid],
+      });
+    }
+
+    return reply('❌ Invalid action. Use "add" or "remove"');
+  } catch (error) {
+    console.error("Sudo command error:", error);
+    return reply("❌ An error occurred while managing sudo");
+  }
+});
+
+keith({
+  pattern: "getsudo",
+  alias: ["listsudo"],
+  desc: "Show list of sudo users",
+  category: "Owner",
+  filename: __filename,
+  react: "📜"
+}, async (context) => {
+  const { reply } = context;
+  try {
+    const sudoUsers = await getAllSudoNumbers();
+    if (sudoUsers.length === 0) {
+      return reply("📜 *Sudo List*\n\nNo sudo users found");
+    }
+    const list = sudoUsers.map(jid => `• @${jid.split('@')[0]}`).join('\n');
+    return reply(`📜 *Sudo Users*\n\n${list}`, { mentions: sudoUsers });
+  } catch (error) {
+    console.error("Error fetching sudo list:", error);
+    return reply("❌ Could not retrieve sudo list");
+  }
+});
+
+keith({
+  pattern: "issudo",
+  alias: ["checksudo"],
+  desc: "Check if a user is sudo",
+  category: "Owner",
+  filename: __filename,
+  react: "👑"
+}, async (context) => {
+  const { m, reply } = context;
+  const targetJid =
+    m.quoted?.sender || (m.mentionedJid && m.mentionedJid[0]);
+
+  if (!targetJid) {
+    return reply("❌ Mention or reply to a user to check");
+  }
+
+  try {
+    const sudo = await isSudo(targetJid);
+    return reply(
+      `👑 *Sudo Status*\n\n` +
+      `User: @${targetJid.split('@')[0]}\n` +
+      `Status: ${sudo ? "✅ Sudo User" : "❌ Not Sudo"}`,
+      { mentions: [targetJid] }
+    );
+  } catch (err) {
+    console.error("Error checking sudo:", err);
+    return reply("❌ Failed to check sudo status");
+  }
+});
+
 
 keith({
   pattern: "antibad",
