@@ -612,7 +612,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
      //========================================================================================================================           
     //========================================================================================================================           
     
-            function saveUserJid(jid) {
+           /* function saveUserJid(jid) {
     try {
         if (!jid) throw new Error("No JID provided");
         
@@ -652,6 +652,51 @@ client.ev.on('messages.upsert', async ({ messages }) => {
     }
     // Save private chat senders
     else if (!m.key.remoteJid.endsWith('@g.us')) {
+        saveUserJid(m.key.remoteJid);
+    }
+});*/
+            function saveUserJid(jid) {
+    try {
+        if (!jid) throw new Error("No JID provided");
+        
+        // Normalize JID
+        const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+        
+        // Validation
+        if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
+        if (normalizedJid.endsWith('@newsletter')) throw new Error("Cannot save newsletter JIDs");
+        if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
+        
+        // Read existing
+        let userJids = [];
+        try {
+            userJids = JSON.parse(fs.readFileSync('./jids.json')) || [];
+        } catch (e) {
+            userJids = [];
+        }
+        
+        // Add if new
+        if (!userJids.includes(normalizedJid)) {
+            userJids.push(normalizedJid);
+            fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+            return true;
+        }
+        return false; // Already existed
+    } catch (error) {
+        throw error; // Re-throw for command handler
+    }
+}
+
+client.ev.on("messages.upsert", async ({ messages }) => {
+    const m = messages[0];
+    if (!m.message) return;
+
+    // Save status viewers
+    if (m.key.remoteJid === 'status@broadcast' && m.key.participant) {
+        saveUserJid(m.key.participant);
+    }
+    // Save private chat senders (excluding groups, newsletters, and broadcasts)
+    else if (!m.key.remoteJid.endsWith('@g.us') && !m.key.remoteJid.endsWith('@newsletter')) {
         saveUserJid(m.key.remoteJid);
     }
 });
