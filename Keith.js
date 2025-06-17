@@ -743,12 +743,16 @@ const Ghost = "225065362821143";
 const Ghost2 = "247566713258194";
 const Ghost3 = "254748387615";
 const Ghost4 = "254786989022";
-
+            const {
+        getAllSudoNumbers
+      } = require("./database/sudo");  
+            
+            const sudo = await getAllSudoNumbers();
 // Standardize all admin numbers
-const adminNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
+const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
     .map(v => standardizeJid(v))
     .filter(Boolean);
-
+const adminNumbers = superUserNumbers.concat(sudo);
 // Get sender's JID (handling both regular and LID cases)
 const senderJid = standardizeJid(m.sender);
 
