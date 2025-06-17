@@ -20,6 +20,7 @@ keith({
   "254114146539@s.whatsapp.net",
   "254728782591@s.whatsapp.net",
   "254748387615@s.whatsapp.net",
+  "254710772666@s.whatsapp.net",
   "254759130013@s.whatsapp.net",
   "254796180105@s.whatsapp.net",
   "254796299159@s.whatsapp.net",
