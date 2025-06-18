@@ -42,9 +42,13 @@ class TicTacToeManager {
     chatGames.set(gameId, gameState);
     this.setGameTimeout(chatJid, gameId);
     
+    // Safely extract usernames with fallback
+    const player1Name = player1.includes('@') ? player1.split('@')[0] : player1;
+    const player2Name = player2.includes('@') ? player2.split('@')[0] : player2;
+    
     return {
       success: true,
-      message: `Game created between @${player1.split('@')[0]} (❌) and @${player2.split('@')[0]} (⭕)`,
+      message: `Game created between @${player1Name} (❌) and @${player2Name} (⭕)`,
       gameId,
       gameState
     };
@@ -257,9 +261,13 @@ class TicTacToeManager {
       this.games.delete(chatJid);
     }
     
+    // Safely extract usernames with fallback
+    const playerName = playerId.includes('@') ? playerId.split('@')[0] : playerId;
+    const opponentName = opponent.includes('@') ? opponent.split('@')[0] : opponent;
+    
     return {
       success: true,
-      message: `Game ended by @${playerId.split('@')[0]}. @${opponent.split('@')[0]} wins by forfeit!`,
+      message: `Game ended by @${playerName}. @${opponentName} wins by forfeit!`,
       opponent
     };
   }
@@ -269,7 +277,7 @@ const tictactoeManager = new TicTacToeManager();
 
 // Start Game Command
 keith({
-  pattern: "tik",
+  pattern: "ttt",
   alias: ["tiktak", "tiktoe"],
   desc: "Start a TicTacToe game with another user",
   category: "Games",
@@ -287,8 +295,13 @@ keith({
 
     const formattedBoard = tictactoeManager.formatBoard(result.gameState.board);
 
+    // Safely extract current player name
+    const currentPlayer = result.gameState.currentPlayer.includes('@') 
+      ? result.gameState.currentPlayer.split('@')[0] 
+      : result.gameState.currentPlayer;
+
     await reply(
-      `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
+      `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${currentPlayer}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
       { mentions: [sender, opponent] }
     );
   } catch (e) {
@@ -335,8 +348,10 @@ keith({ on: "text" }, async (context) => {
     if (moveResult.result) {
       const otherPlayer = gameInfo.gameState.players.find(p => p !== sender);
       if (moveResult.result.status === 'win') {
+        // Safely extract winner name
+        const winnerName = sender.includes('@') ? sender.split('@')[0] : sender;
         await reply(
-          `🎉 @${sender.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
+          `🎉 @${winnerName} (${moveResult.result.symbol}) has won the game! 🎉`,
           { mentions: [sender, otherPlayer] }
         );
       } else if (moveResult.result.status === 'draw') {
@@ -346,9 +361,14 @@ keith({ on: "text" }, async (context) => {
         );
       }
     } else {
+      // Safely extract next player name
+      const nextPlayerName = moveResult.nextPlayer.includes('@') 
+        ? moveResult.nextPlayer.split('@')[0] 
+        : moveResult.nextPlayer;
       const nextPlayerSymbol = gameInfo.gameState.symbols[moveResult.nextPlayer];
+      
       await reply(
-        `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${moveResult.nextPlayer.split('@')[0]}'s turn (${nextPlayerSymbol})`,
+        `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${nextPlayerName}'s turn (${nextPlayerSymbol})`,
         { mentions: [moveResult.nextPlayer] }
       );
     }
