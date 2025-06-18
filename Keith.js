@@ -1226,6 +1226,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                         saveUserJid,
                         mode, 
                         mime, 
+                        from,
+                        sender,
                         qmsg, 
                         msgKeith, 
                         Tag, 
