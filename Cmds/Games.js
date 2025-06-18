@@ -1,25 +1,24 @@
-
 const { keith } = require('../commandHandler');
 
 // Game state manager - handles multiple concurrent games across different chats
 class TicTacToeManager {
   constructor() {
-    this.games = new Map(); // Store all active games: Map<groupJID, Map<gameId, GameState>>
+    this.games = new Map(); // Store all active games: Map<chatJID, Map<gameId, GameState>>
     this.gameTimeout = 5 * 60 * 1000; // 5 minutes timeout
     this.timeouts = new Map(); // Store timeout IDs
   }
   
-  createGame(groupJid, player1, player2) {
+  createGame(chatJid, player1, player2) {
     const gameId = `${player1}:${player2}`;
     
-    if (!this.games.has(groupJid)) {
-      this.games.set(groupJid, new Map());
+    if (!this.games.has(chatJid)) {
+      this.games.set(chatJid, new Map());
     }
     
-    const groupGames = this.games.get(groupJid);
+    const chatGames = this.games.get(chatJid);
     
     // Check if players are already in a game
-    for (const [existingGameId, game] of groupGames.entries()) {
+    for (const [existingGameId, game] of chatGames.entries()) {
       if (game.players.includes(player1) || game.players.includes(player2)) {
         return {
           success: false,
@@ -40,8 +39,8 @@ class TicTacToeManager {
       lastMoveTime: Date.now()
     };
     
-    groupGames.set(gameId, gameState);
-    this.setGameTimeout(groupJid, gameId);
+    chatGames.set(gameId, gameState);
+    this.setGameTimeout(chatJid, gameId);
     
     return {
       success: true,
@@ -51,19 +50,19 @@ class TicTacToeManager {
     };
   }
   
-  makeMove(groupJid, playerId, position) {
-    if (!this.games.has(groupJid)) {
+  makeMove(chatJid, playerId, position) {
+    if (!this.games.has(chatJid)) {
       return {
         success: false,
         message: "No active games in this chat."
       };
     }
     
-    const groupGames = this.games.get(groupJid);
+    const chatGames = this.games.get(chatJid);
     let gameId = null;
     let gameState = null;
     
-    for (const [id, game] of groupGames.entries()) {
+    for (const [id, game] of chatGames.entries()) {
       if (game.players.includes(playerId)) {
         gameId = id;
         gameState = game;
@@ -101,7 +100,7 @@ class TicTacToeManager {
     
     gameState.board[position] = gameState.symbols[playerId];
     gameState.lastMoveTime = Date.now();
-    this.setGameTimeout(groupJid, gameId);
+    this.setGameTimeout(chatJid, gameId);
     
     const winner = this.checkWinner(gameState.board);
     let result = null;
@@ -112,20 +111,20 @@ class TicTacToeManager {
         winner: playerId,
         symbol: gameState.symbols[playerId]
       };
-      groupGames.delete(gameId);
-      this.clearTimeout(groupJid, gameId);
+      chatGames.delete(gameId);
+      this.clearTimeout(chatJid, gameId);
     } else if (!gameState.board.includes(null)) {
       result = {
         status: 'draw'
       };
-      groupGames.delete(gameId);
-      this.clearTimeout(groupJid, gameId);
+      chatGames.delete(gameId);
+      this.clearTimeout(chatJid, gameId);
     } else {
       gameState.currentPlayer = gameState.players[0] === playerId ? gameState.players[1] : gameState.players[0];
     }
     
-    if (groupGames.size === 0) {
-      this.games.delete(groupJid);
+    if (chatGames.size === 0) {
+      this.games.delete(chatJid);
     }
     
     return {
@@ -136,12 +135,12 @@ class TicTacToeManager {
     };
   }
   
-  getGameState(groupJid, playerId) {
-    if (!this.games.has(groupJid)) return null;
+  getGameState(chatJid, playerId) {
+    if (!this.games.has(chatJid)) return null;
     
-    const groupGames = this.games.get(groupJid);
+    const chatGames = this.games.get(chatJid);
     
-    for (const [gameId, game] of groupGames.entries()) {
+    for (const [gameId, game] of chatGames.entries()) {
       if (game.players.includes(playerId)) {
         return {
           gameId,
@@ -197,45 +196,45 @@ class TicTacToeManager {
     return null;
   }
   
-  setGameTimeout(groupJid, gameId) {
-    this.clearTimeout(groupJid, gameId);
+  setGameTimeout(chatJid, gameId) {
+    this.clearTimeout(chatJid, gameId);
     
     const timeoutId = setTimeout(() => {
-      if (this.games.has(groupJid)) {
-        const groupGames = this.games.get(groupJid);
-        if (groupGames.has(gameId)) {
-          groupGames.delete(gameId);
-          if (groupGames.size === 0) {
-            this.games.delete(groupJid);
+      if (this.games.has(chatJid)) {
+        const chatGames = this.games.get(chatJid);
+        if (chatGames.has(gameId)) {
+          chatGames.delete(gameId);
+          if (chatGames.size === 0) {
+            this.games.delete(chatJid);
           }
         }
       }
-      this.timeouts.delete(`${groupJid}:${gameId}`);
+      this.timeouts.delete(`${chatJid}:${gameId}`);
     }, this.gameTimeout);
     
-    this.timeouts.set(`${groupJid}:${gameId}`, timeoutId);
+    this.timeouts.set(`${chatJid}:${gameId}`, timeoutId);
   }
   
-  clearTimeout(groupJid, gameId) {
-    if (this.timeouts.has(`${groupJid}:${gameId}`)) {
-      clearTimeout(this.timeouts.get(`${groupJid}:${gameId}`));
-      this.timeouts.delete(`${groupJid}:${gameId}`);
+  clearTimeout(chatJid, gameId) {
+    if (this.timeouts.has(`${chatJid}:${gameId}`)) {
+      clearTimeout(this.timeouts.get(`${chatJid}:${gameId}`));
+      this.timeouts.delete(`${chatJid}:${gameId}`);
     }
   }
   
-  endGame(groupJid, playerId) {
-    if (!this.games.has(groupJid)) {
+  endGame(chatJid, playerId) {
+    if (!this.games.has(chatJid)) {
       return {
         success: false,
         message: "No active games in this chat."
       };
     }
     
-    const groupGames = this.games.get(groupJid);
+    const chatGames = this.games.get(chatJid);
     let gameId = null;
     let gameState = null;
     
-    for (const [id, game] of groupGames.entries()) {
+    for (const [id, game] of chatGames.entries()) {
       if (game.players.includes(playerId)) {
         gameId = id;
         gameState = game;
@@ -251,11 +250,11 @@ class TicTacToeManager {
     }
     
     const opponent = gameState.players[0] === playerId ? gameState.players[1] : gameState.players[0];
-    groupGames.delete(gameId);
-    this.clearTimeout(groupJid, gameId);
+    chatGames.delete(gameId);
+    this.clearTimeout(chatJid, gameId);
     
-    if (groupGames.size === 0) {
-      this.games.delete(groupJid);
+    if (chatGames.size === 0) {
+      this.games.delete(chatJid);
     }
     
     return {
@@ -277,21 +276,20 @@ keith({
   react: "👥",
   filename: __filename
 }, async (context) => {
-  const { reply, m, sender, quoted, from } = context;
-  
+  const { reply, m, msgKeith, itsMe } = context;
+  const quoted = msgKeith?.quoted?.sender;
   try {
-    if (!m.isGroup) return reply("TicTacToe can only be played in groups!");
     if (!quoted) return reply("Reply to someone to start a game with them!");
-    if (quoted.sender === sender) return reply("You cannot play with yourself!");
+    if (quoted === itsMe) return reply("You cannot play with yourself!");
 
-    const result = tictactoeManager.createGame(from, sender, quoted.sender);
+    const result = tictactoeManager.createGame(m.chat, itsMe, quoted);
     if (!result.success) return reply(result.message);
 
     const formattedBoard = tictactoeManager.formatBoard(result.gameState.board);
 
     await reply(
       `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
-      { mentions: [sender, quoted.sender] }
+      { mentions: [itsMe, quoted] }
     );
   } catch (e) {
     console.error("TicTacToe Start Error:", e);
@@ -307,13 +305,12 @@ keith({
   react: "❌",
   filename: __filename
 }, async (context) => {
-  const { reply, sender, from } = context;
-  
+  const { reply, m, itsMe } = context;
   try {
-    const result = tictactoeManager.endGame(from, sender);
+    const result = tictactoeManager.endGame(m.chat, itsMe);
     if (!result.success) return reply(result.message);
 
-    await reply(result.message, { mentions: [sender, result.opponent] });
+    await reply(result.message, { mentions: [itsMe, result.opponent] });
   } catch (e) {
     console.error("TicTacToe End Error:", e);
     reply("❌ Error ending the game.");
@@ -322,25 +319,25 @@ keith({
 
 // Move Handler
 keith({ on: "text" }, async (context) => {
-  const { body, reply, sender, from } = context;
-  
+  const { body, reply, m, itsMe } = context;
   try {
     if (!/^[1-9]$/.test(body.trim())) return;
     const position = parseInt(body.trim()) - 1;
 
-    const gameInfo = tictactoeManager.getGameState(from, sender);
+    const gameInfo = tictactoeManager.getGameState(m.chat, itsMe);
     if (!gameInfo) return;
 
-    const moveResult = tictactoeManager.makeMove(from, sender, position);
+    const moveResult = tictactoeManager.makeMove(m.chat, itsMe, position);
     if (!moveResult.success) return reply(moveResult.message);
 
     const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
 
     if (moveResult.result) {
+      const otherPlayer = gameInfo.gameState.players.find(p => p !== itsMe);
       if (moveResult.result.status === 'win') {
         await reply(
-          `🎉 @${sender.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
-          { mentions: [sender, gameInfo.gameState.players.find(p => p !== sender)] }
+          `🎉 @${itsMe.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
+          { mentions: [itsMe, otherPlayer] }
         );
       } else if (moveResult.result.status === 'draw') {
         await reply(
