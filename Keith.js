@@ -1171,7 +1171,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 
             //========================================================================================================================
     
-        if (cmd && mode === "private" && !itsMe && m.sender !== daddy) return;
+        if (cmd && mode === "private" && !itsMe && m.sender !== isOwner) return;
       
 //========================================================================================================================
         const Blocked = await client.fetchBlocklist();
