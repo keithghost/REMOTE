@@ -1,32 +1,39 @@
+
 const { keith } = require('../commandHandler');
 
-// Game state manager - handles multiple concurrent games across different chats
 class TicTacToeManager {
   constructor() {
-    this.games = new Map(); // Store all active games: Map<chatJID, Map<gameId, GameState>>
-    this.gameTimeout = 5 * 60 * 1000; // 5 minutes timeout
-    this.timeouts = new Map(); // Store timeout IDs
+    this.games = new Map();
+    this.gameTimeout = 5 * 60 * 1000;
+    this.timeouts = new Map();
   }
-  
+
   createGame(chatJid, player1, player2) {
+    if (!player1 || !player2 || typeof player1 !== 'string' || typeof player2 !== 'string') {
+      console.error("Invalid player IDs:", { player1, player2 });
+      return {
+        success: false,
+        message: "Players must be valid strings."
+      };
+    }
+
     const gameId = `${player1}:${player2}`;
-    
+
     if (!this.games.has(chatJid)) {
       this.games.set(chatJid, new Map());
     }
-    
+
     const chatGames = this.games.get(chatJid);
-    
-    // Check if players are already in a game
-    for (const [existingGameId, game] of chatGames.entries()) {
+
+    for (const game of chatGames.values()) {
       if (game.players.includes(player1) || game.players.includes(player2)) {
         return {
           success: false,
-          message: `One of the players is already in a game. Please finish that game first.`
+          message: "One of the players is already in a game. Please finish that game first."
         };
       }
     }
-    
+
     const gameState = {
       players: [player1, player2],
       board: Array(9).fill(null),
@@ -38,34 +45,28 @@ class TicTacToeManager {
       startTime: Date.now(),
       lastMoveTime: Date.now()
     };
-    
+
     chatGames.set(gameId, gameState);
     this.setGameTimeout(chatJid, gameId);
-    
-    // Safely extract usernames with fallback
-    const player1Name = player1.includes('@') ? player1.split('@')[0] : player1;
-    const player2Name = player2.includes('@') ? player2.split('@')[0] : player2;
-    
+
+    const p1Name = player1.includes('@') ? player1.split('@')[0] : player1;
+    const p2Name = player2.includes('@') ? player2.split('@')[0] : player2;
+
     return {
       success: true,
-      message: `Game created between @${player1Name} (❌) and @${player2Name} (⭕)`,
+      message: `Game created between @${p1Name} (❌) and @${p2Name} (⭕)`,
       gameId,
       gameState
     };
   }
-  
+
   makeMove(chatJid, playerId, position) {
-    if (!this.games.has(chatJid)) {
-      return {
-        success: false,
-        message: "No active games in this chat."
-      };
-    }
-    
+    if (!this.games.has(chatJid)) return { success: false, message: "No active games in this chat." };
+
     const chatGames = this.games.get(chatJid);
     let gameId = null;
     let gameState = null;
-    
+
     for (const [id, game] of chatGames.entries()) {
       if (game.players.includes(playerId)) {
         gameId = id;
@@ -73,42 +74,30 @@ class TicTacToeManager {
         break;
       }
     }
-    
+
     if (!gameState) {
-      return {
-        success: false,
-        message: "You're not in an active game. Start one with *${prefix}tt*"
-      };
+      return { success: false, message: "You're not in an active game. Start one with *tt*" };
     }
-    
+
     if (gameState.currentPlayer !== playerId) {
-      return {
-        success: false,
-        message: "It's not your turn!"
-      };
+      return { success: false, message: "It's not your turn!" };
     }
-    
+
     if (position < 0 || position > 8 || !Number.isInteger(position)) {
-      return {
-        success: false,
-        message: "Invalid position! Choose a number between 1-9."
-      };
+      return { success: false, message: "Invalid position! Choose a number between 1-9." };
     }
-    
+
     if (gameState.board[position] !== null) {
-      return {
-        success: false,
-        message: "That position is already taken! Choose another."
-      };
+      return { success: false, message: "That position is already taken! Choose another." };
     }
-    
+
     gameState.board[position] = gameState.symbols[playerId];
     gameState.lastMoveTime = Date.now();
     this.setGameTimeout(chatJid, gameId);
-    
+
     const winner = this.checkWinner(gameState.board);
     let result = null;
-    
+
     if (winner) {
       result = {
         status: 'win',
@@ -118,19 +107,17 @@ class TicTacToeManager {
       chatGames.delete(gameId);
       this.clearTimeout(chatJid, gameId);
     } else if (!gameState.board.includes(null)) {
-      result = {
-        status: 'draw'
-      };
+      result = { status: 'draw' };
       chatGames.delete(gameId);
       this.clearTimeout(chatJid, gameId);
     } else {
-      gameState.currentPlayer = gameState.players[0] === playerId ? gameState.players[1] : gameState.players[0];
+      gameState.currentPlayer = gameState.players.find(p => p !== playerId);
     }
-    
+
     if (chatGames.size === 0) {
       this.games.delete(chatJid);
     }
-    
+
     return {
       success: true,
       board: gameState.board,
@@ -138,106 +125,86 @@ class TicTacToeManager {
       nextPlayer: gameState.currentPlayer
     };
   }
-  
+
   getGameState(chatJid, playerId) {
     if (!this.games.has(chatJid)) return null;
-    
+
     const chatGames = this.games.get(chatJid);
-    
     for (const [gameId, game] of chatGames.entries()) {
       if (game.players.includes(playerId)) {
-        return {
-          gameId,
-          gameState: game
-        };
+        return { gameId, gameState: game };
       }
     }
-    
+
     return null;
   }
-  
+
   formatBoard(board) {
-    const horizontalLine = '┄┄┄┄┄┄┄┄┄┄┄';
-    const verticalLine = '┃';
-    const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
-    
-    let formattedBoard = `${horizontalLine}\n`;
-    
+    const h = '┄┄┄┄┄┄┄┄┄┄┄';
+    const v = '┃';
+    const emoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
+    let str = `${h}\n`;
+
     for (let i = 0; i < 3; i++) {
-      let row = `${verticalLine} `;
+      str += `${v} `;
       for (let j = 0; j < 3; j++) {
-        const pos = i * 3 + j;
-        const cell = board[pos] || numberEmojis[pos];
-        row += `${cell} `;
-        if (j < 2) row += verticalLine + ' ';
+        const index = i * 3 + j;
+        const cell = board[index] || emoji[index];
+        str += `${cell} ${j < 2 ? v + ' ' : ''}`;
       }
-      row += `${verticalLine}`;
-      formattedBoard += row + '\n';
-      
-      if (i < 2) {
-        formattedBoard += `${horizontalLine}\n`;
-      }
+      str += `${v}\n`;
+      if (i < 2) str += `${h}\n`;
     }
-    
-    formattedBoard += `${horizontalLine}`;
-    return formattedBoard;
+
+    return str + h;
   }
-  
+
   checkWinner(board) {
-    const winPatterns = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6]
+    const wins = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
     ];
-    
-    for (const pattern of winPatterns) {
-      const [a, b, c] = pattern;
+
+    for (const [a,b,c] of wins) {
       if (board[a] && board[a] === board[b] && board[a] === board[c]) {
         return board[a];
       }
     }
-    
+
     return null;
   }
-  
+
   setGameTimeout(chatJid, gameId) {
     this.clearTimeout(chatJid, gameId);
-    
-    const timeoutId = setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (this.games.has(chatJid)) {
         const chatGames = this.games.get(chatJid);
-        if (chatGames.has(gameId)) {
-          chatGames.delete(gameId);
-          if (chatGames.size === 0) {
-            this.games.delete(chatJid);
-          }
-        }
+        chatGames.delete(gameId);
+        if (!chatGames.size) this.games.delete(chatJid);
       }
       this.timeouts.delete(`${chatJid}:${gameId}`);
     }, this.gameTimeout);
-    
-    this.timeouts.set(`${chatJid}:${gameId}`, timeoutId);
+    this.timeouts.set(`${chatJid}:${gameId}`, timeout);
   }
-  
+
   clearTimeout(chatJid, gameId) {
-    if (this.timeouts.has(`${chatJid}:${gameId}`)) {
-      clearTimeout(this.timeouts.get(`${chatJid}:${gameId}`));
-      this.timeouts.delete(`${chatJid}:${gameId}`);
+    const key = `${chatJid}:${gameId}`;
+    if (this.timeouts.has(key)) {
+      clearTimeout(this.timeouts.get(key));
+      this.timeouts.delete(key);
     }
   }
-  
+
   endGame(chatJid, playerId) {
     if (!this.games.has(chatJid)) {
-      return {
-        success: false,
-        message: "No active games in this chat."
-      };
+      return { success: false, message: "No active games in this chat." };
     }
-    
+
     const chatGames = this.games.get(chatJid);
     let gameId = null;
     let gameState = null;
-    
+
     for (const [id, game] of chatGames.entries()) {
       if (game.players.includes(playerId)) {
         gameId = id;
@@ -245,35 +212,29 @@ class TicTacToeManager {
         break;
       }
     }
-    
+
     if (!gameState) {
-      return {
-        success: false,
-        message: "You're not in an active game."
-      };
+      return { success: false, message: "You're not in an active game." };
     }
-    
-    const opponent = gameState.players[0] === playerId ? gameState.players[1] : gameState.players[0];
+
+    const opponent = gameState.players.find(p => p !== playerId);
     chatGames.delete(gameId);
     this.clearTimeout(chatJid, gameId);
-    
-    if (chatGames.size === 0) {
-      this.games.delete(chatJid);
-    }
-    
-    // Safely extract usernames with fallback
-    const playerName = playerId.includes('@') ? playerId.split('@')[0] : playerId;
-    const opponentName = opponent.includes('@') ? opponent.split('@')[0] : opponent;
-    
+    if (!chatGames.size) this.games.delete(chatJid);
+
+    const name = playerId.includes('@') ? playerId.split('@')[0] : playerId;
+    const oppName = opponent.includes('@') ? opponent.split('@')[0] : opponent;
+
     return {
       success: true,
-      message: `Game ended by @${playerName}. @${opponentName} wins by forfeit!`,
+      message: `Game ended by @${name}. @${oppName} wins by forfeit!`,
       opponent
     };
   }
 }
 
 const tictactoeManager = new TicTacToeManager();
+
 
 // Start Game Command
 keith({
