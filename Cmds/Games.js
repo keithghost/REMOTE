@@ -346,7 +346,7 @@ keith({
   react: "❌⭕",
   filename: __filename
 }, async (context) => {
-  const { reply, m, sender2, from } = context;
+  const { client, reply, m, sender2, from } = context;
   try {
     if (!m.isGroup) return reply("TicTacToe can only be played in groups!");
 
@@ -378,7 +378,7 @@ keith({
   react: "🏁",
   filename: __filename
 }, async (context) => {
-  const { reply, m, sender2, from } = context;
+  const { client, reply, m, sender2, from } = context;
   try {
     const result = tictactoeManager.endGame(from, sender2); 
     if (!result.success) return reply(result.message);
@@ -398,7 +398,7 @@ keith({
 client({ 
   on: "text" 
 }, async (context) => {
-  const { body, reply, m, sender2, from } = context;
+  const { client, body, reply, m, sender2, from } = context;
   try {
     if (!/^[1-9]$/.test(body.trim())) return; 
     const position = parseInt(body.trim()) - 1;
