@@ -824,6 +824,7 @@ const color = (text, color) => {
 
 const mime = quoted.mimetype || "";
 const sender = m.sender;
+const from = m.chat;
 const qmsg = quoted;
 const participants = m.isGroup && groupMetadata
     ? groupMetadata.participants
@@ -1168,7 +1169,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 
             //========================================================================================================================
     
-        if (cmd && mode === "private" && !itsMe && m.sender !== isOwner) return;
+        if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
       
 //========================================================================================================================
         const Blocked = await client.fetchBlocklist();
