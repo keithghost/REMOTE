@@ -238,7 +238,7 @@ const tictactoeManager = new TicTacToeManager();
 
 // Start Game Command
 keith({
-  pattern: "ttt",
+  pattern: "tit",
   alias: ["tiktak", "tiktoe"],
   desc: "Start a TicTacToe game with another user",
   category: "Games",
