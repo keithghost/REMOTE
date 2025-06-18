@@ -269,27 +269,27 @@ const tictactoeManager = new TicTacToeManager();
 
 // Start Game Command
 keith({
-  pattern: "tttt",
+  pattern: "tik",
   alias: ["tiktak", "tiktoe"],
   desc: "Start a TicTacToe game with another user",
   category: "Games",
   react: "👥",
   filename: __filename
 }, async (context) => {
-  const { reply, m, msgKeith, itsMe } = context;
-  const quoted = msgKeith?.quoted?.sender;
+  const { reply, m, sender } = context;
   try {
-    if (!quoted) return reply("Reply to someone to start a game with them!");
-    if (quoted === itsMe) return reply("You cannot play with yourself!");
+    if (!m.quoted) return reply("Reply to someone to start a game with them!");
+    if (m.quoted.fromMe) return reply("You cannot play with yourself!");
 
-    const result = tictactoeManager.createGame(m.chat, itsMe, quoted);
+    const opponent = m.quoted.sender;
+    const result = tictactoeManager.createGame(m.chat, sender, opponent);
     if (!result.success) return reply(result.message);
 
     const formattedBoard = tictactoeManager.formatBoard(result.gameState.board);
 
     await reply(
       `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
-      { mentions: [itsMe, quoted] }
+      { mentions: [sender, opponent] }
     );
   } catch (e) {
     console.error("TicTacToe Start Error:", e);
@@ -305,12 +305,12 @@ keith({
   react: "❌",
   filename: __filename
 }, async (context) => {
-  const { reply, m, itsMe } = context;
+  const { reply, m, sender } = context;
   try {
-    const result = tictactoeManager.endGame(m.chat, itsMe);
+    const result = tictactoeManager.endGame(m.chat, sender);
     if (!result.success) return reply(result.message);
 
-    await reply(result.message, { mentions: [itsMe, result.opponent] });
+    await reply(result.message, { mentions: [sender, result.opponent] });
   } catch (e) {
     console.error("TicTacToe End Error:", e);
     reply("❌ Error ending the game.");
@@ -319,25 +319,25 @@ keith({
 
 // Move Handler
 keith({ on: "text" }, async (context) => {
-  const { body, reply, m, itsMe } = context;
+  const { body, reply, m, sender } = context;
   try {
     if (!/^[1-9]$/.test(body.trim())) return;
     const position = parseInt(body.trim()) - 1;
 
-    const gameInfo = tictactoeManager.getGameState(m.chat, itsMe);
+    const gameInfo = tictactoeManager.getGameState(m.chat, sender);
     if (!gameInfo) return;
 
-    const moveResult = tictactoeManager.makeMove(m.chat, itsMe, position);
+    const moveResult = tictactoeManager.makeMove(m.chat, sender, position);
     if (!moveResult.success) return reply(moveResult.message);
 
     const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
 
     if (moveResult.result) {
-      const otherPlayer = gameInfo.gameState.players.find(p => p !== itsMe);
+      const otherPlayer = gameInfo.gameState.players.find(p => p !== sender);
       if (moveResult.result.status === 'win') {
         await reply(
-          `🎉 @${itsMe.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
-          { mentions: [itsMe, otherPlayer] }
+          `🎉 @${sender.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
+          { mentions: [sender, otherPlayer] }
         );
       } else if (moveResult.result.status === 'draw') {
         await reply(
