@@ -288,23 +288,24 @@ keith({
   }
 });
 
-// Move Handler
+// Move Handler - Fixed version
 keith({
   on: "text",
   fromMe: false
-}, async (context) => {
+}, async (context, next) => {
   const { client, body, reply, m, sender2, from } = context;
   try {
     // Only process single digit moves (1-9)
-    if (!/^[1-9]$/.test(body.trim())) return;
+    const move = body.trim();
+    if (!/^[1-9]$/.test(move)) return next();
     
-    const position = parseInt(body.trim()) - 1;
+    const position = parseInt(move) - 1; // Convert to 0-8 index
     const gameInfo = tictactoeManager.getGameState(from, sender2);
-    if (!gameInfo) return;
+    if (!gameInfo) return next();
 
     const moveResult = tictactoeManager.makeMove(from, sender2, position);
     if (!moveResult.success) {
-      return client.sendMessage(from, { text: moveResult.message });
+      return reply(moveResult.message);
     }
 
     const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
@@ -313,7 +314,7 @@ keith({
     if (moveResult.result) {
       if (moveResult.result.status === 'win') {
         const opponent = gameInfo.gameState.players.find(p => p !== sender2);
-        message = `🎉 @${sender2.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`;
+        message = `🎉 @${sender2.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉\n\n${formattedBoard}`;
         await client.sendMessage(from, {
           text: message,
           mentions: [sender2, opponent]
@@ -327,7 +328,7 @@ keith({
       }
     } else {
       const nextPlayerSymbol = gameInfo.gameState.symbols[moveResult.nextPlayer];
-      message = `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${moveResult.nextPlayer.split('@')[0]}'s turn (${nextPlayerSymbol})`;
+      message = `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${moveResult.nextPlayer.split('@')[0]}'s turn (${nextPlayerSymbol})\n\nSend a number (1-9) to make your move.`;
       await client.sendMessage(from, {
         text: message,
         mentions: [moveResult.nextPlayer]
@@ -335,5 +336,7 @@ keith({
     }
   } catch (e) { 
     console.error("TicTacToe Move Error:", e); 
+  } finally {
+    next();
   }
 });
