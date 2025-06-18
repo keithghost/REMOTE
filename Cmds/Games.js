@@ -277,10 +277,10 @@ keith({
   react: "👥",
   filename: __filename
 }, async (context) => {
-  const { reply, m, sender, isGroup, quoted, from } = context;
+  const { reply, m, sender, quoted, from } = context;
   
   try {
-    if (!isGroup) return reply("TicTacToe can only be played in groups!");
+    if (!m.isGroup) return reply("TicTacToe can only be played in groups!");
     if (!quoted) return reply("Reply to someone to start a game with them!");
     if (quoted.sender === sender) return reply("You cannot play with yourself!");
 
