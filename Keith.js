@@ -1247,6 +1247,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                         groupMetadata, 
                         participants, 
                         pushname, 
+                        body,
                         botNumber, 
                         itsMe, 
                         store, 
