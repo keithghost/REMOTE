@@ -854,6 +854,9 @@ const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
 const reply = (teks) => {
     client.sendMessage(m.chat, { text: teks }, { quoted: m });
 };
+const sender2 = m.key.fromMe 
+                ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || cient.user.id) 
+                : (m.key.participant || m.key.remoteJid);            
 
 const IsGroup = m.chat?.endsWith("@g.us");
  //========================================================================================================================           
@@ -1227,7 +1230,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                         mode, 
                         mime, 
                         from,
-                        sender,
+                        sender2,
                         qmsg, 
                         msgKeith, 
                         Tag, 
