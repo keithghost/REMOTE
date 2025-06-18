@@ -2,186 +2,174 @@ const { keith } = require('../commandHandler');
 
 class TicTacToeManager {
   constructor() {
+    // Store all active games: Map<groupJID, Map<gameId, GameState>>
     this.games = new Map();
-    this.gameTimeout = 5 * 60 * 1000; // 5 minutes
+    
+    // Game timeout (5 minutes of inactivity)
+    this.gameTimeout = 5 * 60 * 1000;
+    
+    // Store timeout IDs to clear them when needed
     this.timeouts = new Map();
   }
-
-  // Strict WhatsApp ID validation
-  isValidWhatsAppId(id) {
-    if (!id || typeof id !== 'string') return false;
+  
+  // Create a new game between two players
+  createGame(groupJid, player1, player2) {
+    // Generate a unique game ID using player JIDs
+    const gameId = `${player1}:${player2}`;
     
-    // Clean the ID first
-    const cleaned = id.trim().toLowerCase().replace(/\s+/g, '');
-    
-    // WhatsApp ID patterns:
-    // 1. 1234567890@s.whatsapp.net (standard)
-    // 2. 1234567890@c.us (alternative)
-    // 3. 1234567890 (just the number)
-    const whatsappPattern = /^(\d+)(@[sc]\.(whatsapp\.net|us))?$/;
-    
-    return whatsappPattern.test(cleaned) && cleaned.length >= 10;
-  }
-
-  // Normalize to standard format: 1234567890@s.whatsapp.net
-  normalizeWhatsAppId(id) {
-    if (!this.isValidWhatsAppId(id)) return null;
-    
-    const cleaned = id.trim().toLowerCase().replace(/\s+/g, '');
-    const numberPart = cleaned.split('@')[0];
-    return `${numberPart}@s.whatsapp.net`;
-  }
-
-  createGame(chatJid, player1, player2) {
-    // Validate both players
-    const p1 = this.normalizeWhatsAppId(player1);
-    const p2 = this.normalizeWhatsAppId(player2);
-
-    if (!p1 || !p2) {
-      console.error("Invalid player IDs:", { 
-        originalPlayer1: player1 || 'empty', 
-        originalPlayer2: player2 || 'empty',
-        normalizedPlayer1: p1,
-        normalizedPlayer2: p2
-      });
-      return {
-        success: false,
-        message: "❌ Invalid player IDs. Both players must have valid WhatsApp numbers."
-      };
+    // Initialize group map if needed
+    if (!this.games.has(groupJid)) {
+      this.games.set(groupJid, new Map());
     }
-
-    if (p1 === p2) {
-      return {
-        success: false,
-        message: "❌ You cannot play with yourself!"
-      };
-    }
-
-    const gameId = `${p1}:${p2}`;
-
-    if (!this.games.has(chatJid)) {
-      this.games.set(chatJid, new Map());
-    }
-
-    const chatGames = this.games.get(chatJid);
-
-    // Check for existing games
-    for (const game of chatGames.values()) {
-      if (game.players.includes(p1)) {
+    
+    const groupGames = this.games.get(groupJid);
+    
+    // Check if either player is already in a game in this group
+    for (const [existingGameId, game] of groupGames.entries()) {
+      if (game.players.includes(player1) || game.players.includes(player2)) {
         return {
           success: false,
-          message: "❌ You're already in a game in this chat. Finish that game first."
-        };
-      }
-      if (game.players.includes(p2)) {
-        return {
-          success: false,
-          message: "❌ The other player is already in a game in this chat."
+          message: `One of the players is already in a game. Please finish that game first.`
         };
       }
     }
-
+    
+    // Create new game state
     const gameState = {
-      players: [p1, p2],
+      players: [player1, player2],
       board: Array(9).fill(null),
-      currentPlayer: p1,
+      currentPlayer: player1, // Player 1 goes first
       symbols: {
-        [p1]: '❌',
-        [p2]: '⭕'
+        [player1]: '❌',
+        [player2]: '⭕'
       },
       startTime: Date.now(),
       lastMoveTime: Date.now()
     };
-
-    chatGames.set(gameId, gameState);
-    this.setGameTimeout(chatJid, gameId);
-
-    const getDisplayName = (id) => id.split('@')[0];
-
+    
+    // Store the game
+    groupGames.set(gameId, gameState);
+    
+    // Set game timeout
+    this.setGameTimeout(groupJid, gameId);
+    
     return {
       success: true,
-      message: `🎮 Game created between @${getDisplayName(p1)} (❌) and @${getDisplayName(p2)} (⭕)`,
+      message: `Game created between @${player1.split('@')[0]} (❌) and @${player2.split('@')[0]} (⭕)`,
       gameId,
       gameState
     };
   }
-
-  makeMove(chatJid, playerId, position) {
-    if (!this.games.has(chatJid)) return { 
-      success: false, 
-      message: "❌ No active games in this chat. Start one with *tt*" 
-    };
-
-    const pId = this.normalizeWhatsAppId(playerId);
-    if (!pId) return {
-      success: false,
-      message: "❌ Invalid player ID."
-    };
-
-    const chatGames = this.games.get(chatJid);
+  
+  // Make a move in a game
+  makeMove(groupJid, playerId, position) {
+    // Validate group exists
+    if (!this.games.has(groupJid)) {
+      return {
+        success: false,
+        message: "No active games in this chat."
+      };
+    }
+    
+    const groupGames = this.games.get(groupJid);
+    
+    // Find the game this player is in
     let gameId = null;
     let gameState = null;
-
-    for (const [id, game] of chatGames.entries()) {
-      if (game.players.includes(pId)) {
+    
+    for (const [id, game] of groupGames.entries()) {
+      if (game.players.includes(playerId)) {
         gameId = id;
         gameState = game;
         break;
       }
     }
-
+    
+    // No game found for this player
     if (!gameState) {
-      return { 
-        success: false, 
-        message: "❌ You're not in an active game. Start one with *tt*" 
+      return {
+        success: false,
+        message: "You're not in an active game. Start one by replying to someone with !ttt"
       };
     }
-
-    if (gameState.currentPlayer !== pId) {
-      return { success: false, message: "⏳ It's not your turn!" };
+    
+    // Check if it's the player's turn
+    if (gameState.currentPlayer !== playerId) {
+      return {
+        success: false,
+        message: "It's not your turn!"
+      };
     }
-
+    
+    // Validate position (0-8)
     if (position < 0 || position > 8 || !Number.isInteger(position)) {
-      return { 
-        success: false, 
-        message: "❌ Invalid position! Choose a number between 1-9." 
+      return {
+        success: false,
+        message: "Invalid position! Choose a number between 1-9."
       };
     }
-
+    
+    // Check if the position is already taken
     if (gameState.board[position] !== null) {
-      return { 
-        success: false, 
-        message: "❌ That position is already taken! Choose another." 
+      return {
+        success: false,
+        message: "That position is already taken! Choose another."
       };
     }
-
-    gameState.board[position] = gameState.symbols[pId];
+    
+    // Make the move
+    gameState.board[position] = gameState.symbols[playerId];
+    
+    // Update last move time
     gameState.lastMoveTime = Date.now();
-    this.setGameTimeout(chatJid, gameId);
-
+    
+    // Reset the timeout
+    this.setGameTimeout(groupJid, gameId);
+    
+    // Check for win or draw
     const winner = this.checkWinner(gameState.board);
     let result = null;
-
+    
     if (winner) {
+      // We have a winner
       result = {
         status: 'win',
-        winner: pId,
-        symbol: gameState.symbols[pId]
+        winner: playerId,
+        symbol: gameState.symbols[playerId]
       };
-      chatGames.delete(gameId);
-      this.clearTimeout(chatJid, gameId);
+      
+      // Remove the game
+      groupGames.delete(gameId);
+      
+      // Clear timeout
+      if (this.timeouts.has(`${groupJid}:${gameId}`)) {
+        clearTimeout(this.timeouts.get(`${groupJid}:${gameId}`));
+        this.timeouts.delete(`${groupJid}:${gameId}`);
+      }
     } else if (!gameState.board.includes(null)) {
-      result = { status: 'draw' };
-      chatGames.delete(gameId);
-      this.clearTimeout(chatJid, gameId);
+      // It's a draw - no more moves possible
+      result = {
+        status: 'draw'
+      };
+      
+      // Remove the game
+      groupGames.delete(gameId);
+      
+      // Clear timeout
+      if (this.timeouts.has(`${groupJid}:${gameId}`)) {
+        clearTimeout(this.timeouts.get(`${groupJid}:${gameId}`));
+        this.timeouts.delete(`${groupJid}:${gameId}`);
+      }
     } else {
-      gameState.currentPlayer = gameState.players.find(p => p !== pId);
+      // Switch to next player
+      gameState.currentPlayer = gameState.players[0] === playerId ? gameState.players[1] : gameState.players[0];
     }
-
-    if (chatGames.size === 0) {
-      this.games.delete(chatJid);
+    
+    // Clean up if group has no more games
+    if (groupGames.size === 0) {
+      this.games.delete(groupJid);
     }
-
+    
     return {
       success: true,
       board: gameState.board,
@@ -189,184 +177,197 @@ class TicTacToeManager {
       nextPlayer: gameState.currentPlayer
     };
   }
-
-  getGameState(chatJid, playerId) {
-    if (!this.games.has(chatJid)) return null;
-
-    const pId = this.normalizeWhatsAppId(playerId);
-    if (!pId) return null;
-
-    const chatGames = this.games.get(chatJid);
-    for (const [gameId, game] of chatGames.entries()) {
-      if (game.players.includes(pId)) {
-        return { gameId, gameState: game };
+  
+  // Get current game state for a player
+  getGameState(groupJid, playerId) {
+    // Check if group exists
+    if (!this.games.has(groupJid)) {
+      return null;
+    }
+    
+    const groupGames = this.games.get(groupJid);
+    
+    // Find player's game
+    for (const [gameId, game] of groupGames.entries()) {
+      if (game.players.includes(playerId)) {
+        return {
+          gameId,
+          gameState: game
+        };
       }
     }
-
+    
     return null;
   }
-
+  
+  // Format board for display
   formatBoard(board) {
-    const h = '┄┄┄┄┄┄┄┄┄┄┄';
-    const v = '┃';
-    const emoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
-    let str = `${h}\n`;
-
+    // Unicode characters for better display
+    const horizontalLine = '┄┄┄┄┄┄┄┄┄┄┄';
+    const verticalLine = '┃';
+    
+    // Number emojis for empty spaces (for position selection)
+    const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+    
+    let formattedBoard = `${horizontalLine}\n`;
+    
     for (let i = 0; i < 3; i++) {
-      str += `${v} `;
+      let row = `${verticalLine} `;
       for (let j = 0; j < 3; j++) {
-        const index = i * 3 + j;
-        const cell = board[index] || emoji[index];
-        str += `${cell} ${j < 2 ? v + ' ' : ''}`;
+        const pos = i * 3 + j;
+        const cell = board[pos] || numberEmojis[pos];
+        row += `${cell} `;
+        if (j < 2) row += verticalLine + ' ';
       }
-      str += `${v}\n`;
-      if (i < 2) str += `${h}\n`;
+      row += `${verticalLine}`;
+      formattedBoard += row + '\n';
+      
+      if (i < 2) {
+        formattedBoard += `${horizontalLine}\n`;
+      }
     }
-
-    return str + h;
+    
+    formattedBoard += `${horizontalLine}`;
+    return formattedBoard;
   }
-
+  
+  // Check for a winner
   checkWinner(board) {
-    const wins = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
+    // Winning patterns - rows, columns, diagonals
+    const winPatterns = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6]             // diagonals
     ];
-
-    for (const [a,b,c] of wins) {
+    
+    for (const pattern of winPatterns) {
+      const [a, b, c] = pattern;
       if (board[a] && board[a] === board[b] && board[a] === board[c]) {
         return board[a];
       }
     }
-
+    
     return null;
   }
-
-  setGameTimeout(chatJid, gameId) {
-    this.clearTimeout(chatJid, gameId);
-    const timeout = setTimeout(() => {
-      if (this.games.has(chatJid)) {
-        const chatGames = this.games.get(chatJid);
-        const game = chatGames.get(gameId);
-        if (game) {
-          const inactivePlayer = game.currentPlayer;
-          const opponent = game.players.find(p => p !== inactivePlayer);
-          chatGames.delete(gameId);
-          if (!chatGames.size) this.games.delete(chatJid);
-          console.log(`Game ${gameId} timed out due to inactivity`);
+  
+  // Set a timeout to end inactive games
+  setGameTimeout(groupJid, gameId) {
+    // Clear existing timeout if any
+    if (this.timeouts.has(`${groupJid}:${gameId}`)) {
+      clearTimeout(this.timeouts.get(`${groupJid}:${gameId}`));
+    }
+    
+    // Set new timeout
+    const timeoutId = setTimeout(() => {
+      if (this.games.has(groupJid)) {
+        const groupGames = this.games.get(groupJid);
+        if (groupGames.has(gameId)) {
+          groupGames.delete(gameId);
+          
+          // Clean up if no more games in group
+          if (groupGames.size === 0) {
+            this.games.delete(groupJid);
+          }
         }
       }
-      this.timeouts.delete(`${chatJid}:${gameId}`);
+      
+      this.timeouts.delete(`${groupJid}:${gameId}`);
     }, this.gameTimeout);
-    this.timeouts.set(`${chatJid}:${gameId}`, timeout);
+    
+    this.timeouts.set(`${groupJid}:${gameId}`, timeoutId);
   }
-
-  clearTimeout(chatJid, gameId) {
-    const key = `${chatJid}:${gameId}`;
-    if (this.timeouts.has(key)) {
-      clearTimeout(this.timeouts.get(key));
-      this.timeouts.delete(key);
+  
+  // Force end a game
+  endGame(groupJid, playerId) {
+    // Check if group exists
+    if (!this.games.has(groupJid)) {
+      return {
+        success: false,
+        message: "No active games in this chat."
+      };
     }
-  }
-
-  endGame(chatJid, playerId) {
-    if (!this.games.has(chatJid)) {
-      return { success: false, message: "❌ No active games in this chat." };
-    }
-
-    const pId = this.normalizeWhatsAppId(playerId);
-    if (!pId) return {
-      success: false,
-      message: "❌ Invalid player ID."
-    };
-
-    const chatGames = this.games.get(chatJid);
+    
+    const groupGames = this.games.get(groupJid);
+    
+    // Find player's game
     let gameId = null;
     let gameState = null;
-
-    for (const [id, game] of chatGames.entries()) {
-      if (game.players.includes(pId)) {
+    
+    for (const [id, game] of groupGames.entries()) {
+      if (game.players.includes(playerId)) {
         gameId = id;
         gameState = game;
         break;
       }
     }
-
+    
+    // No game found for this player
     if (!gameState) {
-      return { success: false, message: "❌ You're not in an active game." };
+      return {
+        success: false,
+        message: "You're not in an active game."
+      };
     }
-
-    const opponent = gameState.players.find(p => p !== pId);
-    chatGames.delete(gameId);
-    this.clearTimeout(chatJid, gameId);
-    if (!chatGames.size) this.games.delete(chatJid);
-
-    const getDisplayName = (id) => id.split('@')[0];
-
+    
+    // Get opponent
+    const opponent = gameState.players[0] === playerId ? gameState.players[1] : gameState.players[0];
+    
+    // End the game
+    groupGames.delete(gameId);
+    
+    // Clear timeout
+    if (this.timeouts.has(`${groupJid}:${gameId}`)) {
+      clearTimeout(this.timeouts.get(`${groupJid}:${gameId}`));
+      this.timeouts.delete(`${groupJid}:${gameId}`);
+    }
+    
+    // Clean up if no more games in group
+    if (groupGames.size === 0) {
+      this.games.delete(groupJid);
+    }
+    
     return {
       success: true,
-      message: `🏁 Game ended by @${getDisplayName(pId)}. @${getDisplayName(opponent)} wins by forfeit!`,
+      message: `Game ended by @${playerId.split('@')[0]}. @${opponent.split('@')[0]} wins by forfeit!`,
       opponent
     };
   }
-
-  cleanupExpiredGames() {
-    const now = Date.now();
-    for (const [chatJid, chatGames] of this.games.entries()) {
-      for (const [gameId, game] of chatGames.entries()) {
-        if (now - game.lastMoveTime > this.gameTimeout) {
-          chatGames.delete(gameId);
-          this.clearTimeout(chatJid, gameId);
-        }
-      }
-      if (chatGames.size === 0) {
-        this.games.delete(chatJid);
-      }
-    }
-  }
 }
 
+// Create a global game manager instance
 const tictactoeManager = new TicTacToeManager();
 
-// Start Game Command
+// Start Game
 keith({
-  pattern: "tttt",
+  pattern: "tiktak",
   alias: ["tictactoe", "ttt"],
   desc: "Start a TicTacToe game with another user",
   category: "Games",
   react: "❌⭕",
   filename: __filename
 }, async (context) => {
-  const { reply, m, sender } = context;
+  const { reply, m, sender2, from } = context;
   try {
-    if (!m.quoted) return reply("❌ Please reply to someone's message to start a game with them!");
-    if (m.quoted.fromMe) return reply("❌ You can't play with the bot! Reply to another user.");
+    if (!m.isGroup) return reply("TicTacToe can only be played in groups!");
 
-    const opponent = m.quoted.sender;
-    
-    // Validate both players
-    if (!tictactoeManager.isValidWhatsAppId(sender)) {
-      return reply("❌ Your account doesn't have a valid WhatsApp ID!");
-    }
-    
-    if (!tictactoeManager.isValidWhatsAppId(opponent)) {
-      return reply("❌ The user you replied to doesn't have a valid WhatsApp ID!");
-    }
+    if (!m.quoted) return reply("Reply to someone to start a game with them!");
 
-    const result = tictactoeManager.createGame(m.chat, sender, opponent);
+    if (m.quoted.fromMe) return reply("You cannot play with yourself!");
+
+    const result = tictactoeManager.createGame(from, sender2, m.quoted.sender);
     if (!result.success) return reply(result.message);
 
     const formattedBoard = tictactoeManager.formatBoard(result.gameState.board);
-    const getDisplayName = (id) => id.split('@')[0];
 
-    await reply(
-      `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${getDisplayName(result.gameState.currentPlayer)}'s turn (❌)\n\nTo make a move, reply with a number (1-9).\n\n*End the game with* \`\`\`ttend\`\`\``,
-      { mentions: [sender, opponent] }
-    );
-  } catch (e) {
-    console.error("TicTacToe Start Error:", e);
-    reply("❌ Error starting the game. Please try again.");
-  }
+    await client.sendMessage(from, {
+      text: `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
+      mentions: [sender2, m.quoted.sender]
+    });
+
+  } catch (e) { 
+    console.error("TicTacToe Start Error:", e); 
+    reply("❌ Error starting the game. Try again."); 
+  } 
 });
 
 // End Game Command
@@ -377,64 +378,59 @@ keith({
   react: "🏁",
   filename: __filename
 }, async (context) => {
-  const { reply, m, sender } = context;
+  const { reply, m, sender2, from } = context;
   try {
-    const result = tictactoeManager.endGame(m.chat, sender);
+    const result = tictactoeManager.endGame(from, sender2); 
     if (!result.success) return reply(result.message);
 
-    await reply(result.message, { mentions: [sender, result.opponent] });
-  } catch (e) {
-    console.error("TicTacToe End Error:", e);
-    reply("❌ Error ending the game. Please try again.");
-  }
+    await client.sendMessage(from, {
+      text: result.message,
+      mentions: [sender2, result.opponent]
+    });
+
+  } catch (e) { 
+    console.error("TicTacToe End Error:", e); 
+    reply("❌ Error ending the game."); 
+  } 
 });
 
-// Move Handler
-keith({ on: "text" }, async (context) => {
-  const { body, reply, m, sender } = context;
+// Handle move inputs 1-9
+client({ 
+  on: "text" 
+}, async (context) => {
+  const { body, reply, m, sender2, from } = context;
   try {
-    // Only process moves if it's a single digit 1-9
-    if (!/^[1-9]$/.test(body.trim())) return;
-    
+    if (!/^[1-9]$/.test(body.trim())) return; 
     const position = parseInt(body.trim()) - 1;
 
-    const gameInfo = tictactoeManager.getGameState(m.chat, sender);
+    const gameInfo = tictactoeManager.getGameState(from, sender2);
     if (!gameInfo) return;
 
-    const moveResult = tictactoeManager.makeMove(m.chat, sender, position);
-    if (!moveResult.success) return reply(moveResult.message);
+    const moveResult = tictactoeManager.makeMove(from, sender2, position);
+    if (!moveResult.success) return client.sendMessage(sender2, { text: moveResult.message });
 
     const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
-    const getDisplayName = (id) => id.split('@')[0];
 
     if (moveResult.result) {
-      const otherPlayer = gameInfo.gameState.players.find(p => p !== sender);
       if (moveResult.result.status === 'win') {
-        await reply(
-          `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n🎉 @${getDisplayName(sender)} (${moveResult.result.symbol}) has won the game! 🎉`,
-          { mentions: [sender, otherPlayer] }
-        );
+        await client.sendMessage(from, {
+          text: `🎉 @${sender2.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
+          mentions: [sender2, gameInfo.gameState.players.find(p => p !== sender2)]
+        });
       } else if (moveResult.result.status === 'draw') {
-        await reply(
-          `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n🤝 The game ended in a draw! 🤝`,
-          { mentions: gameInfo.gameState.players }
-        );
+        await client.sendMessage(from, {
+          text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n🤝 The game ended in a draw! 🤝`,
+          mentions: gameInfo.gameState.players
+        });
       }
     } else {
       const nextPlayerSymbol = gameInfo.gameState.symbols[moveResult.nextPlayer];
-      
-      await reply(
-        `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${getDisplayName(moveResult.nextPlayer)}'s turn (${nextPlayerSymbol})`,
-        { mentions: [moveResult.nextPlayer] }
-      );
+      await client.sendMessage(from, {
+        text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${moveResult.nextPlayer.split('@')[0]}'s turn (${nextPlayerSymbol})`,
+        mentions: [moveResult.nextPlayer]
+      });
     }
-  } catch (e) {
-    console.error("TicTacToe Move Error:", e);
-    reply("❌ Error processing your move. Please try again.");
-  }
+  } catch (e) { 
+    console.error("TicTacToe Move Error:", e); 
+  } 
 });
-
-// Periodic cleanup of expired games
-setInterval(() => {
-  tictactoeManager.cleanupExpiredGames();
-}, 60 * 60 * 1000); // Clean up every hour
