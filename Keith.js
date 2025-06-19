@@ -808,8 +808,8 @@ if (mek.key?.remoteJid) {
 // Handle message processing
 const messageText = mek.message?.conversation || mek.message?.extendedTextMessage?.text || "";
 const remoteJid = mek.key.remoteJid;
-const senderJid = mek.key.participant || mek.key.remoteJid;
-const senderNumber = senderJid.split('@')[0];
+const senderJid2 = mek.key.participant || mek.key.remoteJid;
+const senderNumber = senderJid2.split('@')[0];
 const isPrivate = remoteJid.endsWith('@s.whatsapp.net');
 
 // Get current settings
