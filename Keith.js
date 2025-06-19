@@ -224,6 +224,7 @@ const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
 const { initChatbotDB } = require('./database/chatbot');
+const { initGreetDB } = require('./database/greet');
 
 
 //========================================================================================================================
@@ -234,6 +235,7 @@ initAutoViewDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
 initChatbotDB().catch(console.error);
+initGreetDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initAntiBadDB().catch(console.error);
 initPresenceDB().catch(console.error);
@@ -797,6 +799,48 @@ if (mek.key?.remoteJid) {
                             : (m.key.participant || m.key.remoteJid);            
 
             const IsGroup = m.chat?.endsWith("@g.us");
+//========================================================================================================================            
+            // greet handler
+//========================================================================================================================
+            
+            const { getGreetSettings, repliedContacts } = require('./database/greet');
+
+// Handle message processing
+const messageText = mek.message?.conversation || mek.message?.extendedTextMessage?.text || "";
+const remoteJid = mek.key.remoteJid;
+const senderJid = mek.key.participant || mek.key.remoteJid;
+const senderNumber = senderJid.split('@')[0];
+const isPrivate = remoteJid.endsWith('@s.whatsapp.net');
+
+// Get current settings
+const greetSettings = await getGreetSettings();
+
+// Command to update greeting message (only from owner)
+if (messageText.match(/^[^\w\s]/) && mek.key.fromMe && isPrivate) {
+    const prefix = messageText[0];
+    const command = messageText.slice(1).split(" ")[0];
+    const newMessage = messageText.slice(prefix.length + command.length).trim();
+
+    if (command === "setgreet" && newMessage) {
+        await updateGreetSettings({ message: newMessage });
+        await client.sendMessage(remoteJid, {
+            text: `Greet message has been updated to:\n"${newMessage}"`
+        });
+        return;
+    }
+}
+
+// Handle greetings in private chats only
+if (greetSettings.enabled && isPrivate && !mek.key.fromMe && !repliedContacts.has(remoteJid)) {
+    const personalizedMessage = greetSettings.message.replace(/@user/g, `@${senderNumber}`);
+    
+    await client.sendMessage(remoteJid, {
+        text: personalizedMessage,
+        mentions: [senderJid]
+    });
+    
+    repliedContacts.add(remoteJid);
+}
 //========================================================================================================================            
             // Chatbot handler
 //========================================================================================================================
