@@ -806,7 +806,7 @@ const chatbotSettings = await getChatbotSettings();
 let lastTextTime = 0;
 
 // Text Chatbot
-if ((!IsGroup && chatbotSettings.textPrivate) || (IsGroup && chatbotSettings.textGroup)) {
+if ((!IsGroup && isOwner && chatbotSettings.textPrivate) || (IsGroup && isOwner && chatbotSettings.textGroup)) {
     try {
         const currentTime = Date.now();
         if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
@@ -830,7 +830,7 @@ if ((!IsGroup && chatbotSettings.textPrivate) || (IsGroup && chatbotSettings.tex
 }
 
 // Voice Chatbot
-if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.voiceGroup)) {
+if ((!IsGroup && isOwner && chatbotSettings.voicePrivate) || (IsGroup && isOwner && chatbotSettings.voiceGroup)) {
     try {
         const currentTime = Date.now();
         if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
