@@ -834,8 +834,8 @@ async function startKeith() {
                 return;
             }
             
-            const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
-            
+            //const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
+            const command = cmd ? body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase() : null;
             const commandHandler = commands.find(cmd => 
                 cmd.pattern === command || 
                 (cmd.alias && cmd.alias.includes(command))
