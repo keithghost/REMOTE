@@ -1271,7 +1271,7 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
-                `║ ʟɪʙʀᴀʀʏ PANEL\n` +
+                `║ ʟɪʙʀᴀʀʏ baileys\n` +
                 `╰═════════════════⊷`;
 
             await client.sendMessage(client.user.id, { text: message });
