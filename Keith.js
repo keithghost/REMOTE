@@ -269,8 +269,10 @@ async function startKeith() {
     });
 
     store.bind(client.ev);
-    
+//========================================================================================================================    
     // Auto-bio handler
+//========================================================================================================================
+
     let bioInterval;
     async function setupAutoBio(client) {
         const { getAutoBioSettings } = require('./database/autobio');
@@ -297,8 +299,10 @@ async function startKeith() {
     AutoBioDB.afterUpdate(async (instance) => {
         await setupAutoBio(client);
     });
-    
+//========================================================================================================================    
     // Call handler
+//========================================================================================================================
+
     let lastTextTime = 0;
     const messageDelay = 5000;
 
@@ -329,8 +333,9 @@ async function startKeith() {
             console.error('Error handling call:', error);
         }
     });
-
+//========================================================================================================================
     // Anti-delete handler
+//========================================================================================================================
     const { getAntiDeleteSettings } = require('./database/antidelete');
     const baseDir = path.join(__dirname, 'message_data');
     if (!fs.existsSync(baseDir)) {
@@ -479,8 +484,10 @@ async function startKeith() {
             console.error('Error in antidelete handler:', error);
         }
     });
-
+//========================================================================================================================
     // Message handler
+//========================================================================================================================
+
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
@@ -515,8 +522,10 @@ async function startKeith() {
                     console.error('Error handling status reaction:', error);
                 }
             }
-
+//========================================================================================================================
             // Status view handler
+//========================================================================================================================
+
             if (mek.key && mek.key.remoteJid === 'status@broadcast') {
                 try {
                     const { getAutoViewSettings } = require('./database/autoview');
@@ -529,8 +538,10 @@ async function startKeith() {
                     console.error('Error handling status view:', error);
                 }
             }
-
+//========================================================================================================================
             // Message read handler
+//========================================================================================================================
+
             if (mek.key?.remoteJid) {
                 try {
                     const { getAutoReadSettings } = require('./database/autoread');
@@ -551,8 +562,10 @@ async function startKeith() {
                     console.error('Error handling auto-read:', error);
                 }
             }
-
+//========================================================================================================================
             // User JID saving
+//========================================================================================================================
+
             function saveUserJid(jid) {
                 try {
                     if (!jid) throw new Error("No JID provided");
@@ -587,8 +600,10 @@ async function startKeith() {
             else if (!m.key.remoteJid.endsWith('@g.us') && !m.key.remoteJid.endsWith('@newsletter')) {
                 saveUserJid(m.key.remoteJid);
             }
-
+//========================================================================================================================
             // JID standardization
+//========================================================================================================================
+
             function standardizeJid(jid) {
                 if (!jid) return '';
                 try {
@@ -607,8 +622,10 @@ async function startKeith() {
                     return '';
                 }
             }
-
+//========================================================================================================================
             // Message processing
+//========================================================================================================================
+
             const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
                 m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
@@ -745,8 +762,10 @@ async function startKeith() {
                             : (m.key.participant || m.key.remoteJid);            
 
             const IsGroup = m.chat?.endsWith("@g.us");
-
+//========================================================================================================================
             // Anti-bad word handler
+//========================================================================================================================
+
             const userWarnings = new Map();
 
             if (m.message) {
@@ -781,6 +800,9 @@ async function startKeith() {
                                         console.error('Failed to delete message:', deleteError);
                                     }
                                 }
+                                
+//========================================================================================================================
+//========================================================================================================================
 
                                 if (isGroup) {
                                     const groupMetadata = await client.groupMetadata(m.key.remoteJid);
@@ -825,14 +847,21 @@ async function startKeith() {
                     console.error('Anti-bad word error:', error);
                 }
             }
+//========================================================================================================================
+//mode            
+//========================================================================================================================
 
             if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
+//========================================================================================================================
+//========================================================================================================================
             
             const Blocked = await client.fetchBlocklist();
             if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
                 await m.reply("You are blocked from using bot commands.");
                 return;
             }
+//========================================================================================================================
+//========================================================================================================================
             
             //const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
             const command = cmd ? body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase() : null;
@@ -915,6 +944,8 @@ async function startKeith() {
             KeithLogger.error("Error processing message", error);
         }
     });
+//========================================================================================================================
+//========================================================================================================================
 
     process.on("unhandledRejection", (reason, promise) => {
         KeithLogger.error(`Unhandled Rejection at: ${promise}`, reason);
@@ -946,8 +977,10 @@ async function startKeith() {
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
     client.ev.on("group-participants.update", (m) => groupEvents(client, m));
-    
+  //========================================================================================================================  
     // Connection event handler
+//========================================================================================================================
+
     client.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         
@@ -996,8 +1029,10 @@ async function startKeith() {
             KeithLogger.info(message);
         }
     });
-    
+//========================================================================================================================    
     // Credentials update handler
+//========================================================================================================================
+
     client.ev.on("creds.update", saveCreds);
 
     client.downloadMediaMessage = async (message) => {
@@ -1025,8 +1060,10 @@ async function startKeith() {
         await fs.writeFileSync(trueFileName, buffer);
         return trueFileName;
     };
-
+//========================================================================================================================
     // Start Express server
+//========================================================================================================================
+
     const app = express();
     const port = process.env.PORT || 10000;
 
