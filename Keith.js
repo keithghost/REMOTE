@@ -800,50 +800,57 @@ if (mek.key?.remoteJid) {
 //========================================================================================================================            
             // Chatbot handler
 //========================================================================================================================
-            
+ // Chatbot handler
 const { getChatbotSettings } = require('./database/chatbot');
 const chatbotSettings = await getChatbotSettings();
 let lastTextTime = 0;
 
+// Skip conditions:
+// 1. If message is from the bot itself
+// 2. If quoted message is from the bot
+// 3. If sender is not owner
+if (m.sender === client.user.id || (m.quoted?.fromMe) || !m.isOwner) return;
+
 // Text Chatbot
-if ((!IsGroup && isOwner && chatbotSettings.textPrivate) || (IsGroup && isOwner && chatbotSettings.textGroup)) {
+if ((!IsGroup && chatbotSettings.textPrivate) || (IsGroup && chatbotSettings.textGroup)) {
     try {
         const currentTime = Date.now();
         if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
-            console.log('Message skipped: Too many messages in a short time.');
+            console.log('Message skipped: Rate limit exceeded');
             return;
         }
 
-        const response = await axios.get('https://keith-api.vercel.app/ai/gpt', {
-            params: { q: text }
-        });
-
-        if (response.data?.status && response.data?.result) {
-            await client.sendMessage(m.chat, { text: response.data.result });
-            lastTextTime = currentTime;
-        } else {
-            throw new Error('No response content found.');
+        const response = await axios.get(`https://apis-keith.vercel.app/ai/gpt?q=${encodeURIComponent(text)}`);
+        
+        if (!response.data?.status || !response.data?.result) {
+            throw new Error('Invalid API response');
         }
+
+        await client.sendMessage(m.chat, { 
+            text: response.data.result,
+            mentions: [m.sender],
+            quoted: m
+        });
+        
+        lastTextTime = currentTime;
     } catch (error) {
-        console.error('Error fetching chatbot response:', error);
+        console.error('Error in text chatbot:', error);
     }
 }
 
 // Voice Chatbot
-if ((!IsGroup && isOwner && chatbotSettings.voicePrivate) || (IsGroup && isOwner && chatbotSettings.voiceGroup)) {
+if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.voiceGroup)) {
     try {
         const currentTime = Date.now();
         if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
-            console.log('Message skipped: Too many messages in a short time for voice chatbot.');
+            console.log('Message skipped: Rate limit exceeded for voice');
             return;
         }
 
-        const response = await axios.get('https://keith-api.vercel.app/ai/gpt', {
-            params: { q: text }
-        });
-
+        const response = await axios.get(`https://apis-keith.vercel.app/ai/gpt?q=${encodeURIComponent(text)}`);
+        
         if (!response.data?.status || !response.data?.result) {
-            throw new Error('Invalid response from the API');
+            throw new Error('Invalid API response');
         }
 
         const audioUrl = googleTTS.getAudioUrl(response.data.result, {
@@ -853,17 +860,18 @@ if ((!IsGroup && isOwner && chatbotSettings.voicePrivate) || (IsGroup && isOwner
         });
 
         await client.sendMessage(m.chat, { 
-            audio: { url: audioUrl }, 
-            mimetype: 'audio/mp4', 
-            ptt: true 
+            audio: { url: audioUrl },
+            mimetype: 'audio/mp4',
+            ptt: true,
+            quoted: m
         });
 
         lastTextTime = currentTime;
     } catch (error) {
         console.error('Error in voice chatbot:', error);
     }
-}
-            
+}           
+
 //========================================================================================================================
             // Anti-bad word handler
 //========================================================================================================================
