@@ -6,8 +6,61 @@ const { getAntiCallSettings, updateAntiCallSettings } = require('../database/ant
 const { getAutoLikeStatusSettings, updateAutoLikeStatusSettings } = require('../database/autolikestatus');
 const { getAutoViewSettings, updateAutoViewSettings } = require('../database/autoview');
 const { getAutoReadSettings, updateAutoReadSettings } = require('../database/autoread');
+const { getPresenceSettings, updatePresenceSettings } = require('../database/presence');
+
+keith({
+    pattern: "presence",
+    alias: ["setpresence", "mypresence"],
+    desc: "Manage your presence settings",
+    category: "Settings",
+    react: "🔄",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const [type, status] = args.map(arg => arg?.toLowerCase());
+
+        const settings = await getPresenceSettings();
+
+        if (!type) {
+            // Show current settings
+            const formatStatus = (s) => s === 'off' ? '❌ OFF' : `✅ ${s.toUpperCase()}`;
+            
+            return await reply(
+                `*🔄 Presence Settings*\n\n` +
+                `🔹 *Private Chats:* ${formatStatus(settings.privateChat)}\n` +
+                `🔹 *Group Chats:* ${formatStatus(settings.groupChat)}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}presence private [off/online/typing/recording]*\n` +
+                `▸ *${prefix}presence group [off/online/typing/recording]*`
+            );
+        }
+
+        if (type !== 'private' && type !== 'group') {
+            return await reply(
+                '❌ Invalid type. Available options:\n\n' +
+                `▸ *${prefix}presence private [status]*\n` +
+                `▸ *${prefix}presence group [status]*`
+            );
+        }
+
+        if (!status || !['off', 'online', 'typing', 'recording'].includes(status)) {
+            return await reply(
+                '❌ Invalid status. Available options:\n\n' +
+                `▸ *off* - No presence\n` +
+                `▸ *online* - Show as online\n` +
+                `▸ *typing* - Show typing indicator\n` +
+                `▸ *recording* - Show recording indicator`
+            );
+        }
+
+        await updatePresenceSettings({ [type === 'private' ? 'privateChat' : 'groupChat']: status });
+        return await reply(`✅ ${type === 'private' ? 'Private chat' : 'Group chat'} presence has been set to *${status}*`);
+    });
+});
 //========================================================================================================================
 //========================================================================================================================
+
 keith({
     pattern: "autoread",
     alias: ["readmessages", "setread"],
