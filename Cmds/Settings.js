@@ -8,8 +8,67 @@ const { getAutoViewSettings, updateAutoViewSettings } = require('../database/aut
 const { getAutoReadSettings, updateAutoReadSettings } = require('../database/autoread');
 const { getPresenceSettings, updatePresenceSettings } = require('../database/presence');
 const { getChatbotSettings, updateChatbotSettings } = require('../database/chatbot');
+const { getGreetSettings, updateGreetSettings, clearRepliedContacts } = require('../database/greet');
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+    pattern: "greet",
+    alias: ["autoreply"],
+    desc: "Manage private chat greeting settings",
+    category: "Settings",
+    react: "👋",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const [action, ...messageParts] = args;
+        const message = messageParts.join(' ');
+
+        const settings = await getGreetSettings();
+
+        if (!action) {
+            // Show current settings
+            return await reply(
+                `*👋 Greeting Settings*\n\n` +
+                `Status: ${settings.enabled ? '✅ ON' : '❌ OFF'}\n` +
+                `Message: ${settings.message}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}greet on* - Enable greetings\n` +
+                `▸ *${prefix}greet off* - Disable greetings\n` +
+                `▸ *${prefix}greet set [message]* - Set greeting message\n` +
+                `▸ *${prefix}greet clear* - Reset replied contacts\n` +
+                `▸ In chat: *[prefix]setgreet [message]* - Update message`
+            );
+        }
+
+        switch (action.toLowerCase()) {
+            case 'on':
+                await updateGreetSettings({ enabled: true });
+                return await reply('✅ Private chat greetings enabled');
+                
+            case 'off':
+                await updateGreetSettings({ enabled: false });
+                return await reply('✅ Private chat greetings disabled');
+                
+            case 'set':
+                if (!message) return await reply('❌ Please provide a greeting message');
+                await updateGreetSettings({ message });
+                return await reply(`✅ Greet message updated:\n"${message}"`);
+                
+            case 'clear':
+                clearRepliedContacts();
+                return await reply('✅ Cleared replied contacts memory');
+                
+            default:
+                return await reply('❌ Invalid command. Use without arguments to see usage.');
+        }
+    });
+});
+
+//========================================================================================================================
+//========================================================================================================================
+
 keith({
     pattern: "chatbot",
     alias: ["bot", "aichat"],
