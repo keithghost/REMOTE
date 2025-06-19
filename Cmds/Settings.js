@@ -7,7 +7,83 @@ const { getAutoLikeStatusSettings, updateAutoLikeStatusSettings } = require('../
 const { getAutoViewSettings, updateAutoViewSettings } = require('../database/autoview');
 const { getAutoReadSettings, updateAutoReadSettings } = require('../database/autoread');
 const { getPresenceSettings, updatePresenceSettings } = require('../database/presence');
+const { getChatbotSettings, updateChatbotSettings } = require('../database/chatbot');
+//========================================================================================================================
+//========================================================================================================================
+keith({
+    pattern: "chatbot",
+    alias: ["bot", "aichat"],
+    desc: "Manage chatbot settings",
+    category: "Settings",
+    react: "🤖",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const [type, mode, value] = args.map(arg => arg?.toLowerCase());
 
+        const settings = await getChatbotSettings();
+
+        if (!type) {
+            // Show current settings
+            const formatStatus = (s) => s ? '✅ ON' : '❌ OFF';
+            
+            return await reply(
+                `*🤖 Chatbot Settings*\n\n` +
+                `*Text Chatbot:*\n` +
+                `🔹 Private: ${formatStatus(settings.textPrivate)}\n` +
+                `🔹 Group: ${formatStatus(settings.textGroup)}\n\n` +
+                `*Voice Chatbot:*\n` +
+                `🔹 Private: ${formatStatus(settings.voicePrivate)}\n` +
+                `🔹 Group: ${formatStatus(settings.voiceGroup)}\n\n` +
+                `⚙️ Message Delay: ${settings.messageDelay}ms\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}chatbot text private [on/off]*\n` +
+                `▸ *${prefix}chatbot text group [on/off]*\n` +
+                `▸ *${prefix}chatbot voice private [on/off]*\n` +
+                `▸ *${prefix}chatbot voice group [on/off]*\n` +
+                `▸ *${prefix}chatbot delay [milliseconds]*`
+            );
+        }
+
+        // Handle delay setting
+        if (type === 'delay') {
+            const delay = parseInt(mode);
+            if (isNaN(delay) || delay < 0) {
+                return await reply('❌ Please provide a valid delay in milliseconds (e.g., 1000 for 1 second)');
+            }
+            await updateChatbotSettings({ messageDelay: delay });
+            return await reply(`✅ Chatbot message delay set to ${delay}ms`);
+        }
+
+        // Validate type and mode
+        if (!['text', 'voice'].includes(type) || !['private', 'group'].includes(mode)) {
+            return await reply(
+                '❌ Invalid parameters. Available options:\n\n' +
+                `▸ *${prefix}chatbot text private [on/off]*\n` +
+                `▸ *${prefix}chatbot text group [on/off]*\n` +
+                `▸ *${prefix}chatbot voice private [on/off]*\n` +
+                `▸ *${prefix}chatbot voice group [on/off]*\n` +
+                `▸ *${prefix}chatbot delay [milliseconds]*`
+            );
+        }
+
+        // Validate value
+        if (!value || !['on', 'off'].includes(value)) {
+            return await reply('❌ Please specify "on" or "off" to enable/disable the feature');
+        }
+
+        // Determine which setting to update
+        const settingKey = `${type}${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+        await updateChatbotSettings({ [settingKey]: value === 'on' });
+
+        return await reply(
+            `✅ ${type === 'text' ? 'Text' : 'Voice'} chatbot for ${mode} chats has been turned ${value.toUpperCase()}`
+        );
+    });
+});
+//========================================================================================================================
+//========================================================================================================================
 keith({
     pattern: "presence",
     alias: ["setpresence", "mypresence"],
