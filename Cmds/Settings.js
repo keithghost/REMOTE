@@ -9,6 +9,78 @@ const { getAutoReadSettings, updateAutoReadSettings } = require('../database/aut
 const { getPresenceSettings, updatePresenceSettings } = require('../database/presence');
 const { getChatbotSettings, updateChatbotSettings } = require('../database/chatbot');
 const { getGreetSettings, updateGreetSettings, clearRepliedContacts } = require('../database/greet');
+const { getGroupEventsSettings, updateGroupEventsSettings } = require('../database/groupevents');
+
+keith({
+    pattern: "events",
+    alias: ["gevents", "groupwelcome"],
+    desc: "Manage group welcome/leave events",
+    category: "",
+    react: "🎉",
+    filename: __filename
+}, async (context) => {
+    await adminMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const [action, ...rest] = args;
+        const value = rest.join(' ');
+
+        const settings = await getGroupEventsSettings();
+
+        if (!action) {
+            // Show current settings
+            return await reply(
+                `*🎉 Group Events Settings*\n\n` +
+                `Status: ${settings.enabled ? '✅ ON' : '❌ OFF'}\n` +
+                `Promotions: ${settings.showPromotions ? '✅ ON' : '❌ OFF'}\n\n` +
+                `*Welcome Message:*\n${settings.welcomeMessage}\n\n` +
+                `*Goodbye Message:*\n${settings.goodbyeMessage}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}groupevents on/off* - Toggle events\n` +
+                `▸ *${prefix}groupevents promote on/off* - Toggle promotion notices\n` +
+                `▸ *${prefix}groupevents welcome [message]* - Set welcome message\n` +
+                `▸ *${prefix}groupevents goodbye [message]* - Set goodbye message\n\n` +
+                `*Placeholders:*\n` +
+                `@user - Mentions new member\n` +
+                `{group} - Group name\n` +
+                `{count} - Member count\n` +
+                `{time} - Join time\n` +
+                `{desc} - Group description`
+            );
+        }
+
+        switch (action.toLowerCase()) {
+            case 'on':
+                await updateGroupEventsSettings({ enabled: true });
+                return await reply('✅ Group events enabled');
+                
+            case 'off':
+                await updateGroupEventsSettings({ enabled: false });
+                return await reply('✅ Group events disabled');
+                
+            case 'promote':
+                if (!['on', 'off'].includes(value)) {
+                    return await reply('❌ Please specify "on" or "off"');
+                }
+                await updateGroupEventsSettings({ showPromotions: value === 'on' });
+                return await reply(`✅ Promotion notices ${value === 'on' ? 'enabled' : 'disabled'}`);
+                
+            case 'welcome':
+                if (!value) return await reply('❌ Please provide a welcome message');
+                await updateGroupEventsSettings({ welcomeMessage: value });
+                return await reply('✅ Welcome message updated');
+                
+            case 'goodbye':
+                if (!value) return await reply('❌ Please provide a goodbye message');
+                await updateGroupEventsSettings({ goodbyeMessage: value });
+                return await reply('✅ Goodbye message updated');
+                
+            default:
+                return await reply('❌ Invalid command. Use without arguments to see usage.');
+        }
+    });
+});
+
+
 //========================================================================================================================
 //========================================================================================================================
 
