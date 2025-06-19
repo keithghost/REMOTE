@@ -59,7 +59,7 @@ if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir);
 }
 //========================================================================================================================
-// Enhanced logger clas
+// Enhanced logger class
 //========================================================================================================================
 class KeithLogger {
     static logMessage(m) {
@@ -182,20 +182,7 @@ async function authenticationn() {
 const { keith, commands } = require('./commandHandler');
 const { dev, botname, prefix, author, mode, url } = require('./settings');
 //========================================================================================================================
-// Load all commands from the Commands directory
-//========================================================================================================================
-//prefix integration 
-//========================================================================================================================
-/*const { getPrefix } = require('./database/prefix');
 
-let prefix; 
-
-(async () => {
-    prefix = await getPrefix(); 
-   
-})();*/
-
-// Note: Any code using `prefix` needs to wait for the async assignment
 //========================================================================================================================
 function loadAllCommands() {
     const cmdsDir = path.join(__dirname, 'Cmds');
@@ -237,21 +224,18 @@ const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
 
-
 //========================================================================================================================
+// Initialize databases
 //========================================================================================================================
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
-//initModeDB().catch(console.error);
-//initPrefixDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initAntiBadDB().catch(console.error);
 initPresenceDB().catch(console.error);
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
-//========================================================================================================================
 //========================================================================================================================
 // Main bot function
 async function startKeith() {
@@ -284,599 +268,418 @@ async function startKeith() {
         },
     });
 
-   store.bind(client.ev);
-    //========================================================================================================================
-   //========================================================================================================================
-     // Auto-bio handler
-let bioInterval;
-async function setupAutoBio(client) {
-    const { getAutoBioSettings } = require('./database/autobio');
-    const settings = await getAutoBioSettings();
+    store.bind(client.ev);
     
-    if (bioInterval) clearInterval(bioInterval);
-    
-    if (settings.status) {
-        bioInterval = setInterval(async () => {
-            try {
-                await client.updateProfileStatus(settings.message);
-                //console.log('Auto-bio updated:', settings.message);
-            } catch (error) {
-                console.error('Error updating bio:', error);
-            }
-        }, settings.interval * 1000);
-    }
-}
-
-// Initialize auto-bio on startup
-setupAutoBio(client).catch(console.error);
-
-// Listen for changes in auto-bio settings
-const { AutoBioDB } = require('./database/autobio');
-AutoBioDB.afterUpdate(async (instance) => {
-    await setupAutoBio(client);
-});
-
- //========================================================================================================================
-  //========================================================================================================================  
-    // Also call whenever settings change
-    
-    // Add this near your other event handlers
-let lastTextTime = 0;
-const messageDelay = 5000;
-
-client.ev.on('call', async (callData) => {
-    try {
-        const { getAntiCallSettings } = require('./database/anticall');
-        const settings = await getAntiCallSettings();
+    // Auto-bio handler
+    let bioInterval;
+    async function setupAutoBio(client) {
+        const { getAutoBioSettings } = require('./database/autobio');
+        const settings = await getAutoBioSettings();
+        
+        if (bioInterval) clearInterval(bioInterval);
         
         if (settings.status) {
-            const callId = callData[0].id;
-            const callerId = callData[0].from;
-
-            if (settings.action === 'block') {
-                await client.updateBlockStatus(callerId, 'block');
-            } else {
-                await client.rejectCall(callId, callerId);
-            }
-
-            const currentTime = Date.now();
-            if (currentTime - lastTextTime >= messageDelay) {
-                await client.sendMessage(callerId, {
-                    text: settings.message
-                });
-                lastTextTime = currentTime;
-            } else {
-                console.log('Message skipped to prevent overflow');
-            }
-        }
-    } catch (error) {
-        console.error('Error handling call:', error);
-    }
-});
-    //========================================================================================================================
-    //========================================================================================================================
-//========================================================================================================================
-    // Add these at the top of your index.js with other requires
-
-const { getAntiDeleteSettings } = require('./database/antidelete');
-
-// Anti-delete file storage setup
-const baseDir = path.join(__dirname, 'message_data');
-if (!fs.existsSync(baseDir)) {
-    fs.mkdirSync(baseDir, { recursive: true });
-}
-
-// Message storage functions
-function getChatFilePath(remoteJid) {
-    const safeJid = remoteJid.replace(/[^a-zA-Z0-9@]/g, '_');
-    return path.join(baseDir, `${safeJid}.json`);
-}
-
-function loadChatData(remoteJid) {
-    const filePath = getChatFilePath(remoteJid);
-    try {
-        if (fs.existsSync(filePath)) {
-            const data = fs.readFileSync(filePath, 'utf8');
-            return JSON.parse(data) || [];
-        }
-    } catch (error) {
-        console.error('Error loading chat data:', error);
-    }
-    return [];
-}
-
-function saveChatData(remoteJid, messages) {
-    const filePath = getChatFilePath(remoteJid);
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(messages, null, 2));
-    } catch (error) {
-        console.error('Error saving chat data:', error);
-    }
-}
-
-// Main antidelete handler
-client.ev.on('messages.upsert', async ({ messages }) => {
-    try {
-        const settings = await getAntiDeleteSettings();
-        if (!settings.status) return;
-
-        const message = messages[0];
-        if (!message.message || message.key.remoteJid === 'status@broadcast') return;
-
-        // Store incoming messages
-        const remoteJid = message.key.remoteJid;
-        const chatData = loadChatData(remoteJid);
-        
-        // Keep only the last 100 messages per chat to prevent storage bloat
-        chatData.push(message);
-        if (chatData.length > 100) chatData.shift();
-        
-        saveChatData(remoteJid, chatData);
-
-        // Handle message deletions
-        if (message.message.protocolMessage?.type === 0) {
-            const deletedKey = message.message.protocolMessage.key;
-            const deletedMsg = chatData.find(m => m.key.id === deletedKey.id);
-            
-            if (!deletedMsg) return;
-
-            const deleterJid = message.key.participant || message.key.remoteJid;
-            const senderJid = deletedMsg.key.participant || deletedMsg.key.remoteJid;
-            
-            // Don't notify about our own deletions
-            if (deleterJid.includes(client.user.id.split(':')[0])) return;
-
-            const isGroup = remoteJid.endsWith('@g.us');
-            let groupInfo = '';
-            
-            if (isGroup && settings.includeGroupInfo) {
+            bioInterval = setInterval(async () => {
                 try {
-                    const groupMetadata = await client.groupMetadata(remoteJid);
-                    groupInfo = `\n• Group: ${groupMetadata.subject}`;
-                } catch (e) {
-                    console.error('Error fetching group metadata:', e);
+                    await client.updateProfileStatus(settings.message);
+                } catch (error) {
+                    console.error('Error updating bio:', error);
                 }
-            }
-
-            const notification = `${settings.notification}\n` +
-                               `• Deleted by: @${deleterJid.split('@')[0]}\n` +
-                               `• Original sender: @${senderJid.split('@')[0]}\n` +
-                               `${groupInfo}\n` +
-                               `• Chat type: ${isGroup ? 'Group' : 'Private'}`;
-
-            const contextInfo = {
-                mentionedJid: [deleterJid, senderJid],
-                forwardingScore: 0,
-                isForwarded: false
-            };
-
-            // Handle different message types
-            if (deletedMsg.message.conversation) {
-                await client.sendMessage(remoteJid, {
-                    text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMsg.message.conversation}`,
-                    mentions: [deleterJid, senderJid],
-                    contextInfo
-                });
-            } 
-            else if (deletedMsg.message.extendedTextMessage) {
-                await client.sendMessage(remoteJid, {
-                    text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMsg.message.extendedTextMessage.text}`,
-                    mentions: [deleterJid, senderJid],
-                    contextInfo
-                });
-            }
-            else if (settings.includeMedia) {
-                // Handle media messages if enabled
-                if (deletedMsg.message.imageMessage) {
-                    const buffer = await client.downloadMediaMessage(deletedMsg);
-                    await client.sendMessage(remoteJid, {
-                        image: buffer,
-                        caption: notification,
-                        mentions: [deleterJid, senderJid],
-                        contextInfo
-                    });
-                }
-                else if (deletedMsg.message.videoMessage) {
-                    const buffer = await client.downloadMediaMessage(deletedMsg);
-                    await client.sendMessage(remoteJid, {
-                        video: buffer,
-                        caption: notification,
-                        mentions: [deleterJid, senderJid],
-                        contextInfo
-                    });
-                }
-                else if (deletedMsg.message.audioMessage) {
-                    const buffer = await client.downloadMediaMessage(deletedMsg);
-                    await client.sendMessage(remoteJid, {
-                        audio: buffer,
-                        ptt: deletedMsg.message.audioMessage.ptt,
-                        caption: notification,
-                        mentions: [deleterJid, senderJid],
-                        contextInfo
-                    });
-                }
-                else if (deletedMsg.message.stickerMessage) {
-                    const buffer = await client.downloadMediaMessage(deletedMsg);
-                    await client.sendMessage(remoteJid, {
-                        sticker: buffer,
-                        mentions: [deleterJid, senderJid],
-                        contextInfo
-                    });
-                }
-            }
-            else {
-                // Media is disabled but message was media
-                await client.sendMessage(remoteJid, {
-                    text: `${notification}\n\n⚠️ A media message was deleted (media capture is disabled)`,
-                    mentions: [deleterJid, senderJid],
-                    contextInfo
-                });
-            }
+            }, settings.interval * 1000);
         }
-    } catch (error) {
-        console.error('Error in antidelete handler:', error);
     }
-});
-    //========================================================================================================================
+
+    // Initialize auto-bio on startup
+    setupAutoBio(client).catch(console.error);
+
+    // Listen for changes in auto-bio settings
+    const { AutoBioDB } = require('./database/autobio');
+    AutoBioDB.afterUpdate(async (instance) => {
+        await setupAutoBio(client);
+    });
+    
+    // Call handler
+    let lastTextTime = 0;
+    const messageDelay = 5000;
+
+    client.ev.on('call', async (callData) => {
+        try {
+            const { getAntiCallSettings } = require('./database/anticall');
+            const settings = await getAntiCallSettings();
+            
+            if (settings.status) {
+                const callId = callData[0].id;
+                const callerId = callData[0].from;
+
+                if (settings.action === 'block') {
+                    await client.updateBlockStatus(callerId, 'block');
+                } else {
+                    await client.rejectCall(callId, callerId);
+                }
+
+                const currentTime = Date.now();
+                if (currentTime - lastTextTime >= messageDelay) {
+                    await client.sendMessage(callerId, {
+                        text: settings.message
+                    });
+                    lastTextTime = currentTime;
+                }
+            }
+        } catch (error) {
+            console.error('Error handling call:', error);
+        }
+    });
+
+    // Anti-delete handler
+    const { getAntiDeleteSettings } = require('./database/antidelete');
+    const baseDir = path.join(__dirname, 'message_data');
+    if (!fs.existsSync(baseDir)) {
+        fs.mkdirSync(baseDir, { recursive: true });
+    }
+
+    function getChatFilePath(remoteJid) {
+        const safeJid = remoteJid.replace(/[^a-zA-Z0-9@]/g, '_');
+        return path.join(baseDir, `${safeJid}.json`);
+    }
+
+    function loadChatData(remoteJid) {
+        const filePath = getChatFilePath(remoteJid);
+        try {
+            if (fs.existsSync(filePath)) {
+                const data = fs.readFileSync(filePath, 'utf8');
+                return JSON.parse(data) || [];
+            }
+        } catch (error) {
+            console.error('Error loading chat data:', error);
+        }
+        return [];
+    }
+
+    function saveChatData(remoteJid, messages) {
+        const filePath = getChatFilePath(remoteJid);
+        try {
+            fs.writeFileSync(filePath, JSON.stringify(messages, null, 2));
+        } catch (error) {
+            console.error('Error saving chat data:', error);
+        }
+    }
+
+    client.ev.on('messages.upsert', async ({ messages }) => {
+        try {
+            const settings = await getAntiDeleteSettings();
+            if (!settings.status) return;
+
+            const message = messages[0];
+            if (!message.message || message.key.remoteJid === 'status@broadcast') return;
+
+            const remoteJid = message.key.remoteJid;
+            const chatData = loadChatData(remoteJid);
+            
+            chatData.push(message);
+            if (chatData.length > 100) chatData.shift();
+            
+            saveChatData(remoteJid, chatData);
+
+            if (message.message.protocolMessage?.type === 0) {
+                const deletedKey = message.message.protocolMessage.key;
+                const deletedMsg = chatData.find(m => m.key.id === deletedKey.id);
+                
+                if (!deletedMsg) return;
+
+                const deleterJid = message.key.participant || message.key.remoteJid;
+                const senderJid = deletedMsg.key.participant || deletedMsg.key.remoteJid;
+                
+                if (deleterJid.includes(client.user.id.split(':')[0])) return;
+
+                const isGroup = remoteJid.endsWith('@g.us');
+                let groupInfo = '';
+                
+                if (isGroup && settings.includeGroupInfo) {
+                    try {
+                        const groupMetadata = await client.groupMetadata(remoteJid);
+                        groupInfo = `\n• Group: ${groupMetadata.subject}`;
+                    } catch (e) {
+                        console.error('Error fetching group metadata:', e);
+                    }
+                }
+
+                const notification = `${settings.notification}\n` +
+                                   `• Deleted by: @${deleterJid.split('@')[0]}\n` +
+                                   `• Original sender: @${senderJid.split('@')[0]}\n` +
+                                   `${groupInfo}\n` +
+                                   `• Chat type: ${isGroup ? 'Group' : 'Private'}`;
+
+                const contextInfo = {
+                    mentionedJid: [deleterJid, senderJid],
+                    forwardingScore: 0,
+                    isForwarded: false
+                };
+
+                if (deletedMsg.message.conversation) {
+                    await client.sendMessage(remoteJid, {
+                        text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMsg.message.conversation}`,
+                        mentions: [deleterJid, senderJid],
+                        contextInfo
+                    });
+                } 
+                else if (deletedMsg.message.extendedTextMessage) {
+                    await client.sendMessage(remoteJid, {
+                        text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMsg.message.extendedTextMessage.text}`,
+                        mentions: [deleterJid, senderJid],
+                        contextInfo
+                    });
+                }
+                else if (settings.includeMedia) {
+                    if (deletedMsg.message.imageMessage) {
+                        const buffer = await client.downloadMediaMessage(deletedMsg);
+                        await client.sendMessage(remoteJid, {
+                            image: buffer,
+                            caption: notification,
+                            mentions: [deleterJid, senderJid],
+                            contextInfo
+                        });
+                    }
+                    else if (deletedMsg.message.videoMessage) {
+                        const buffer = await client.downloadMediaMessage(deletedMsg);
+                        await client.sendMessage(remoteJid, {
+                            video: buffer,
+                            caption: notification,
+                            mentions: [deleterJid, senderJid],
+                            contextInfo
+                        });
+                    }
+                    else if (deletedMsg.message.audioMessage) {
+                        const buffer = await client.downloadMediaMessage(deletedMsg);
+                        await client.sendMessage(remoteJid, {
+                            audio: buffer,
+                            ptt: deletedMsg.message.audioMessage.ptt,
+                            caption: notification,
+                            mentions: [deleterJid, senderJid],
+                            contextInfo
+                        });
+                    }
+                    else if (deletedMsg.message.stickerMessage) {
+                        const buffer = await client.downloadMediaMessage(deletedMsg);
+                        await client.sendMessage(remoteJid, {
+                            sticker: buffer,
+                            mentions: [deleterJid, senderJid],
+                            contextInfo
+                        });
+                    }
+                }
+                else {
+                    await client.sendMessage(remoteJid, {
+                        text: `${notification}\n\n⚠️ A media message was deleted (media capture is disabled)`,
+                        mentions: [deleterJid, senderJid],
+                        contextInfo
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error in antidelete handler:', error);
+        }
+    });
+
     // Message handler
-//========================================================================================================================
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
-            
             const mek = chatUpdate.messages[0];
             if (!mek.message) return;
             mek.message = mek.message.ephemeralMessage?.message || mek.message;
             
             const m = smsg(client, mek, store);
             KeithLogger.logMessage(m);
-            //========================================================================================================================
-              // Status reaction handler
-//========================================================================================================================
-client.ev.on('messages.upsert', async ({ messages }) => {
-    try {
-        const mek = messages[0];
-        if (!mek.key || mek.key.remoteJid !== 'status@broadcast') return;
 
-        const { getAutoLikeStatusSettings } = require('./database/autolikestatus');
-        const settings = await getAutoLikeStatusSettings();
-        
-        if (!settings.status || !settings.emojis || settings.emojis.length === 0) return;
+            // Status reaction handler
+            if (mek.key && mek.key.remoteJid === 'status@broadcast') {
+                try {
+                    const { getAutoLikeStatusSettings } = require('./database/autolikestatus');
+                    const settings = await getAutoLikeStatusSettings();
+                    
+                    if (settings.status && settings.emojis && settings.emojis.length > 0) {
+                        const keithlike = await client.decodeJid(client.user.id);
+                        const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
 
-        const keithlike = await client.decodeJid(client.user.id);
-        const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
-
-        await client.sendMessage(mek.key.remoteJid, {
-            react: {
-                text: randomEmoji,
-                key: mek.key,
+                        await client.sendMessage(mek.key.remoteJid, {
+                            react: {
+                                text: randomEmoji,
+                                key: mek.key,
+                            }
+                        }, { statusJidList: [mek.key.participant, keithlike] });
+                        
+                        if (settings.delay > 0) {
+                            await new Promise(resolve => setTimeout(resolve, settings.delay));
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling status reaction:', error);
+                }
             }
-        }, { statusJidList: [mek.key.participant, keithlike] });
-        
-        if (settings.delay > 0) {
-            await new Promise(resolve => setTimeout(resolve, settings.delay));
-        }
-    } catch (error) {
-        console.error('Error handling status reaction:', error);
-    }
-});
-            //========================================================================================================================
-            //========================================================================================================================
-              // Status view handler
-client.ev.on('messages.upsert', async ({ messages }) => {
-    try {
-        const mek = messages[0];
-        if (!mek.key || mek.key.remoteJid !== 'status@broadcast') return;
 
-        const { getAutoViewSettings } = require('./database/autoview');
-        const settings = await getAutoViewSettings();
-        
-        if (settings.status) {
-            await client.readMessages([mek.key]);
-          //  console.log('Status automatically viewed');
-        }
-    } catch (error) {
-        console.error('Error handling status view:', error);
-    }
-});
-            //========================================================================================================================
-            //========================================================================================================================
-              // Message read handler
-client.ev.on('messages.upsert', async ({ messages }) => {
-    try {
-        const mek = messages[0];
-        if (!mek.key?.remoteJid) return;
+            // Status view handler
+            if (mek.key && mek.key.remoteJid === 'status@broadcast') {
+                try {
+                    const { getAutoViewSettings } = require('./database/autoview');
+                    const settings = await getAutoViewSettings();
+                    
+                    if (settings.status) {
+                        await client.readMessages([mek.key]);
+                    }
+                } catch (error) {
+                    console.error('Error handling status view:', error);
+                }
+            }
 
-        const { getAutoReadSettings } = require('./database/autoread');
-        const settings = await getAutoReadSettings();
-        
-        if (!settings.status) return;
+            // Message read handler
+            if (mek.key?.remoteJid) {
+                try {
+                    const { getAutoReadSettings } = require('./database/autoread');
+                    const settings = await getAutoReadSettings();
+                    
+                    if (settings.status) {
+                        const isPrivate = mek.key.remoteJid.endsWith('@s.whatsapp.net');
+                        const isGroup = mek.key.remoteJid.endsWith('@g.us');
+                        
+                        const shouldReadPrivate = settings.chatTypes.includes('private') && isPrivate;
+                        const shouldReadGroup = settings.chatTypes.includes('group') && isGroup;
 
-        const isPrivate = mek.key.remoteJid.endsWith('@s.whatsapp.net');
-        const isGroup = mek.key.remoteJid.endsWith('@g.us');
-        
-        const shouldReadPrivate = settings.chatTypes.includes('private') && isPrivate;
-        const shouldReadGroup = settings.chatTypes.includes('group') && isGroup;
+                        if (shouldReadPrivate || shouldReadGroup) {
+                            await client.readMessages([mek.key]);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling auto-read:', error);
+                }
+            }
 
-        if (shouldReadPrivate || shouldReadGroup) {
-            await client.readMessages([mek.key]);
-            //console.log(`Message marked as read in ${isPrivate ? 'private' : 'group'} chat`);
-        }
-    } catch (error) {
-        console.error('Error handling auto-read:', error);
-    }
-});
-     //========================================================================================================================           
-    //========================================================================================================================           
-    
-           /* function saveUserJid(jid) {
-    try {
-        if (!jid) throw new Error("No JID provided");
-        
-        // Normalize JID
-        const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
-        
-        // Validation
-        if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
-        if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
-        
-        // Read existing
-        let userJids = [];
-        try {
-            userJids = JSON.parse(fs.readFileSync('./jids.json')) || [];
-        } catch (e) {
-            userJids = [];
-        }
-        
-        // Add if new
-        if (!userJids.includes(normalizedJid)) {
-            userJids.push(normalizedJid);
-            fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
-            return true;
-        }
-        return false; // Already existed
-    } catch (error) {
-        throw error; // Re-throw for command handler
-    }
-}
-            client.ev.on("messages.upsert", async ({ messages }) => {
-    const m = messages[0];
-    if (!m.message) return;
-
-    // Save status viewers
-    if (m.key.remoteJid === 'status@broadcast' && m.key.participant) {
-        saveUserJid(m.key.participant);
-    }
-    // Save private chat senders
-    else if (!m.key.remoteJid.endsWith('@g.us')) {
-        saveUserJid(m.key.remoteJid);
-    }
-});*/
+            // User JID saving
             function saveUserJid(jid) {
-    try {
-        if (!jid) throw new Error("No JID provided");
-        
-        // Normalize JID
-        const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
-        
-        // Validation
-        if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
-        if (normalizedJid.endsWith('@newsletter')) throw new Error("Cannot save newsletter JIDs");
-        if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
-        
-        // Read existing
-        let userJids = [];
-        try {
-            userJids = JSON.parse(fs.readFileSync('./jids.json')) || [];
-        } catch (e) {
-            userJids = [];
-        }
-        
-        // Add if new
-        if (!userJids.includes(normalizedJid)) {
-            userJids.push(normalizedJid);
-            fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
-            return true;
-        }
-        return false; // Already existed
-    } catch (error) {
-        throw error; // Re-throw for command handler
-    }
-}
+                try {
+                    if (!jid) throw new Error("No JID provided");
+                    
+                    const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+                    
+                    if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
+                    if (normalizedJid.endsWith('@newsletter')) throw new Error("Cannot save newsletter JIDs");
+                    if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
+                    
+                    let userJids = [];
+                    try {
+                        userJids = JSON.parse(fs.readFileSync('./jids.json')) || [];
+                    } catch (e) {
+                        userJids = [];
+                    }
+                    
+                    if (!userJids.includes(normalizedJid)) {
+                        userJids.push(normalizedJid);
+                        fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    throw error;
+                }
+            }
 
-client.ev.on("messages.upsert", async ({ messages }) => {
-    const m = messages[0];
-    if (!m.message) return;
+            if (m.key.remoteJid === 'status@broadcast' && m.key.participant) {
+                saveUserJid(m.key.participant);
+            }
+            else if (!m.key.remoteJid.endsWith('@g.us') && !m.key.remoteJid.endsWith('@newsletter')) {
+                saveUserJid(m.key.remoteJid);
+            }
 
-    // Save status viewers
-    if (m.key.remoteJid === 'status@broadcast' && m.key.participant) {
-        saveUserJid(m.key.participant);
-    }
-    // Save private chat senders (excluding groups, newsletters, and broadcasts)
-    else if (!m.key.remoteJid.endsWith('@g.us') && !m.key.remoteJid.endsWith('@newsletter')) {
-        saveUserJid(m.key.remoteJid);
-    }
-});
+            // JID standardization
+            function standardizeJid(jid) {
+                if (!jid) return '';
+                try {
+                    jid = typeof jid === 'string' ? jid : 
+                         (jid.decodeJid ? jid.decodeJid() : String(jid));
+                    
+                    jid = jid.split(':')[0].split('/')[0];
+                    
+                    if (!jid.includes('@')) {
+                        jid += '@s.whatsapp.net';
+                    }
+                    
+                    return jid.toLowerCase();
+                } catch (e) {
+                    console.error("JID standardization error:", e);
+                    return '';
+                }
+            }
 
-
-     //========================================================================================================================           
-    //========================================================================================================================           
-     
-            // Improved JID standardization function
-function standardizeJid(jid) {
-    if (!jid) return '';
-    try {
-        // Handle different JID formats
-        jid = typeof jid === 'string' ? jid : 
-             (jid.decodeJid ? jid.decodeJid() : String(jid));
-        
-        // Split to get the base JID without any suffixes
-        jid = jid.split(':')[0].split('/')[0];
-        
-        // Handle cases where domain might be missing
-        if (!jid.includes('@')) {
-            jid += '@s.whatsapp.net';
-        }
-        
-        return jid.toLowerCase();
-    } catch (e) {
-        console.error("JID standardization error:", e);
-        return '';
-    }
-}
-
-// Message processing
-const body = m.mtype === "conversation" ? m.message.conversation :
-    m.mtype === "imageMessage" ? m.message.imageMessage.caption :
-    m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
-
-const cmd = body.startsWith(prefix);
-const args = body.trim().split(/ +/).slice(1);
-const pushname = m.pushName || "No Name";
-const botNumber = await client.decodeJid(client.user.id);
-const servBot = botNumber.split('@')[0];
-
-// Define admin numbers (including yours)
-const Ghost = "225065362821143"; 
-const Ghost2 = "247566713258194";
-const Ghost3 = "254748387615";
-const Ghost4 = "254786989022";
-            const {
-        getAllSudoNumbers
-      } = require("./database/sudo");  
-            
-            const sudo = await getAllSudoNumbers();
-// Standardize all admin numbers
-const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
-    .map(v => standardizeJid(v))
-    .filter(Boolean);
-const adminNumbers = superUserNumbers.concat(sudo);
-// Get sender's JID (handling both regular and LID cases)
-const senderJid = standardizeJid(m.sender);
-
-// Enhanced admin check that handles LID cases
-function isUserAdmin(jid) {
-    // Check direct match
-    if (adminNumbers.includes(jid)) return true;
-    
-    // Handle LID cases (check if the number matches without domain)
-    const baseJid = jid.split('@')[0];
-    return adminNumbers.some(adminJid => 
-        adminJid.split('@')[0] === baseJid
-    );
-}
-
-const isOwner = isUserAdmin(senderJid);
-
-// Group-specific checks
-let groupMetadata = null;
-let isBotAdmin = false;
-let isAdmin = false;
-
-if (m.isGroup) {
-    try {
-        groupMetadata = await client.groupMetadata(m.chat);
-        const participants = groupMetadata.participants || [];
-        
-        // Get all admins in the group
-        const groupAdmins = participants
-            .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
-            .map(p => standardizeJid(p.id));
-        
-        // Check if bot is admin
-        isBotAdmin = groupAdmins.includes(standardizeJid(botNumber));
-        
-        // Check if sender is admin
-        isAdmin = groupAdmins.includes(senderJid) || isOwner;
-        
-    } catch (error) {
-        console.error("Error fetching group metadata:", error);
-    }
-}
-
-// Message utilities
-const isBotMessage = m.sender === botNumber;  
-const itsMe = m.sender === botNumber;
-const text = args.join(" ");
-const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
-    ? m.message.extendedTextMessage.contextInfo.mentionedJid
-    : [];
-
-let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
-let budy = typeof m.text === "string" ? m.text : "";
-
-const timestamp = speed();
-const Keithspeed = speed() - timestamp;
-
-const getGroupAdmins = (participants) => {
-    return participants
-        .filter(p => p.admin === "superadmin" || p.admin === "admin")
-        .map(p => p.id);
-};
-
-const keizzah = m.quoted || m;
-const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
-    keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
-        keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
-
-const color = (text, color) => {
-    return color ? chalk.keyword(color)(text) : chalk.green(text);
-};
-
-const mime = quoted.mimetype || "";
-const sender = m.sender;
-const from = m.chat;
-const qmsg = quoted;
-const participants = m.isGroup && groupMetadata
-    ? groupMetadata.participants
-        .filter(p => p.pn)
-        .map(p => p.pn)
-    : [];
-const groupAdmin = m.isGroup && groupMetadata
-    ? getGroupAdmins(groupMetadata.participants)
-    : [];
-const groupSender = m.isGroup && groupMetadata
-    ? (() => {
-        const found = groupMetadata.participants.find(p => 
-            standardizeJid(p.id) === senderJid
-        );
-        return found?.pn || sender;
-    })()
-    : sender;
-
-const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
-const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
-const IsNewsletter = m.chat?.endsWith("@newsletter");
-const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
-const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
-const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
-
-const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-const reply = (teks) => {
-    client.sendMessage(m.chat, { text: teks }, { quoted: m });
-};
-const sender2 = m.key.fromMe 
-                ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || cient.user.id) 
-                : (m.key.participant || m.key.remoteJid);            
-
-const IsGroup = m.chat?.endsWith("@g.us");
- //========================================================================================================================           
-    //========================================================================================================================        
-//========================================================================================================================
-           /* const body = m.mtype === "conversation" ? m.message.conversation :
+            // Message processing
+            const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
                 m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
 
+            // Use the prefix from settings directly
             const cmd = body.startsWith(prefix);
             const args = body.trim().split(/ +/).slice(1);
             const pushname = m.pushName || "No Name";
             const botNumber = await client.decodeJid(client.user.id);
             const servBot = botNumber.split('@')[0];
+
+            // Define admin numbers (including yours)
             const Ghost = "225065362821143"; 
             const Ghost2 = "247566713258194";
             const Ghost3 = "254748387615";
             const Ghost4 = "254786989022";
-            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
+            const {
+                getAllSudoNumbers
+            } = require("./database/sudo");  
             
+            const sudo = await getAllSudoNumbers();
+            
+            // Standardize all admin numbers
+            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
+                .map(v => standardizeJid(v))
+                .filter(Boolean);
+            const adminNumbers = superUserNumbers.concat(sudo);
+            
+            // Get sender's JID
+            const senderJid = standardizeJid(m.sender);
+
+            // Enhanced admin check that handles LID cases
+            function isUserAdmin(jid) {
+                if (adminNumbers.includes(jid)) return true;
+                
+                // Handle LID cases (check if the number matches without domain)
+                const baseJid = jid.split('@')[0];
+                return adminNumbers.some(adminJid => 
+                    adminJid.split('@')[0] === baseJid
+                );
+            }
+
+            const isOwner = isUserAdmin(senderJid);
+
+            // Group-specific checks
+            let groupMetadata = null;
+            let isBotAdmin = false;
+            let isAdmin = false;
+
+            if (m.isGroup) {
+                try {
+                    groupMetadata = await client.groupMetadata(m.chat);
+                    const participants = groupMetadata.participants || [];
+                    
+                    // Get all admins in the group
+                    const groupAdmins = participants
+                        .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+                        .map(p => standardizeJid(p.id));
+                    
+                    // Check if bot is admin
+                    isBotAdmin = groupAdmins.includes(standardizeJid(botNumber));
+                    
+                    // Check if sender is admin
+                    isAdmin = groupAdmins.includes(senderJid) || isOwner;
+                    
+                } catch (error) {
+                    console.error("Error fetching group metadata:", error);
+                }
+            }
+
+            // Message utilities
             const isBotMessage = m.sender === botNumber;  
             const itsMe = m.sender === botNumber;
             const text = args.join(" ");
@@ -891,12 +694,9 @@ const IsGroup = m.chat?.endsWith("@g.us");
             const Keithspeed = speed() - timestamp;
 
             const getGroupAdmins = (participants) => {
-                let admins = [];
-                for (let i of participants) {
-                    if (i.admin === "superadmin") admins.push(i.id);
-                    if (i.admin === "admin") admins.push(i.id);
-                }
-                return admins || [];
+                return participants
+                    .filter(p => p.admin === "superadmin" || p.admin === "admin")
+                    .map(p => p.id);
             };
 
             const keizzah = m.quoted || m;
@@ -910,26 +710,25 @@ const IsGroup = m.chat?.endsWith("@g.us");
 
             const mime = quoted.mimetype || "";
             const sender = m.sender;
+            const from = m.chat;
             const qmsg = quoted;
-            const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
             const participants = m.isGroup && groupMetadata
-  ? groupMetadata.participants
-      .filter(p => p.pn)
-      .map(p => p.pn)
-  : [];
-            const groupAdmin = m.isGroup
-  ? groupMetadata.participants
-      .filter(p => p.admin && p.pn)
-      .map(p => p.pn)
-  : [];
+                ? groupMetadata.participants
+                    .filter(p => p.pn)
+                    .map(p => p.pn)
+                : [];
+            const groupAdmin = m.isGroup && groupMetadata
+                ? getGroupAdmins(groupMetadata.participants)
+                : [];
             const groupSender = m.isGroup && groupMetadata
-  ? (() => {
-      const found = groupMetadata.participants.find(p => 
-        p.id === sender || client.decodeJid(p.id) === client.decodeJid(sender)
-      );
-      return found?.pn || sender;
-    })()
-  : sender;
+                ? (() => {
+                    const found = groupMetadata.participants.find(p => 
+                        standardizeJid(p.id) === senderJid
+                    );
+                    return found?.pn || sender;
+                })()
+                : sender;
+
             const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
             const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
             const IsNewsletter = m.chat?.endsWith("@newsletter");
@@ -938,250 +737,103 @@ const IsGroup = m.chat?.endsWith("@g.us");
             const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
 
             const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-            //const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
-           // const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-            const isOwner = superUserNumbers.includes(groupSender); 
-            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
-            const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
-             const reply = (teks) => {
-      client.sendMessage(m.chat, { text: teks }, { quoted: mek });
-    };
+            const reply = (teks) => {
+                client.sendMessage(m.chat, { text: teks }, { quoted: m });
+            };
+            const sender2 = m.key.fromMe 
+                            ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || cient.user.id) 
+                            : (m.key.participant || m.key.remoteJid);            
 
+            const IsGroup = m.chat?.endsWith("@g.us");
 
-            const IsGroup = m.chat?.endsWith("@g.us");*/
-            //========================================================================================================================
-            //========================================================================================================================
-            // Add this function at the top of your code
-/*function standardizeJid(jid) {
-    if (!jid) return '';
-    try {
-        jid = typeof jid === 'string' ? jid : 
-             (jid.decodeJid ? jid.decodeJid() : String(jid));
-        jid = jid.split(':')[0].split('/')[0];
-        
-        // Handle both @s.whatsapp.net and @lid cases
-        if (!jid.includes('@')) {
-            jid += '@s.whatsapp.net';
-        } else if (jid.endsWith('@lid')) {
-            // Keep @lid as is
-            return jid.toLowerCase();
-        }
-        
-        return jid.toLowerCase();
-    } catch (e) {
-        console.error("JID standardization error:", e);
-        return '';
-    }
-}
+            // Anti-bad word handler
+            const userWarnings = new Map();
 
-// Then modify your existing code like this:
-const body = m.mtype === "conversation" ? m.message.conversation :
-    m.mtype === "imageMessage" ? m.message.imageMessage.caption :
-    m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
-
-const cmd = body.startsWith(prefix);
-const args = body.trim().split(/ +/).slice(1);
-const pushname = m.pushName || "No Name";
-const botNumber = await client.decodeJid(client.user.id);
-const servBot = botNumber.split('@')[0];
-const Ghost = "254114018035"; 
-const Ghost2 = "247566713258194";
-const Ghost3 = "254748387615";
-const Ghost4 = "254786989022";
-
-// Standardize all numbers including LIDs
-const standardNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map(v => standardizeJid(v));
-const superUserNumbers = [...standardNumbers].filter(Boolean);
-
-// Get the sender's standardized JID
-const senderJid = standardizeJid(m.sender);
-
-
-// Check if owner (including LID verification)
-
-// Rest of your code remains the same...
-const isBotMessage = m.sender === botNumber;  
-const itsMe = m.sender === botNumber;
-const text = args.join(" ");
-const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
-    ? m.message.extendedTextMessage.contextInfo.mentionedJid
-    : [];
-
-let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
-let budy = typeof m.text === "string" ? m.text : "";
-
-const timestamp = speed();
-const Keithspeed = speed() - timestamp;
-
-const getGroupAdmins = (participants) => {
-    let admins = [];
-    for (let i of participants) {
-        if (i.admin === "superadmin") admins.push(i.id);
-        if (i.admin === "admin") admins.push(i.id);
-    }
-    return admins || [];
-};
-
-const keizzah = m.quoted || m;
-const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
-    keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
-        keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
-
-const color = (text, color) => {
-    return color ? chalk.keyword(color)(text) : chalk.green(text);
-};
-
-const mime = quoted.mimetype || "";
-const sender = m.sender;
-const qmsg = quoted;
-const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
-const participants = m.isGroup && groupMetadata
-    ? groupMetadata.participants
-        .filter(p => p.pn)
-        .map(p => p.pn)
-    : [];
-const groupAdmin = m.isGroup
-    ? groupMetadata.participants
-        .filter(p => p.admin && p.pn)
-        .map(p => p.pn)
-    : [];
-const groupSender = m.isGroup && groupMetadata
-    ? (() => {
-        const found = groupMetadata.participants.find(p => 
-            p.id === sender || client.decodeJid(p.id) === client.decodeJid(sender)
-        );
-        return found?.pn || sender;
-    })()
-    : sender;
-            const groupSenderJid = m.isGroup && groupMetadata 
-    ? standardizeJid(groupMetadata.participants.find(p => 
-        standardizeJid(p.id) === senderJid)?.id || senderJid)
-    : senderJid;
-            
-            const isOwner = superUserNumbers.includes(senderJid) || 
-               superUserNumbers.includes(groupSenderJid) ||
-               (senderJid.endsWith('@lid') && superUserNumbers.some(num => 
-                   num.startsWith(senderJid.split('@')[0]))) ||
-               (groupSenderJid.endsWith('@lid') && superUserNumbers.some(num => 
-                   num.startsWith(groupSenderJid.split('@')[0])));
-
-const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
-const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
-const IsNewsletter = m.chat?.endsWith("@newsletter");
-const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
-const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
-const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
-
-const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
-const isAdmin = m.isGroup ? groupAdmin.includes(groupSender) : false;
-const reply = (teks) => {
-    client.sendMessage(m.chat, { text: teks }, { quoted: mek });
-};
-
-const IsGroup = m.chat?.endsWith("@g.us");*/
-            //========================================================================================================================
-        
-            // At top of file
-const userWarnings = new Map();
-
-client.ev.on('messages.upsert', async ({ messages }) => {
-    try {
-        const m = messages[0];
-        if (!m.message || !m.key) return;
-
-        const { getAntiBadSettings } = require('./database/antibad');
-        const settings = await getAntiBadSettings();
-        
-        if (!settings.status || !settings.forbiddenWords.length) return;
-
-        const body = m.message.conversation || 
-                    m.message.extendedTextMessage?.text || 
-                    m.message.imageMessage?.caption;
-        if (!body) return;
-
-        const containsBadWord = settings.forbiddenWords.some(word => 
-            body.toLowerCase().includes(word.toLowerCase())
-        );
-
-        if (containsBadWord) {
-            const sender = m.key.participant || m.key.remoteJid;
-            const isGroup = m.key.remoteJid.endsWith('@g.us');
-            
-            // Always delete the message in groups
-            if (isGroup) {
+            if (m.message) {
                 try {
-                    await client.sendMessage(m.key.remoteJid, {
-                        delete: {
-                            remoteJid: m.key.remoteJid,
-                            fromMe: false,
-                            id: m.key.id,
-                            participant: sender
-                        }
-                    });
-                } catch (deleteError) {
-                    console.error('Failed to delete message:', deleteError);
-                }
-            }
-
-            if (isGroup) {
-                const groupMetadata = await client.groupMetadata(m.key.remoteJid);
-                const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
-                const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
-
-                if (settings.groupAction === 'warn') {
-                    // Warn system with limits
-                    const warnings = (userWarnings.get(sender) || 0) + 1;
-                    userWarnings.set(sender, warnings);
-
-                    const warningMsg = `🚫 Bad word detected (${warnings}/${settings.warnLimit})\n\n@${sender.split('@')[0]}, this is warning ${warnings} of ${settings.warnLimit}!`;
+                    const { getAntiBadSettings } = require('./database/antibad');
+                    const settings = await getAntiBadSettings();
                     
-                    await client.sendMessage(
-                        m.key.remoteJid, 
-                        { 
-                            text: warningMsg,
-                            contextInfo: { mentionedJid: [sender] }
-                        }, 
-                        { quoted: m }
-                    );
+                    if (settings.status && settings.forbiddenWords.length) {
+                        const body = m.message.conversation || 
+                                    m.message.extendedTextMessage?.text || 
+                                    m.message.imageMessage?.caption;
+                        if (body) {
+                            const containsBadWord = settings.forbiddenWords.some(word => 
+                                body.toLowerCase().includes(word.toLowerCase())
+                            );
 
-                    if (warnings >= settings.warnLimit && isBotAdmin && !isUserAdmin) {
-                        await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
-                        userWarnings.delete(sender);
+                            if (containsBadWord) {
+                                const sender = m.key.participant || m.key.remoteJid;
+                                const isGroup = m.key.remoteJid.endsWith('@g.us');
+                                
+                                if (isGroup) {
+                                    try {
+                                        await client.sendMessage(m.key.remoteJid, {
+                                            delete: {
+                                                remoteJid: m.key.remoteJid,
+                                                fromMe: false,
+                                                id: m.key.id,
+                                                participant: sender
+                                            }
+                                        });
+                                    } catch (deleteError) {
+                                        console.error('Failed to delete message:', deleteError);
+                                    }
+                                }
+
+                                if (isGroup) {
+                                    const groupMetadata = await client.groupMetadata(m.key.remoteJid);
+                                    const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
+                                    const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
+
+                                    if (settings.groupAction === 'warn') {
+                                        const warnings = (userWarnings.get(sender) || 0) + 1;
+                                        userWarnings.set(sender, warnings);
+
+                                        const warningMsg = `🚫 Bad word detected (${warnings}/${settings.warnLimit})\n\n@${sender.split('@')[0]}, this is warning ${warnings} of ${settings.warnLimit}!`;
+                                        
+                                        await client.sendMessage(
+                                            m.key.remoteJid, 
+                                            { 
+                                                text: warningMsg,
+                                                contextInfo: { mentionedJid: [sender] }
+                                            }, 
+                                            { quoted: m }
+                                        );
+
+                                        if (warnings >= settings.warnLimit && isBotAdmin && !isUserAdmin) {
+                                            await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                                            userWarnings.delete(sender);
+                                        }
+                                    } 
+                                    else if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
+                                        await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                                    }
+                                } 
+                                else {
+                                    await client.sendMessage(
+                                        sender,
+                                        { text: '🚫 You have been blocked for using banned words!' }
+                                    );
+                                    await client.updateBlockStatus(sender, 'block');
+                                }
+                            }
+                        }
                     }
-                } 
-                else if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
-                    // Immediate remove
-                    await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                } catch (error) {
+                    console.error('Anti-bad word error:', error);
                 }
-            } 
-            else {
-                // Private chat - always block
-                await client.sendMessage(
-                    sender,
-                    { text: '🚫 You have been blocked for using banned words!' }
-                );
-                await client.updateBlockStatus(sender, 'block');
             }
-        }
-    } catch (error) {
-        console.error('Anti-bad word error:', error);
-    }
-});
 
-
-            //========================================================================================================================
-    
-        if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
-      
-//========================================================================================================================
-        const Blocked = await client.fetchBlocklist();
+            if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
+            
+            const Blocked = await client.fetchBlocklist();
             if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
-        await m.reply("You are blocked from using bot commands.");
-        return;
-    }
-//========================================================================================================================            
-//========================================================================================================================
+                await m.reply("You are blocked from using bot commands.");
+                return;
+            }
+            
             const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
             
             const commandHandler = commands.find(cmd => 
@@ -1199,8 +851,6 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                             }
                         });
                     }
-                    //========================================================================================================================
-                    //========================================================================================================================
 
                     await commandHandler.function({
                         client,
@@ -1296,9 +946,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
     client.ev.on("group-participants.update", (m) => groupEvents(client, m));
-//========================================================================================================================
+    
     // Connection event handler
-//========================================================================================================================
     client.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         
@@ -1323,9 +972,6 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                 startKeith();
             }
         } else if (connection === "open") {
-                  
-            //await client.newsletterFollow("120363266249040649@newsletter");
-
             KeithLogger.success("Connected to Keith server");
             KeithLogger.success("Bot is now active");
             KeithLogger.info(`commands loaded successfully 🔥`);
@@ -1337,8 +983,6 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                 if (currentHour >= 18 && currentHour < 22) return "Good evening 🌆";
                 return "Good night 😴";
             };
-           // const modeStatus = settings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
-            
 
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
@@ -1352,9 +996,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
             KeithLogger.info(message);
         }
     });
-    //========================================================================================================================
+    
     // Credentials update handler
-//========================================================================================================================
     client.ev.on("creds.update", saveCreds);
 
     client.downloadMediaMessage = async (message) => {
@@ -1367,8 +1010,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         }
         return buffer;
     };
-    //========================================================================================================================
-//========================================================================================================================
+
     client.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
         const quoted = message.msg || message;
         const mime = (message.msg || message).mimetype || "";
@@ -1383,18 +1025,16 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         await fs.writeFileSync(trueFileName, buffer);
         return trueFileName;
     };
-//========================================================================================================================
+
     // Start Express server
-//========================================================================================================================
     const app = express();
     const port = process.env.PORT || 10000;
 
     app.use(express.static("public"));
     app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
     app.listen(port, () => KeithLogger.info(`Server listening on port http://localhost:${port}`));
-//========================================================================================================================
+
     // Watch for file changes
-//========================================================================================================================
     let file = require.resolve(__filename);
     fs.watchFile(file, () => {
         fs.unwatchFile(file);
