@@ -223,6 +223,7 @@ const { initAutoViewDB } = require('./database/autoview');
 const { initPresenceDB } = require('./database/presence');
 const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
+const { initChatbotDB } = require('./database/chatbot');
 
 
 //========================================================================================================================
@@ -232,6 +233,7 @@ initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
+initChatbotDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initAntiBadDB().catch(console.error);
 initPresenceDB().catch(console.error);
@@ -795,6 +797,73 @@ if (mek.key?.remoteJid) {
                             : (m.key.participant || m.key.remoteJid);            
 
             const IsGroup = m.chat?.endsWith("@g.us");
+//========================================================================================================================            
+            // Chatbot handler
+//========================================================================================================================
+            
+const { getChatbotSettings } = require('./database/chatbot');
+const chatbotSettings = await getChatbotSettings();
+let lastTextTime = 0;
+
+// Text Chatbot
+if ((!IsGroup && chatbotSettings.textPrivate) || (IsGroup && chatbotSettings.textGroup)) {
+    try {
+        const currentTime = Date.now();
+        if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
+            console.log('Message skipped: Too many messages in a short time.');
+            return;
+        }
+
+        const response = await axios.get('https://keith-api.vercel.app/ai/gpt', {
+            params: { q: text }
+        });
+
+        if (response.data?.status && response.data?.result) {
+            await client.sendMessage(m.chat, { text: response.data.result });
+            lastTextTime = currentTime;
+        } else {
+            throw new Error('No response content found.');
+        }
+    } catch (error) {
+        console.error('Error fetching chatbot response:', error);
+    }
+}
+
+// Voice Chatbot
+if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.voiceGroup)) {
+    try {
+        const currentTime = Date.now();
+        if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
+            console.log('Message skipped: Too many messages in a short time for voice chatbot.');
+            return;
+        }
+
+        const response = await axios.get('https://keith-api.vercel.app/ai/gpt', {
+            params: { q: text }
+        });
+
+        if (!response.data?.status || !response.data?.result) {
+            throw new Error('Invalid response from the API');
+        }
+
+        const audioUrl = googleTTS.getAudioUrl(response.data.result, {
+            lang: 'en',
+            slow: false,
+            host: 'https://translate.google.com'
+        });
+
+        await client.sendMessage(m.chat, { 
+            audio: { url: audioUrl }, 
+            mimetype: 'audio/mp4', 
+            ptt: true 
+        });
+
+        lastTextTime = currentTime;
+    } catch (error) {
+        console.error('Error in voice chatbot:', error);
+    }
+}
+            
 //========================================================================================================================
             // Anti-bad word handler
 //========================================================================================================================
