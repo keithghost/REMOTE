@@ -23,7 +23,6 @@ const {
     getRandom, fetchBuffer,
 } = require("./lib/botFunctions.js");
 
-const groupEvents = require("./groupEvents.js");
 const { sendReply, sendMediaMessage } = require("./lib/context");
 const daddy = "254748387615@s.whatsapp.net";
 const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
@@ -225,6 +224,7 @@ const { initAutoReadDB } = require('./database/autoread');
 const { initAntiDeleteDB } = require('./database/antidelete');
 const { initChatbotDB } = require('./database/chatbot');
 const { initGreetDB } = require('./database/greet');
+const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
 
 
 //========================================================================================================================
@@ -236,6 +236,7 @@ initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
 initChatbotDB().catch(console.error);
 initGreetDB().catch(console.error);
+initGroupEventsDB().catch(console.error);
 initAutoLikeStatusDB().catch(console.error);
 initAntiBadDB().catch(console.error);
 initPresenceDB().catch(console.error);
@@ -1130,7 +1131,93 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
 
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
-    client.ev.on("group-participants.update", (m) => groupEvents(client, m));
+   
+
+//========================================================================================================================
+   // Group Participants Update Handler
+    //========================================================================================================================
+
+client.ev.on('group-participants.update', async (keizzah) => {
+    const settings = await getGroupEventsSettings();
+    if (!settings.enabled) return;
+
+    const getContextInfo = () => ({
+        mentionedJid: [keizzah.participants[0]],
+        forwardingScore: 999,
+        isForwarded: true
+    });
+
+    try {
+        const metadata = await client.groupMetadata(keizzah.id);
+        const count = metadata.participants.length;
+        const time = new Date().toLocaleString();
+
+        // Helper function to get profile picture
+        const getProfilePic = async (jid) => {
+            try {
+                return await client.profilePictureUrl(jid, 'image');
+            } catch {
+                return 'https://i.imgur.com/iEWHnOH.jpeg';
+            }
+        };
+
+        // Process each participant
+        for (const num of keizzah.participants) {
+            const userName = num.split('@')[0];
+            const dpuser = await getProfilePic(num);
+
+            if (keizzah.action === 'add') {
+                const message = settings.welcomeMessage
+                    .replace('@user', `@${userName}`)
+                    .replace('{group}', metadata.subject)
+                    .replace('{count}', count)
+                    .replace('{time}', time)
+                    .replace('{desc}', metadata.desc || 'No description');
+
+                await client.sendMessage(keizzah.id, {
+                    image: { url: dpuser },
+                    caption: message,
+                    mentions: [num],
+                    contextInfo: getContextInfo()
+                });
+            } 
+            else if (keizzah.action === 'remove') {
+                const message = settings.goodbyeMessage
+                    .replace('@user', `@${userName}`)
+                    .replace('{time}', time)
+                    .replace('{count}', count);
+
+                await client.sendMessage(keizzah.id, {
+                    image: { url: dpuser },
+                    caption: message,
+                    mentions: [num],
+                    contextInfo: getContextInfo()
+                });
+            }
+        }
+
+        // Handle admin changes
+        if (settings.showPromotions) {
+            const author = keizzah.author.split('@')[0];
+            const target = keizzah.participants[0].split('@')[0];
+
+            if (keizzah.action === 'promote') {
+                await client.sendMessage(keizzah.id, {
+                    text: `🎉 @${author} promoted @${target} to admin!`,
+                    mentions: [keizzah.author, keizzah.participants[0]]
+                });
+            } 
+            else if (keizzah.action === 'demote') {
+                await client.sendMessage(keizzah.id, {
+                    text: `⚠️ @${author} demoted @${target} from admin.`,
+                    mentions: [keizzah.author, keizzah.participants[0]]
+                });
+            }
+        }
+    } catch (err) {
+        console.error('Group event error:', err);
+    }
+}); 
   //========================================================================================================================  
     // Connection event handler
 //========================================================================================================================
