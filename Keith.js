@@ -108,16 +108,12 @@ function loadAllCommands() {
 //========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
-
 const { initAntiBadDB } = require('./database/antibad');
-
-
 
 //========================================================================================================================
 //========================================================================================================================
 
 initAntiBadDB().catch(console.error);
-
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
 //========================================================================================================================
@@ -222,76 +218,72 @@ async function startKeith() {
         }
     });
 
-    
-            KeithLogger.logMessage(m);
-            //========================================================================================================================
-            
-function saveUserJid(jid) {
-    try {
-        if (!jid) throw new Error("No JID provided");
-
-        // Normalize JID
-        const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
-
-        // Validate JID
-        const blockedSuffixes = ['@g.us', '@newsletter'];
-        if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
-            throw new Error("Cannot save group or newsletter JIDs");
-        }
-
-        // Block broadcast JIDs except for specific patterns like status viewers
-        const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
-        if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
-            throw new Error("Cannot save general broadcast JIDs");
-        }
-
-        // Read existing
-        let userJids = [];
+    function saveUserJid(jid) {
         try {
-            const data = fs.readFileSync('./jids.json', 'utf-8');
-            userJids = JSON.parse(data);
-        } catch {
-            userJids = [];
-        }
+            if (!jid) throw new Error("No JID provided");
 
-        // Add if new
-        if (!userJids.includes(normalizedJid)) {
-            userJids.push(normalizedJid);
-            fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
-            return true;
+            // Normalize JID
+            const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+
+            // Validate JID
+            const blockedSuffixes = ['@g.us', '@newsletter'];
+            if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
+                throw new Error("Cannot save group or newsletter JIDs");
+            }
+
+            // Block broadcast JIDs except for specific patterns like status viewers
+            const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
+            if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
+                throw new Error("Cannot save general broadcast JIDs");
+            }
+
+            // Read existing
+            let userJids = [];
+            try {
+                const data = fs.readFileSync('./jids.json', 'utf-8');
+                userJids = JSON.parse(data);
+            } catch {
+                userJids = [];
+            }
+
+            // Add if new
+            if (!userJids.includes(normalizedJid)) {
+                userJids.push(normalizedJid);
+                fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            throw error;
         }
-        return false;
-    } catch (error) {
-        throw error;
     }
-}
 
-// Listener
-client.ev.on("messages.upsert", async ({ messages }) => {
-    const m = messages[0];
-    if (!m.message) return;
+    // Listener
+    client.ev.on("messages.upsert", async ({ messages }) => {
+        const m = messages[0];
+        if (!m.message) return;
 
-    const remoteJid = m.key.remoteJid;
-    const participant = m.key.participant;
+        const remoteJid = m.key.remoteJid;
+        const participant = m.key.participant;
 
-    try {
-        if (remoteJid === 'status@broadcast' && participant) {
-            saveUserJid(participant);
-        } else if (
-            !remoteJid.endsWith('@g.us') &&
-            !remoteJid.endsWith('@newsletter') &&
-            !remoteJid.includes('broadcast')
-        ) {
-            saveUserJid(remoteJid);
+        try {
+            if (remoteJid === 'status@broadcast' && participant) {
+                saveUserJid(participant);
+            } else if (
+                !remoteJid.endsWith('@g.us') &&
+                !remoteJid.endsWith('@newsletter') &&
+                !remoteJid.includes('broadcast')
+            ) {
+                saveUserJid(remoteJid);
+            }
+        } catch (e) {
+            console.error(`JID saving failed: ${e.message}`);
         }
-    } catch (e) {
-        console.error(`JID saving failed: ${e.message}`);
-    }
-});
+    });
 
-  //========================================================================================================================                       
-  //========================================================================================================================            
-client.ev.on("messages.upsert", async (chatUpdate) => {
+    //========================================================================================================================                       
+    //========================================================================================================================            
+    client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
             if (!mek.message) return;
@@ -299,80 +291,68 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                         
             if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
 
-      const m = smsg(client, mek, store);
+            const m = smsg(client, mek, store);
 
-      const body = m.mtype === "conversation" ? m.message.conversation :
-        m.mtype === "imageMessage" ? m.message.imageMessage.caption :
-          m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
+            const body = m.mtype === "conversation" ? m.message.conversation :
+                m.mtype === "imageMessage" ? m.message.imageMessage.caption :
+                m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
 
-      const cmd = body.startsWith(prefix);
-      const args = body.trim().split(/ +/).slice(1);
-      const pushname = m.pushName || "No Name";
-      const botLid = await client.decodeJid(client.user.lid);       
-      const botNumber = await client.decodeJid(client.user.id);
-      const botNumbers = [botNumber, botLid];       
-      const servBot = botNumbers.split('@')[0];
-      const Ghost = "254796299158"; 
-      const Ghost2 = "254110190196";
-      const Ghost3 = "2547483876159";
-      const Ghost4 = "254743995989";
-      const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
-      const isOwner = superUserNumbers.includes(m.sender); 
-      const isBotMessage = m.sender === botNumbers;  
-      const itsMe = m.sender === botNumbers;
-      const text = args.join(" ");
-      const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
-        ? m.message.extendedTextMessage.contextInfo.mentionedJid
-        : [];
+            const cmd = body.startsWith(prefix);
+            const args = body.trim().split(/ +/).slice(1);
+            const pushname = m.pushName || "No Name";
+            const botLid = await client.decodeJid(client.user.lid);       
+            const botNumber = await client.decodeJid(client.user.id);
+            const botNumbers = [botNumber, botLid];       
+            const servBot = botNumbers.split('@')[0];
+            const Ghost = "254796299158"; 
+            const Ghost2 = "254110190196";
+            const Ghost3 = "2547483876159";
+            const Ghost4 = "254743995989";
+            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
+            const isOwner = superUserNumbers.includes(m.sender); 
+            const isBotMessage = m.sender === botNumbers;  
+            const itsMe = m.sender === botNumbers;
+            const text = args.join(" ");
+            const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
+                ? m.message.extendedTextMessage.contextInfo.mentionedJid
+                : [];
 
-      let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
-      let budy = typeof m.text === "string" ? m.text : "";
+            let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
+            let budy = typeof m.text === "string" ? m.text : "";
 
-      const timestamp = speed();
-      const Keithspeed = speed() - timestamp;
+            const timestamp = speed();
+            const Keithspeed = speed() - timestamp;
 
-      const getGroupAdmins = (participants) => {
-        let admins = [];
-        for (let i of participants) {
-          if (i.admin === "superadmin") admins.push(i.id);
-          if (i.admin === "admin") admins.push(i.id);
-        }
-        return admins || [];
-      };
+            const getGroupAdmins = (participants) => {
+                let admins = [];
+                for (let i of participants) {
+                    if (i.admin === "superadmin") admins.push(i.id);
+                    if (i.admin === "admin") admins.push(i.id);
+                }
+                return admins || [];
+            };
 
-      const keizzah = m.quoted || m;
-      const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
-        keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
-          keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
+            const keizzah = m.quoted || m;
+            const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
+                keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
+                keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
 
-      const color = (text, color) => {
-        return color ? chalk.keyword(color)(text) : chalk.green(text);
-      };
+            const color = (text, color) => {
+                return color ? chalk.keyword(color)(text) : chalk.green(text);
+            };
 
-      const mime = quoted.mimetype || "";
-      const qmsg = quoted;
-      const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
-      const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-      const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
-      const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-      const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumbers) : false;
-      const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
+            const mime = quoted.mimetype || "";
+            const qmsg = quoted;
+            const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
+            const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
+            const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
+            const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
+            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumbers) : false;
+            const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
 
-      const IsGroup = m.chat?.endsWith("@g.us");
+            const IsGroup = m.chat?.endsWith("@g.us");
 
-           
-            //========================================================================================================================        
-            //========================================================================================================================
-           
-            //========================================================================================================================
-            //========================================================================================================================
-            // Add this function at the top of your code
-
-            //========================================================================================================================
-        
-            // At top of file
-            const userWarnings = new Map();
-
+            // Anti-bad word handler
             client.ev.on('messages.upsert', async ({ messages }) => {
                 try {
                     const m = messages[0];
@@ -457,12 +437,10 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                 }
             });
 
-            //========================================================================================================================
-        
-             (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
+            if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
             //========================================================================================================================
             const Blocked = await client.fetchBlocklist();
-                if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
+            if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
                 await m.reply("You are blocked from using bot commands.");
                 return;
             }
@@ -484,8 +462,6 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                             }
                         });
                     }
-                    //========================================================================================================================
-                    //========================================================================================================================
 
                     await commandHandler.function({
                         client,
@@ -495,11 +471,7 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                         searchYouTube, 
                         searchSoundCloud, 
                         searchSpotify, 
-                        subscribers, 
                         fetchLogoUrl, 
-                        newsletterMetadata, 
-                        isNewsletterAdmin, 
-                        isNewsletterBotAdmin, 
                         isOwner, 
                         fetchJson, 
                         exec,
@@ -514,15 +486,12 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                         saveUserJid,
                         mode, 
                         mime, 
-                        from,
-                        sender2,
                         qmsg, 
                         msgKeith, 
                         Tag, 
                         text,
                         botname,
                         prefix,
-                        reply,
                         sendReply, 
                         sendMediaMessage, 
                         prefix, 
@@ -580,7 +549,7 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
-   // client.ev.on("group-participants.update", (m) => groupEvents(client, m));
+    // client.ev.on("group-participants.update", (m) => groupEvents(client, m));
     //========================================================================================================================
     // Connection event handler
     //========================================================================================================================
@@ -608,9 +577,6 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                 startKeith();
             }
         } else if (connection === "open") {
-                      
-            //await client.newsletterFollow("120363266249040649@newsletter");
-
             KeithLogger.success("Connected to Keith server");
             KeithLogger.success("Bot is now active");
             KeithLogger.info(`commands loaded successfully 🔥`);
@@ -622,8 +588,6 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                 if (currentHour >= 18 && currentHour < 22) return "Good evening 🌆";
                 return "Good night 😴";
             };
-           // const modeStatus = settings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
-            
 
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
