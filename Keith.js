@@ -108,25 +108,16 @@ function loadAllCommands() {
 //========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
-const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
-const { initAntiLinkDB } = require('./database/antilink');
-const { initAutoLikeStatusDB } = require('./database/autolikestatus');
+
 const { initAntiBadDB } = require('./database/antibad');
-const { initAutoViewDB } = require('./database/autoview');
-const { initPresenceDB } = require('./database/presence');
-const { initAutoReadDB } = require('./database/autoread');
-const { initAntiDeleteDB } = require('./database/antidelete');
+
 
 
 //========================================================================================================================
 //========================================================================================================================
-initAutoReadDB().catch(console.error);
-initAutoViewDB().catch(console.error);
-initAntiLinkDB().catch(console.error);
-initAntiDeleteDB().catch(console.error);
-initAutoLikeStatusDB().catch(console.error);
+
 initAntiBadDB().catch(console.error);
-initPresenceDB().catch(console.error);
+
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
 //========================================================================================================================
