@@ -459,8 +459,7 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 
             //========================================================================================================================
         
-            if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
-            
+             (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
             //========================================================================================================================
             const Blocked = await client.fetchBlocklist();
                 if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
@@ -469,8 +468,7 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
             }
             //========================================================================================================================            
             //========================================================================================================================
-            const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
-            
+            const command = cmd ? body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase() : null;
             const commandHandler = commands.find(cmd => 
                 cmd.pattern === command || 
                 (cmd.alias && cmd.alias.includes(command))
