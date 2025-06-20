@@ -342,7 +342,7 @@ async function startKeith() {
 //========================================================================================================================
     // Anti-delete handler
 //========================================================================================================================
-    const { getAntiDeleteSettings } = require('./database/antidelete');
+   /* const { getAntiDeleteSettings } = require('./database/antidelete');
     const baseDir = path.join(__dirname, 'message_data');
     if (!fs.existsSync(baseDir)) {
         fs.mkdirSync(baseDir, { recursive: true });
@@ -637,7 +637,7 @@ if (mek.key?.remoteJid) {
             }
             else if (!m.key.remoteJid.endsWith('@g.us') && !m.key.remoteJid.endsWith('@newsletter')) {
                 saveUserJid(m.key.remoteJid);
-            }
+            }*/
 //========================================================================================================================
             // JID standardization
 //========================================================================================================================
@@ -813,7 +813,7 @@ if (mek.key?.remoteJid) {
             // greet handler
 //========================================================================================================================
             
-            const { getGreetSettings, repliedContacts } = require('./database/greet');
+          /*  const { getGreetSettings, repliedContacts } = require('./database/greet');
 
 // Handle message processing
 const messageText = mek.message?.conversation || mek.message?.extendedTextMessage?.text || "";
@@ -1010,7 +1010,7 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
                 } catch (error) {
                     console.error('Anti-bad word error:', error);
                 }
-            }
+            }*/
 //========================================================================================================================
 //mode            
 //========================================================================================================================
@@ -1189,7 +1189,7 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
-                `║ ʟɪʙʀᴀʀʏ baileys\n` +
+                `║ ʟɪʙʀᴀʀʏ bailes\n` +
                 `╰═════════════════⊷`;
 
             await client.sendMessage(client.user.id, { text: message });
