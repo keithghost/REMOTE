@@ -301,17 +301,17 @@ async function startKeith() {
             const args = body.trim().split(/ +/).slice(1);
             const pushname = m.pushName || "No Name";
             const botLid = await client.decodeJid(client.user.lid);       
-            const botNumber = await client.decodeJid(client.user.id);
-            const botNumbers = [botNumber, botLid];       
-            const servBot = botNumbers.split('@')[0];
+            const botNumbers = await client.decodeJid(client.user.id);
+            const botNumber = [botNumbers, botLid];       
+            const servBot = botNumber.split('@')[0];
             const Ghost = "254796299158"; 
             const Ghost2 = "254110190196";
             const Ghost3 = "2547483876159";
             const Ghost4 = "254743995989";
             const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
             const isOwner = superUserNumbers.includes(m.sender); 
-            const isBotMessage = m.sender === botNumbers;  
-            const itsMe = m.sender === botNumbers;
+            const isBotMessage = m.sender === botNumber;  
+            const itsMe = m.sender === botNumber;
             const text = args.join(" ");
             const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
                 ? m.message.extendedTextMessage.contextInfo.mentionedJid
@@ -347,7 +347,7 @@ async function startKeith() {
             const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
             const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
             const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumbers) : false;
+            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
             const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
 
             const IsGroup = m.chat?.endsWith("@g.us");
