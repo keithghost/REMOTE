@@ -1,115 +1,39 @@
+//========================================================================================================================
+//========================================================================================================================
 const fs = require('fs');
 const zlib = require('zlib');
-const path = require('path');
-const chalk = require('chalk');
 const { session } = require("./settings");
+const chalk = require('chalk');
+const path = require('path');
+const { DateTime } = require("luxon");
+const { Boom } = require("@hapi/boom");
+const pino = require("pino");
+const { useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
+const FileType = require("file-type");
+const { exec } = require("child_process");
+const express = require("express");
+const util = require("util");
+const speed = require("performance-now");
+const { smsg } = require('./lib/smsg');
+const makeInMemoryStore = require('./lib/store');
+const fetchLogoUrl = require('./lib/ephoto');
+const {
+    formatp, tanggal, formatDate, getTime, sleep, clockString,
+    fetchJson, getBuffer, jsonformat, antispam, generateProfilePicture, parseMention,
+    getRandom, fetchBuffer,
+} = require("./lib/botFunctions.js");
 
-// Custom chalk colors
-const keithPurple = chalk.hex('#A020F0');
-const keithBlue = chalk.hex('#1DA1F2');
-const keithPink = chalk.hex('#FF69B4');
-const keithGreen = chalk.hex('#2ECC71');
-const keithOrange = chalk.hex('#FFA500');
-const keithGold = chalk.hex('#FFD700');
-const keithRed = chalk.hex('#E74C3C');
-const keithYellow = chalk.hex('#F1C40F');
+//const groupEvents = require("./groupEvents.js");
+const KeithLogger = require('./logger');
+const { sendReply, sendMediaMessage } = require("./lib/context");
+const daddy = "254748387615@s.whatsapp.net";
+const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
+const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require("./lib/exif");
 
-// Unicode symbols
-const BOT_SYMBOL = '✦';
-const MESSAGE_SYMBOL = '✉';
-const USER_SYMBOL = '👤';
-const GROUP_SYMBOL = '👥';
-const TYPE_SYMBOL = '📋';
-const CONTENT_SYMBOL = '📝';
-const ERROR_SYMBOL = '⚠️';
-const SUCCESS_SYMBOL = '✅';
-const WARNING_SYMBOL = '⚠️';
-
-// Create logs directory if it doesn't exist
-const logsDir = path.join(__dirname, 'logs');
-if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir);
-}
-
-// Enhanced logger class
-class KeithLogger {
-    static logMessage(m) {
-        const isGroup = m.isGroup;
-        const groupName = m.isGroup ? m.chat : '';
-        const senderName = m.pushName || 'Unknown';
-        const senderId = m.sender;
-        const messageType = m.mtype;
-        const text = m.text || '';
-
-        console.log(keithPurple.bold(`\t ${BOT_SYMBOL} ${BOT_SYMBOL} ${BOT_SYMBOL} { K E I T H - M D } ${BOT_SYMBOL} ${BOT_SYMBOL} ${BOT_SYMBOL}`));
-        console.log(keithGold.bold("╔════════════════════════════╗"));
-        console.log(keithGold.bold(`║ ${MESSAGE_SYMBOL}   N E W   M E S S A G E   ${MESSAGE_SYMBOL} ║`));
-        console.log(keithGold.bold("╚════════════════════════════╝"));
-        
-        if (isGroup) {
-            console.log(keithGreen(`${GROUP_SYMBOL} Message from: `) + keithBlue.bold(groupName));
-        }
-        
-        console.log(keithGreen(`${USER_SYMBOL} Sender: `) + 
-            keithPink.bold(`[${senderName}] `) + 
-            keithOrange(`(${senderId.split("@s.whatsapp.net")[0]})`));
-        
-        console.log(keithGreen(`${TYPE_SYMBOL} Type: `) + keithBlue.bold(messageType));
-        
-        console.log(keithGold.bold("┌────────────────────────────┐"));
-        console.log(keithGreen(`${CONTENT_SYMBOL} Content:`));
-        console.log(keithGold.bold("├────────────────────────────┤"));
-        console.log(chalk.whiteBright(text));
-        console.log(keithGold.bold("└────────────────────────────┘"));
-        
-        // Log to daily file
-        const today = new Date().toISOString().split('T')[0];
-        const logFile = path.join(logsDir, `messages_${today}.log`);
-        const logEntry = `[${new Date().toISOString()}] ${isGroup ? `Group: ${groupName} | ` : ''}Sender: ${senderName} (${senderId.split("@s.whatsapp.net")[0]}) | Type: ${messageType} | Content: ${text}\n`;
-        fs.appendFileSync(logFile, logEntry);
-    }
-
-    static error(message, error) {
-        console.log(keithRed.bold(`${ERROR_SYMBOL} [ERROR] ${message}`));
-        if (error) {
-            console.log(keithRed(error.stack || error.message));
-        }
-        
-        const today = new Date().toISOString().split('T')[0];
-        const logFile = path.join(logsDir, `errors_${today}.log`);
-        const logEntry = `[${new Date().toISOString()}] [ERROR] ${message}\n${error ? (error.stack || error.message) : ''}\n`;
-        fs.appendFileSync(logFile, logEntry);
-    }
-
-    static success(message) {
-        console.log(keithGreen.bold(`${SUCCESS_SYMBOL} [SUCCESS] ${message}`));
-        
-        const today = new Date().toISOString().split('T')[0];
-        const logFile = path.join(logsDir, `success_${today}.log`);
-        const logEntry = `[${new Date().toISOString()}] [SUCCESS] ${message}\n`;
-        fs.appendFileSync(logFile, logEntry);
-    }
-
-    static warning(message) {
-        console.log(keithYellow.bold(`${WARNING_SYMBOL} [WARNING] ${message}`));
-        
-        const today = new Date().toISOString().split('T')[0];
-        const logFile = path.join(logsDir, `warnings_${today}.log`);
-        const logEntry = `[${new Date().toISOString()}] [WARNING] ${message}\n`;
-        fs.appendFileSync(logFile, logEntry);
-    }
-
-    static info(message) {
-        console.log(keithBlue.bold(`[INFO] ${message}`));
-        
-        const today = new Date().toISOString().split('T')[0];
-        const logFile = path.join(logsDir, `info_${today}.log`);
-        const logEntry = `[${new Date().toISOString()}] [INFO] ${message}\n`;
-        fs.appendFileSync(logFile, logEntry);
-    }
-}
-
-async function authenticateSession() {
+//========================================================================================================================
+// Authentication function
+//========================================================================================================================
+async function authenticationn() {
     try {
         const credsPath = "./session/creds.json";
 
@@ -119,8 +43,8 @@ async function authenticateSession() {
             const [header, b64data] = session.split(';;;');
 
             if (header === "KEITH" && b64data) {
-                const compressedData = Buffer.from(b64data.replace('...', ''), 'base64');
-                const decompressedData = zlib.gunzipSync(compressedData);
+                let compressedData = Buffer.from(b64data.replace('...', ''), 'base64');
+                let decompressedData = zlib.gunzipSync(compressedData);
                 fs.writeFileSync(credsPath, decompressedData, "utf8");
                 KeithLogger.success("Session credentials created successfully");
             } else {
@@ -132,8 +56,8 @@ async function authenticateSession() {
             const [header, b64data] = session.split(';;;');
 
             if (header === "KEITH" && b64data) {
-                const compressedData = Buffer.from(b64data.replace('...', ''), 'base64');
-                const decompressedData = zlib.gunzipSync(compressedData);
+                let compressedData = Buffer.from(b64data.replace('...', ''), 'base64');
+                let decompressedData = zlib.gunzipSync(compressedData);
                 fs.writeFileSync(credsPath, decompressedData, "utf8");
                 KeithLogger.success("Session credentials updated successfully");
             } else {
@@ -145,46 +69,81 @@ async function authenticateSession() {
         return;
     }
 }
+//========================================================================================================================
+// Command handler setup
+//========================================================================================================================
+const { keith, commands } = require('./commandHandler');
+const { dev, botname, prefix, author, mode, url } = require('./settings');
+//========================================================================================================================
 
-authenticateSession();
-
-const {
-    default: KeithConnect,
-    useMultiFileAuthState,
-    makeInMemoryStore,
-    downloadContentFromMessage,
-    jidDecode,
-    DisconnectReason
-} = require("@whiskeysockets/baileys");
-
-const pino = require("pino");
-const { Boom } = require("@hapi/boom");
-const FileType = require("file-type");
-const express = require("express");
-const { DateTime } = require("luxon");
-const { smsg } = require('./lib/smsg');
-const { commands, totalCommands } = require("./commandHandler");
-
-const {
-    autoview, autostatusreply, autostatusmsg, permit, autoread, botname, chatbot, timezone, autobio, mode, anticallmsg, reactemoji, prefix, presence,
-    mycode, author, antibad, autodownloadstatus, packname, url, voicechatbot2, gurl, herokuAppname, greet, greetmsg, herokuapikey, anticall, dev, antilink, gcpresence, antibot, antitag, antidelete, autolike, voicechatbot
-} = require("./settings");
-
-const app = express();
-const port = process.env.PORT || 10000;
-
-function getGroupAdmins(participants) {
-    return participants
-        .filter(p => p.admin === "superadmin" || p.admin === "admin")
-        .map(p => p.id);
+//========================================================================================================================
+function loadAllCommands() {
+    const cmdsDir = path.join(__dirname, 'Cmds');
+    
+    function loadCommandsFromDirectory(directory) {
+        const items = fs.readdirSync(directory);
+        
+        items.forEach(item => {
+            const fullPath = path.join(directory, item);
+            const stat = fs.statSync(fullPath);
+            
+            if (stat.isDirectory()) {
+                loadCommandsFromDirectory(fullPath);
+            } else if (item.endsWith('.js')) {
+                try {
+                    require(fullPath);
+                    KeithLogger.info(`Loaded command from: ${fullPath}`);
+                } catch (error) {
+                    KeithLogger.error(`Failed to load command from ${fullPath}`, error);
+                }
+            }
+        });
+    }
+    
+    loadCommandsFromDirectory(cmdsDir);
+    
+    KeithLogger.success(`Successfully loaded ${commands.length} commands`);
 }
+//========================================================================================================================
+//========================================================================================================================
+const { initAntiCallDB } = require('./database/anticall');
+const { initAutoBioDB } = require('./database/autobio');
+const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
+const { initAntiLinkDB } = require('./database/antilink');
+const { initAutoLikeStatusDB } = require('./database/autolikestatus');
+const { initAntiBadDB } = require('./database/antibad');
+const { initAutoViewDB } = require('./database/autoview');
+const { initPresenceDB } = require('./database/presence');
+const { initAutoReadDB } = require('./database/autoread');
+const { initAntiDeleteDB } = require('./database/antidelete');
 
+
+//========================================================================================================================
+//========================================================================================================================
+initAutoReadDB().catch(console.error);
+initAutoViewDB().catch(console.error);
+initAntiLinkDB().catch(console.error);
+initAntiDeleteDB().catch(console.error);
+initAutoLikeStatusDB().catch(console.error);
+initAntiBadDB().catch(console.error);
+initPresenceDB().catch(console.error);
+initAutoBioDB().catch(console.error);
+initAntiCallDB().catch(console.error);
+//========================================================================================================================
+//========================================================================================================================
+// Main bot function
 async function startKeith() {
-    const { saveCreds, state } = await useMultiFileAuthState("session");
+    await authenticationn();
+    loadAllCommands();
+
+    const { state, saveCreds } = await useMultiFileAuthState("session");
+    const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
+    
+    const { default: KeithConnect, downloadContentFromMessage, jidDecode } = require("@whiskeysockets/baileys");
     const client = KeithConnect({
         logger: pino({ level: "silent" }),
         printQRInTerminal: true,
-        version: [2, 3000, 1015901307],
+        version: [2, 3000, 1023223821],
         browser: ["KEITH-MD", "Safari", "3.0"],
         fireInitQueries: false,
         shouldSyncHistoryMessage: true,
@@ -203,9 +162,75 @@ async function startKeith() {
         },
     });
 
-    const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
     store.bind(client.ev);
+    //========================================================================================================================
+    //========================================================================================================================
+    // Auto-bio handler
+    let bioInterval;
+    async function setupAutoBio(client) {
+        const { getAutoBioSettings } = require('./database/autobio');
+        const settings = await getAutoBioSettings();
+        
+        if (bioInterval) clearInterval(bioInterval);
+        
+        if (settings.status) {
+            bioInterval = setInterval(async () => {
+                try {
+                    await client.updateProfileStatus(settings.message);
+                } catch (error) {
+                    console.error('Error updating bio:', error);
+                }
+            }, settings.interval * 1000);
+        }
+    }
+
+    // Initialize auto-bio on startup
+    setupAutoBio(client).catch(console.error);
+
+    // Listen for changes in auto-bio settings
+    const { AutoBioDB } = require('./database/autobio');
+    AutoBioDB.afterUpdate(async (instance) => {
+        await setupAutoBio(client);
+    });
+
+    //========================================================================================================================
+    //========================================================================================================================  
+    // Also call whenever settings change
     
+    // Add this near your other event handlers
+    let lastTextTime = 0;
+    const messageDelay = 5000;
+
+    client.ev.on('call', async (callData) => {
+        try {
+            const { getAntiCallSettings } = require('./database/anticall');
+            const settings = await getAntiCallSettings();
+            
+            if (settings.status) {
+                const callId = callData[0].id;
+                const callerId = callData[0].from;
+
+                if (settings.action === 'block') {
+                    await client.updateBlockStatus(callerId, 'block');
+                } else {
+                    await client.rejectCall(callId, callerId);
+                }
+
+                const currentTime = Date.now();
+                if (currentTime - lastTextTime >= messageDelay) {
+                    await client.sendMessage(callerId, {
+                        text: settings.message
+                    });
+                    lastTextTime = currentTime;
+                } else {
+                    console.log('Message skipped to prevent overflow');
+                }
+            }
+        } catch (error) {
+            console.error('Error handling call:', error);
+        }
+    });
+
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
@@ -214,92 +239,403 @@ async function startKeith() {
             
             const m = smsg(client, mek, store);
             KeithLogger.logMessage(m);
+            //========================================================================================================================
+            function saveUserJid(jid) {
+                try {
+                    if (!jid) throw new Error("No JID provided");
+                    
+                    // Normalize JID
+                    const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+                    
+                    // Validation
+                    if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
+                    if (normalizedJid.endsWith('@newsletter')) throw new Error("Cannot save newsletter JIDs");
+                    if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
+                    
+                    // Read existing
+                    let userJids = [];
+                    try {
+                        userJids = JSON.parse(fs.readFileSync('./jids.json')) || [];
+                    } catch (e) {
+                        userJids = [];
+                    }
+                    
+                    // Add if new
+                    if (!userJids.includes(normalizedJid)) {
+                        userJids.push(normalizedJid);
+                        fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+                        return true;
+                    }
+                    return false; // Already existed
+                } catch (error) {
+                    throw error; // Re-throw for command handler
+                }
+            }
 
-            const botId = client.decodeJid(client.user.id);
-           
-            if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
+            client.ev.on("messages.upsert", async ({ messages }) => {
+                const m = messages[0];
+                if (!m.message) return;
 
+                // Save status viewers
+                if (m.key.remoteJid === 'status@broadcast' && m.key.participant) {
+                    saveUserJid(m.key.participant);
+                }
+                // Save private chat senders (excluding groups, newsletters, and broadcasts)
+                else if (!m.key.remoteJid.endsWith('@g.us') && !m.key.remoteJid.endsWith('@newsletter')) {
+                    saveUserJid(m.key.remoteJid);
+                }
+            });
+
+            //========================================================================================================================           
+            //========================================================================================================================           
+            // Improved JID standardization function
+            function standardizeJid(jid) {
+                if (!jid) return '';
+                try {
+                    // Handle different JID formats
+                    jid = typeof jid === 'string' ? jid : 
+                        (jid.decodeJid ? jid.decodeJid() : String(jid));
+                    
+                    // Split to get the base JID without any suffixes
+                    jid = jid.split(':')[0].split('/')[0];
+                    
+                    // Handle cases where domain might be missing
+                    if (!jid.includes('@')) {
+                        jid += '@s.whatsapp.net';
+                    }
+                    
+                    return jid.toLowerCase();
+                } catch (e) {
+                    console.error("JID standardization error:", e);
+                    return '';
+                }
+            }
+
+            // Message processing
             const body = m.mtype === "conversation" ? m.message.conversation :
                 m.mtype === "imageMessage" ? m.message.imageMessage.caption :
                 m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
 
-            const isCommand = body.startsWith(prefix);
+            const cmd = body.startsWith(prefix);
             const args = body.trim().split(/ +/).slice(1);
             const pushname = m.pushName || "No Name";
             const botNumber = await client.decodeJid(client.user.id);
             const servBot = botNumber.split('@')[0];
-            const superUserNumbers = [
-                servBot, 
-                "254796299159", 
-                "254110190196", 
-                "254748387615", 
-                "254786989022", 
-                dev
-            ].map(v => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+
+            // Define admin numbers (including yours)
+            const Ghost = "225065362821143"; 
+            const Ghost2 = "247566713258194";
+            const Ghost3 = "254748387615";
+            const Ghost4 = "254786989022";
+            const {
+                getAllSudoNumbers
+            } = require("./database/sudo");  
             
-            const isOwner = superUserNumbers.includes(m.sender); 
-            const isBotMessage = m.sender === botNumber;
+            const sudo = await getAllSudoNumbers();
+            // Standardize all admin numbers
+            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
+                .map(v => standardizeJid(v))
+                .filter(Boolean);
+            const adminNumbers = superUserNumbers.concat(sudo);
+            // Get sender's JID (handling both regular and LID cases)
+            const senderJid = standardizeJid(m.sender);
+
+            // Enhanced admin check that handles LID cases
+            function isUserAdmin(jid) {
+                // Check direct match
+                if (adminNumbers.includes(jid)) return true;
+                
+                // Handle LID cases (check if the number matches without domain)
+                const baseJid = jid.split('@')[0];
+                return adminNumbers.some(adminJid => 
+                    adminJid.split('@')[0] === baseJid
+                );
+            }
+
+            const isOwner = isUserAdmin(senderJid);
+
+            // Group-specific checks
+            let groupMetadata = null;
+            let isBotAdmin = false;
+            let isAdmin = false;
+
+            if (m.isGroup) {
+                try {
+                    groupMetadata = await client.groupMetadata(m.chat);
+                    const participants = groupMetadata.participants || [];
+                    
+                    // Get all admins in the group
+                    const groupAdmins = participants
+                        .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+                        .map(p => standardizeJid(p.id));
+                    
+                    // Check if bot is admin
+                    isBotAdmin = groupAdmins.includes(standardizeJid(botNumber));
+                    
+                    // Check if sender is admin
+                    isAdmin = groupAdmins.includes(senderJid) || isOwner;
+                    
+                } catch (error) {
+                    console.error("Error fetching group metadata:", error);
+                }
+            }
+
+            // Message utilities
+            const isBotMessage = m.sender === botNumber;  
+            const itsMe = m.sender === botNumber;
             const text = args.join(" ");
-            const mentionedJids = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
+            const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
                 ? m.message.extendedTextMessage.contextInfo.mentionedJid
                 : [];
 
-            const quotedMessage = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
-            const messageText = typeof m.text === "string" ? m.text : "";
+            let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
+            let budy = typeof m.text === "string" ? m.text : "";
 
-            const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
-            const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
-            const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
-            const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
+            const timestamp = speed();
+            const Keithspeed = speed() - timestamp;
 
-            if (isCommand && mode === "private" && m.sender !== botNumber && m.sender !== "254748387615@s.whatsapp.net") {
+            const getGroupAdmins = (participants) => {
+                return participants
+                    .filter(p => p.admin === "superadmin" || p.admin === "admin")
+                    .map(p => p.id);
+            };
+
+            const keizzah = m.quoted || m;
+            const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
+                keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
+                    keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
+
+            const color = (text, color) => {
+                return color ? chalk.keyword(color)(text) : chalk.green(text);
+            };
+
+            const mime = quoted.mimetype || "";
+            const sender = m.sender;
+            const from = m.chat;
+            const qmsg = quoted;
+            const participants = m.isGroup && groupMetadata
+                ? groupMetadata.participants
+                    .filter(p => p.pn)
+                    .map(p => p.pn)
+                : [];
+            const groupAdmin = m.isGroup && groupMetadata
+                ? getGroupAdmins(groupMetadata.participants)
+                : [];
+            const groupSender = m.isGroup && groupMetadata
+                ? (() => {
+                    const found = groupMetadata.participants.find(p => 
+                        standardizeJid(p.id) === senderJid
+                    );
+                    return found?.pn || sender;
+                })()
+                : sender;
+
+            const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
+            const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
+            const IsNewsletter = m.chat?.endsWith("@newsletter");
+            const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
+            const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
+            const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
+
+            const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
+            const reply = (teks) => {
+                client.sendMessage(m.chat, { text: teks }, { quoted: m });
+            };
+            const sender2 = m.key.fromMe 
+                            ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || client.user.id) 
+                            : (m.key.participant || m.key.remoteJid);            
+
+            const IsGroup = m.chat?.endsWith("@g.us");
+            //========================================================================================================================           
+            //========================================================================================================================        
+            //========================================================================================================================
+           
+            //========================================================================================================================
+            //========================================================================================================================
+            // Add this function at the top of your code
+
+            //========================================================================================================================
+        
+            // At top of file
+            const userWarnings = new Map();
+
+            client.ev.on('messages.upsert', async ({ messages }) => {
+                try {
+                    const m = messages[0];
+                    if (!m.message || !m.key) return;
+
+                    const { getAntiBadSettings } = require('./database/antibad');
+                    const settings = await getAntiBadSettings();
+                    
+                    if (!settings.status || !settings.forbiddenWords.length) return;
+
+                    const body = m.message.conversation || 
+                                m.message.extendedTextMessage?.text || 
+                                m.message.imageMessage?.caption;
+                    if (!body) return;
+
+                    const containsBadWord = settings.forbiddenWords.some(word => 
+                        body.toLowerCase().includes(word.toLowerCase())
+                    );
+
+                    if (containsBadWord) {
+                        const sender = m.key.participant || m.key.remoteJid;
+                        const isGroup = m.key.remoteJid.endsWith('@g.us');
+                        
+                        // Always delete the message in groups
+                        if (isGroup) {
+                            try {
+                                await client.sendMessage(m.key.remoteJid, {
+                                    delete: {
+                                        remoteJid: m.key.remoteJid,
+                                        fromMe: false,
+                                        id: m.key.id,
+                                        participant: sender
+                                    }
+                                });
+                            } catch (deleteError) {
+                                console.error('Failed to delete message:', deleteError);
+                            }
+                        }
+
+                        if (isGroup) {
+                            const groupMetadata = await client.groupMetadata(m.key.remoteJid);
+                            const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
+                            const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
+
+                            if (settings.groupAction === 'warn') {
+                                // Warn system with limits
+                                const warnings = (userWarnings.get(sender) || 0) + 1;
+                                userWarnings.set(sender, warnings);
+
+                                const warningMsg = `🚫 Bad word detected (${warnings}/${settings.warnLimit})\n\n@${sender.split('@')[0]}, this is warning ${warnings} of ${settings.warnLimit}!`;
+                                
+                                await client.sendMessage(
+                                    m.key.remoteJid, 
+                                    { 
+                                        text: warningMsg,
+                                        contextInfo: { mentionedJid: [sender] }
+                                    }, 
+                                    { quoted: m }
+                                );
+
+                                if (warnings >= settings.warnLimit && isBotAdmin && !isUserAdmin) {
+                                    await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                                    userWarnings.delete(sender);
+                                }
+                            } 
+                            else if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
+                                // Immediate remove
+                                await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                            }
+                        } 
+                        else {
+                            // Private chat - always block
+                            await client.sendMessage(
+                                sender,
+                                { text: '🚫 You have been blocked for using banned words!' }
+                            );
+                            await client.updateBlockStatus(sender, 'block');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Anti-bad word error:', error);
+                }
+            });
+
+            //========================================================================================================================
+        
+            if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
+            
+            //========================================================================================================================
+            const Blocked = await client.fetchBlocklist();
+                if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
+                await m.reply("You are blocked from using bot commands.");
                 return;
             }
+            //========================================================================================================================            
+            //========================================================================================================================
+            const command = body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase();
             
-            try {
-                const Blocked = await client.fetchBlocklist();
-                if (isCommand && m.isGroup && Blocked?.includes(m.sender)) {
-                    await m.reply("You are blocked from using bot commands.");
-                    return;
-                }
+            const commandHandler = commands.find(cmd => 
+                cmd.pattern === command || 
+                (cmd.alias && cmd.alias.includes(command))
+            );
 
-                if (m.chat.endsWith('@s.whatsapp.net') && isCommand && permit === 'true' && !isOwner) {
-                    await m.reply("You have no access to commands here. ❌");
-                    return;
-                }
-            } catch (error) {
-                KeithLogger.error("Error processing command permissions", error);
-            }
-
-            const command = isCommand ? body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase() : null;
-            if (command) {
-                const commandObj = commands[command];
-                if (commandObj) {
-                    try {
-                        await commandObj.execute({ 
-                            client, 
-                            m, 
-                            args,
-                            text,
-                            isOwner,
-                            isAdmin,
-                            isBotAdmin,
-                            groupAdmin,
-                            participants,
-                            pushname,
-                            botNumber,
-                            prefix,
-                            store
+            if (commandHandler) {
+                try {
+                    if (commandHandler.react) {
+                        await client.sendMessage(m.key.remoteJid, {
+                            react: {
+                                text: commandHandler.react,
+                                key: m.key
+                            }
                         });
-                        KeithLogger.info(`Command executed: ${command}`);
-                    } catch (error) {
-                        KeithLogger.error(`Error executing command: ${command}`, error);
                     }
+                    //========================================================================================================================
+                    //========================================================================================================================
+
+                    await commandHandler.function({
+                        client,
+                        downloadYouTube, 
+                        downloadSoundCloud, 
+                        downloadSpotify, 
+                        searchYouTube, 
+                        searchSoundCloud, 
+                        searchSpotify, 
+                        subscribers, 
+                        fetchLogoUrl, 
+                        newsletterMetadata, 
+                        isNewsletterAdmin, 
+                        isNewsletterBotAdmin, 
+                        isOwner, 
+                        fetchJson, 
+                        exec,
+                        pushname,
+                        commands,
+                        getRandom, 
+                        generateProfilePicture, 
+                        args, 
+                        url,
+                        dev, 
+                        m,
+                        saveUserJid,
+                        mode, 
+                        mime, 
+                        from,
+                        sender2,
+                        qmsg, 
+                        msgKeith, 
+                        Tag, 
+                        text,
+                        botname,
+                        prefix,
+                        reply,
+                        sendReply, 
+                        sendMediaMessage, 
+                        prefix, 
+                        groupAdmin, 
+                        getGroupAdmins, 
+                        groupName, 
+                        groupMetadata, 
+                        participants, 
+                        pushname, 
+                        body,
+                        botNumber, 
+                        itsMe, 
+                        store, 
+                        isAdmin, 
+                        isBotAdmin 
+                    });
+                    
+                    KeithLogger.info(`Command executed: ${command}`);
+                } catch (error) {
+                    KeithLogger.error(`Error executing command: ${command}`, error);
+                    await m.reply("❌ An error occurred while executing this command.");
                 }
             }
-        } catch (err) {
-            KeithLogger.error("Error processing message", err);
+        } catch (error) {
+            KeithLogger.error("Error processing message", error);
         }
     });
 
@@ -332,9 +668,13 @@ async function startKeith() {
 
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
-
+   // client.ev.on("group-participants.update", (m) => groupEvents(client, m));
+    //========================================================================================================================
+    // Connection event handler
+    //========================================================================================================================
     client.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
+        
         if (connection === "close") {
             const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
             const reasons = {
@@ -348,7 +688,7 @@ async function startKeith() {
             };
             
             const reasonMessage = reasons[reason] || `Unknown DisconnectReason: ${reason}`;
-            if ([DisconnectReason.badSession, DisconnectReason.connectionReplaced, DisconnectReason.loggedOut].includes(reason)) {
+            if (reason === DisconnectReason.badSession || reason === DisconnectReason.connectionReplaced || reason === DisconnectReason.loggedOut) {
                 KeithLogger.error(reasonMessage);
                 process.exit();
             } else {
@@ -356,11 +696,12 @@ async function startKeith() {
                 startKeith();
             }
         } else if (connection === "open") {
-            await client.newsletterFollow("120363266249040649@newsletter");
+                      
+            //await client.newsletterFollow("120363266249040649@newsletter");
 
             KeithLogger.success("Connected to Keith server");
             KeithLogger.success("Bot is now active");
-            KeithLogger.info(`Loaded ${totalCommands} commands`);
+            KeithLogger.info(`commands loaded successfully 🔥`);
 
             const getGreeting = () => {
                 const currentHour = DateTime.now().setZone("Africa/Nairobi").hour;
@@ -369,12 +710,13 @@ async function startKeith() {
                 if (currentHour >= 18 && currentHour < 22) return "Good evening 🌆";
                 return "Good night 😴";
             };
+           // const modeStatus = settings.mode === 'private' ? ' PRIVATE' : ' PUBLIC';
+            
 
             const message = `Holla, ${getGreeting()},\n\n╭═══『 ${botname} 𝐢𝐬 𝐜𝐨𝐧𝐧𝐞𝐜𝐭𝐞𝐝』══⊷ \n` +
                 `║ ʙᴏᴛ ᴏᴡɴᴇʀ ${author}\n` +
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
-                `║ ᴛᴏᴛᴀʟ ᴘʟᴜɢɪɴs ${totalCommands}\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
                 `║ ʟɪʙʀᴀʀʏ Baileys\n` +
                 `╰═════════════════⊷`;
@@ -383,22 +725,64 @@ async function startKeith() {
             KeithLogger.info(message);
         }
     });
-
+    //========================================================================================================================
+    // Credentials update handler
+    //========================================================================================================================
     client.ev.on("creds.update", saveCreds);
+
+    client.downloadMediaMessage = async (message) => {
+        const mime = (message.msg || message).mimetype || "";
+        const messageType = message.mtype ? message.mtype.replace(/Message/gi, "") : mime.split("/")[0];
+        const stream = await downloadContentFromMessage(message, messageType);
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+        return buffer;
+    };
+    //========================================================================================================================
+    //========================================================================================================================
+    client.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
+        const quoted = message.msg || message;
+        const mime = (message.msg || message).mimetype || "";
+        const messageType = message.mtype ? message.mtype.replace(/Message/gi, "") : mime.split("/")[0];
+        const stream = await downloadContentFromMessage(quoted, messageType);
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+        const type = await FileType.fromBuffer(buffer);
+        const trueFileName = attachExtension ? `${filename}.${type.ext}` : filename;
+        await fs.writeFileSync(trueFileName, buffer);
+        return trueFileName;
+    };
+    //========================================================================================================================
+    // Start Express server
+    //========================================================================================================================
+    const app = express();
+    const port = process.env.PORT || 10000;
 
     app.use(express.static("public"));
     app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
     app.listen(port, () => KeithLogger.info(`Server listening on port http://localhost:${port}`));
-
-    return client;
+    //========================================================================================================================
+    // Watch for file changes
+    //========================================================================================================================
+    let file = require.resolve(__filename);
+    fs.watchFile(file, () => {
+        fs.unwatchFile(file);
+        KeithLogger.warning(`Update detected in ${__filename}`);
+        delete require.cache[file];
+        require(file);
+    });
 }
-
-startKeith();
-
-let file = require.resolve(__filename);
-fs.watchFile(file, () => {
-    fs.unwatchFile(file);
-    KeithLogger.warning(`Update detected in ${__filename}`);
-    delete require.cache[file];
-    require(file);
+//========================================================================================================================
+// Start the bot
+//========================================================================================================================
+startKeith().catch(err => {
+    KeithLogger.error("Failed to start bot", err);
+    process.exit(1);
 });
+
+module.exports = startKeith;
+//========================================================================================================================
