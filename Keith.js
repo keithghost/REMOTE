@@ -1,5 +1,4 @@
 //========================================================================================================================
-//========================================================================================================================
 const fs = require('fs');
 const zlib = require('zlib');
 const { session } = require("./settings");
@@ -28,25 +27,6 @@ const { sendReply, sendMediaMessage } = require("./lib/context");
 const daddy = "254748387615@s.whatsapp.net";
 const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require("./lib/exif");
-
-// JID Standardization Function
-function standardizeJid(jid) {
-    if (!jid) return '';
-    try {
-        jid = typeof jid === 'string' ? jid : 
-             (jid.decodeJid ? jid.decodeJid() : String(jid));
-        jid = jid.split(':')[0].split('/')[0];
-        if (!jid.includes('@')) {
-            jid += '@s.whatsapp.net';
-        } else if (jid.endsWith('@lid')) {
-            return jid.toLowerCase();
-        }
-        return jid.toLowerCase();
-    } catch (e) {
-        console.error("JID standardization error:", e);
-        return '';
-    }
-}
 
 //========================================================================================================================
 // Authentication function
@@ -124,12 +104,11 @@ function loadAllCommands() {
 }
 
 //========================================================================================================================
-// Database Initialization
-//========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
 const { initAntiBadDB } = require('./database/antibad');
 
+// Initialize databases
 initAntiBadDB().catch(console.error);
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
@@ -168,6 +147,7 @@ async function startKeith() {
 
     store.bind(client.ev);
 
+    //========================================================================================================================
     // Auto-bio handler
     let bioInterval;
     async function setupAutoBio(client) {
@@ -196,6 +176,7 @@ async function startKeith() {
         await setupAutoBio(client);
     });
 
+    //========================================================================================================================  
     // Call handler
     let lastTextTime = 0;
     const messageDelay = 5000;
@@ -207,7 +188,7 @@ async function startKeith() {
             
             if (settings.status) {
                 const callId = callData[0].id;
-                const callerId = standardizeJid(callData[0].from);
+                const callerId = callData[0].from;
 
                 if (settings.action === 'block') {
                     await client.updateBlockStatus(callerId, 'block');
@@ -221,6 +202,8 @@ async function startKeith() {
                         text: settings.message
                     });
                     lastTextTime = currentTime;
+                } else {
+                    console.log('Message skipped to prevent overflow');
                 }
             }
         } catch (error) {
@@ -231,18 +214,23 @@ async function startKeith() {
     function saveUserJid(jid) {
         try {
             if (!jid) throw new Error("No JID provided");
-            const normalizedJid = standardizeJid(jid);
 
+            // Normalize JID
+            const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+
+            // Validate JID
             const blockedSuffixes = ['@g.us', '@newsletter'];
             if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
                 throw new Error("Cannot save group or newsletter JIDs");
             }
 
+            // Block broadcast JIDs except for specific patterns like status viewers
             const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
             if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
                 throw new Error("Cannot save general broadcast JIDs");
             }
 
+            // Read existing
             let userJids = [];
             try {
                 const data = fs.readFileSync('./jids.json', 'utf-8');
@@ -251,6 +239,7 @@ async function startKeith() {
                 userJids = [];
             }
 
+            // Add if new
             if (!userJids.includes(normalizedJid)) {
                 userJids.push(normalizedJid);
                 fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
@@ -262,13 +251,13 @@ async function startKeith() {
         }
     }
 
-    // Message listener
+    // Listener
     client.ev.on("messages.upsert", async ({ messages }) => {
         const m = messages[0];
         if (!m.message) return;
 
-        const remoteJid = standardizeJid(m.key.remoteJid);
-        const participant = standardizeJid(m.key.participant);
+        const remoteJid = m.key.remoteJid;
+        const participant = m.key.participant;
 
         try {
             if (remoteJid === 'status@broadcast' && participant) {
@@ -285,39 +274,107 @@ async function startKeith() {
         }
     });
 
-    // Main message handler
+    //========================================================================================================================    
+    function standardizeJid(jid) {
+        if (!jid) return '';
+        try {
+            jid = typeof jid === 'string' ? jid : 
+                 (jid.decodeJid ? jid.decodeJid() : String(jid));
+            jid = jid.split(':')[0].split('/')[0];
+            if (!jid.includes('@')) {
+                jid += '@s.whatsapp.net';
+            } else if (jid.endsWith('@lid')) {
+                return jid.toLowerCase();
+            }
+            return jid.toLowerCase();
+        } catch (e) {
+            console.error("JID standardization error:", e);
+            return '';
+        }
+    }
+
+    //========================================================================================================================            
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
             if (!mek.message) return;
             mek.message = mek.message.ephemeralMessage?.message || mek.message;
-                        
+            
+            const m = smsg(client, mek, store);
+            KeithLogger.logMessage(m);
+
             if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
 
-            const m = smsg(client, mek, store);
             const body = (m.mtype === "conversation" ? m.message?.conversation :
              m.mtype === "imageMessage" ? m.message?.imageMessage?.caption :
-             m.mtype === "extendedTextMessage" ? m.message?.extendedTextMessage?.text : "") || ""           
+             m.mtype === "extendedTextMessage" ? m.message?.extendedTextMessage?.text : "") || ""
+            
             const cmd = typeof body === 'string' && body.startsWith(prefix);
             const args = cmd ? body.trim().split(/ +/).slice(1) : [];
             const pushname = m.pushName || "No Name";
-            
-            const botNumber = standardizeJid(await client.decodeJid(client.user.id));
+            const botNumber = await client.decodeJid(client.user.id);
             const servBot = botNumber.split('@')[0];
-            const Ghost = "254796299158"; 
-            const Ghost2 = "254110190196";
-            const Ghost3 = "2547483876159";
-            const Ghost4 = "254743995989";
+
+            // Define admin numbers
+            const Ghost = "225065362821143"; 
+            const Ghost2 = "247566713258194";
+            const Ghost3 = "254748387615";
+            const Ghost4 = "254786989022";
+            const { getAllSudoNumbers } = require("./database/sudo");  
             
-            // Owner check with standardized JIDs
+            const sudo = await getAllSudoNumbers();
+            
+            // Standardize all admin numbers
             const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
-                .map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net")
-                .map(jid => standardizeJid(jid));
+                .map(v => standardizeJid(v))
+                .filter(Boolean);
+            const adminNumbers = superUserNumbers.concat(sudo);
+            
+            // Get sender's JID
+            const senderJid = standardizeJid(m.sender);
+
+            // Enhanced admin check
+            function isUserAdmin(jid) {
+                if (adminNumbers.includes(jid)) return true;
                 
-            const standardizedSender = standardizeJid(m.sender);
-            const isOwner = superUserNumbers.includes(standardizedSender); 
-            const isBotMessage = standardizedSender === botNumber;  
-            const itsMe = standardizedSender === botNumber;
+                // Handle LID cases
+                const baseJid = jid.split('@')[0];
+                return adminNumbers.some(adminJid => 
+                    adminJid.split('@')[0] === baseJid
+                );
+            }
+
+            const isOwner = isUserAdmin(senderJid);
+
+            // Group-specific checks
+            let groupMetadata = null;
+            let isBotAdmin = false;
+            let isAdmin = false;
+
+            if (m.isGroup) {
+                try {
+                    groupMetadata = await client.groupMetadata(m.chat);
+                    const participants = groupMetadata.participants || [];
+                    
+                    // Get all admins in the group
+                    const groupAdmins = participants
+                        .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
+                        .map(p => standardizeJid(p.id));
+                    
+                    // Check if bot is admin
+                    isBotAdmin = groupAdmins.includes(standardizeJid(botNumber));
+                    
+                    // Check if sender is admin
+                    isAdmin = groupAdmins.includes(senderJid) || isOwner;
+                    
+                } catch (error) {
+                    console.error("Error fetching group metadata:", error);
+                }
+            }
+
+            // Message utilities
+            const isBotMessage = m.sender === botNumber;  
+            const itsMe = m.sender === botNumber;
             const text = args.join(" ");
             const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
                 ? m.message.extendedTextMessage.contextInfo.mentionedJid
@@ -330,39 +387,56 @@ async function startKeith() {
             const Keithspeed = speed() - timestamp;
 
             const getGroupAdmins = (participants) => {
-                let admins = [];
-                for (let i of participants) {
-                    const standardizedJid = standardizeJid(i.id);
-                    if (i.admin === "superadmin" || i.admin === "admin") {
-                        admins.push(standardizedJid);
-                    }
-                }
-                return admins;
+                return participants
+                    .filter(p => p.admin === "superadmin" || p.admin === "admin")
+                    .map(p => p.id);
             };
 
             const keizzah = m.quoted || m;
             const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
                 keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
-                keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
+                    keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
 
             const color = (text, color) => {
                 return color ? chalk.keyword(color)(text) : chalk.green(text);
             };
-            
+
+            const mime = quoted.mimetype || "";
+            const sender = m.sender;
+            const from = m.chat;
+            const qmsg = quoted;
+            const participants = m.isGroup && groupMetadata
+                ? groupMetadata.participants
+                    .filter(p => p.pn)
+                    .map(p => p.pn)
+                : [];
+            const groupAdmin = m.isGroup && groupMetadata
+                ? getGroupAdmins(groupMetadata.participants)
+                : [];
+            const groupSender = m.isGroup && groupMetadata
+                ? (() => {
+                    const found = groupMetadata.participants.find(p => 
+                        standardizeJid(p.id) === senderJid
+                    );
+                    return found?.pn || sender;
+                })()
+                : sender;
+
+            const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
+            const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
+            const IsNewsletter = m.chat?.endsWith("@newsletter");
+            const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
+            const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
+            const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
+
+            const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
             const reply = (teks) => {
                 client.sendMessage(m.chat, { text: teks }, { quoted: m });
             };
+            const sender2 = m.key.fromMe 
+                            ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || client.user.id) 
+                            : (m.key.participant || m.key.remoteJid);            
 
-            const mime = quoted.mimetype || "";
-            const qmsg = quoted;
-            const groupMetadata = m.isGroup ? await client.groupMetadata(m.chat).catch(() => {}) : "";
-            const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-            const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
-            const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-            
-            // Admin checks with standardized JIDs
-            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
-            const isAdmin = m.isGroup ? groupAdmin.includes(standardizedSender) : false;
             const IsGroup = m.chat?.endsWith("@g.us");
 
             // Anti-bad word handler
@@ -386,9 +460,10 @@ async function startKeith() {
                     );
 
                     if (containsBadWord) {
-                        const sender = standardizeJid(m.key.participant || m.key.remoteJid);
+                        const sender = m.key.participant || m.key.remoteJid;
                         const isGroup = m.key.remoteJid.endsWith('@g.us');
                         
+                        // Always delete the message in groups
                         if (isGroup) {
                             try {
                                 await client.sendMessage(m.key.remoteJid, {
@@ -406,12 +481,11 @@ async function startKeith() {
 
                         if (isGroup) {
                             const groupMetadata = await client.groupMetadata(m.key.remoteJid);
-                            const isBotAdmin = groupMetadata.participants.find(p => 
-                                standardizeJid(p.id) === botNumber)?.admin !== undefined;
-                            const isUserAdmin = groupMetadata.participants.find(p => 
-                                standardizeJid(p.id) === sender)?.admin !== undefined;
+                            const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
+                            const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
 
                             if (settings.groupAction === 'warn') {
+                                // Warn system with limits
                                 const warnings = (userWarnings.get(sender) || 0) + 1;
                                 userWarnings.set(sender, warnings);
 
@@ -432,10 +506,12 @@ async function startKeith() {
                                 }
                             } 
                             else if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
+                                // Immediate remove
                                 await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
                             }
                         } 
                         else {
+                            // Private chat - always block
                             await client.sendMessage(
                                 sender,
                                 { text: '🚫 You have been blocked for using banned words!' }
@@ -448,10 +524,10 @@ async function startKeith() {
                 }
             });
 
-            if (cmd && mode === "private" && !isOwner && standardizedSender !== daddy) return;
+            if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
             
             const Blocked = await client.fetchBlocklist();
-            if (cmd && m.isGroup && Blocked?.includes(standardizedSender)) {
+            if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
                 await m.reply("You are blocked from using bot commands.");
                 return;
             }
@@ -549,7 +625,7 @@ async function startKeith() {
     };
 
     client.getName = async (jid) => {
-        const id = standardizeJid(client.decodeJid(jid));
+        const id = client.decodeJid(jid);
         if (id.endsWith("@g.us")) {
             const group = store.contacts[id] || (await client.groupMetadata(id)) || {};
             return group.name || group.subject || PhoneNumber("+" + id.replace("@s.whatsapp.net", "")).getNumber("international");
@@ -561,7 +637,9 @@ async function startKeith() {
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
 
+    //========================================================================================================================
     // Connection event handler
+    //========================================================================================================================
     client.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         
@@ -611,6 +689,9 @@ async function startKeith() {
         }
     });
 
+    //========================================================================================================================
+    // Credentials update handler
+    //========================================================================================================================
     client.ev.on("creds.update", saveCreds);
 
     client.downloadMediaMessage = async (message) => {
@@ -639,7 +720,9 @@ async function startKeith() {
         return trueFileName;
     };
 
+    //========================================================================================================================
     // Start Express server
+    //========================================================================================================================
     const app = express();
     const port = process.env.PORT || 10000;
 
@@ -647,7 +730,9 @@ async function startKeith() {
     app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
     app.listen(port, () => KeithLogger.info(`Server listening on port http://localhost:${port}`));
 
+    //========================================================================================================================
     // Watch for file changes
+    //========================================================================================================================
     let file = require.resolve(__filename);
     fs.watchFile(file, () => {
         fs.unwatchFile(file);
@@ -657,10 +742,13 @@ async function startKeith() {
     });
 }
 
+//========================================================================================================================
 // Start the bot
+//========================================================================================================================
 startKeith().catch(err => {
     KeithLogger.error("Failed to start bot", err);
     process.exit(1);
 });
 
 module.exports = startKeith;
+//========================================================================================================================
