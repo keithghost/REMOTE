@@ -347,9 +347,8 @@ async function startKeith() {
             const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
             const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
             const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
+            const isBotAdmin = m.isGroup ? groupAdmin.some(j => botNumber.includes(j)) : false;
             const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
-
             const IsGroup = m.chat?.endsWith("@g.us");
 
             // Anti-bad word handler
