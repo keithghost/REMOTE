@@ -612,7 +612,7 @@ if (mek.key?.remoteJid) {
                     
                     if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
                     if (normalizedJid.endsWith('@newsletter')) throw new Error("Cannot save newsletter JIDs");
-                    if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
+                    if (normalizedJid.includes('@broadcast')) throw new Error("Cannot save broadcast JIDs");
                     
                     let userJids = [];
                     try {
@@ -1189,7 +1189,7 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
-                `║ ʟɪʙʀᴀʀʏ baile\n` +
+                `║ ʟɪʙʀᴀʀʏ baileys\n` +
                 `╰═════════════════⊷`;
 
             await client.sendMessage(client.user.id, { text: message });
