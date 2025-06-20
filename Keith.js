@@ -301,7 +301,7 @@ async function startKeith() {
             const args = body.trim().split(/ +/).slice(1);
             const pushname = m.pushName || "No Name";
             const botNumber = [await client.decodeJid(client.user.id), await client.decodeJid(client.user.lid)];
-            const servBots = botNumber.map(num => num.split('@')[0]); // Gets all numbers without @s.whatsapp.net
+            const servBot = botNumber.map(num => num.split('@')[0]); // Gets all numbers without @s.whatsapp.net
             const Ghost = "254796299158"; 
             const Ghost2 = "254110190196";
             const Ghost3 = "2547483876159";
