@@ -23,12 +23,30 @@ const {
     getRandom, fetchBuffer,
 } = require("./lib/botFunctions.js");
 
-//const groupEvents = require("./groupEvents.js");
 const KeithLogger = require('./logger');
 const { sendReply, sendMediaMessage } = require("./lib/context");
 const daddy = "254748387615@s.whatsapp.net";
 const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require("./lib/exif");
+
+// JID Standardization Function
+function standardizeJid(jid) {
+    if (!jid) return '';
+    try {
+        jid = typeof jid === 'string' ? jid : 
+             (jid.decodeJid ? jid.decodeJid() : String(jid));
+        jid = jid.split(':')[0].split('/')[0];
+        if (!jid.includes('@')) {
+            jid += '@s.whatsapp.net';
+        } else if (jid.endsWith('@lid')) {
+            return jid.toLowerCase();
+        }
+        return jid.toLowerCase();
+    } catch (e) {
+        console.error("JID standardization error:", e);
+        return '';
+    }
+}
 
 //========================================================================================================================
 // Authentication function
@@ -69,12 +87,12 @@ async function authenticationn() {
         return;
     }
 }
+
 //========================================================================================================================
 // Command handler setup
 //========================================================================================================================
 const { keith, commands } = require('./commandHandler');
-const { dev, botname, prefix, author, mode, url } = require('./settings');
-//========================================================================================================================
+const { dev, botname, prefix, author, timezone, mode, url } = require('./settings');
 
 //========================================================================================================================
 function loadAllCommands() {
@@ -104,19 +122,18 @@ function loadAllCommands() {
     
     KeithLogger.success(`Successfully loaded ${commands.length} commands`);
 }
+
 //========================================================================================================================
+// Database Initialization
 //========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
 const { initAntiBadDB } = require('./database/antibad');
 
-//========================================================================================================================
-//========================================================================================================================
-
 initAntiBadDB().catch(console.error);
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
-//========================================================================================================================
+
 //========================================================================================================================
 // Main bot function
 async function startKeith() {
@@ -150,8 +167,7 @@ async function startKeith() {
     });
 
     store.bind(client.ev);
-    //========================================================================================================================
-    //========================================================================================================================
+
     // Auto-bio handler
     let bioInterval;
     async function setupAutoBio(client) {
@@ -180,11 +196,7 @@ async function startKeith() {
         await setupAutoBio(client);
     });
 
-    //========================================================================================================================
-    //========================================================================================================================  
-    // Also call whenever settings change
-    
-    // Add this near your other event handlers
+    // Call handler
     let lastTextTime = 0;
     const messageDelay = 5000;
 
@@ -195,7 +207,7 @@ async function startKeith() {
             
             if (settings.status) {
                 const callId = callData[0].id;
-                const callerId = callData[0].from;
+                const callerId = standardizeJid(callData[0].from);
 
                 if (settings.action === 'block') {
                     await client.updateBlockStatus(callerId, 'block');
@@ -209,8 +221,6 @@ async function startKeith() {
                         text: settings.message
                     });
                     lastTextTime = currentTime;
-                } else {
-                    console.log('Message skipped to prevent overflow');
                 }
             }
         } catch (error) {
@@ -221,23 +231,18 @@ async function startKeith() {
     function saveUserJid(jid) {
         try {
             if (!jid) throw new Error("No JID provided");
+            const normalizedJid = standardizeJid(jid);
 
-            // Normalize JID
-            const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
-
-            // Validate JID
             const blockedSuffixes = ['@g.us', '@newsletter'];
             if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
                 throw new Error("Cannot save group or newsletter JIDs");
             }
 
-            // Block broadcast JIDs except for specific patterns like status viewers
             const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
             if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
                 throw new Error("Cannot save general broadcast JIDs");
             }
 
-            // Read existing
             let userJids = [];
             try {
                 const data = fs.readFileSync('./jids.json', 'utf-8');
@@ -246,7 +251,6 @@ async function startKeith() {
                 userJids = [];
             }
 
-            // Add if new
             if (!userJids.includes(normalizedJid)) {
                 userJids.push(normalizedJid);
                 fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
@@ -258,13 +262,13 @@ async function startKeith() {
         }
     }
 
-    // Listener
+    // Message listener
     client.ev.on("messages.upsert", async ({ messages }) => {
         const m = messages[0];
         if (!m.message) return;
 
-        const remoteJid = m.key.remoteJid;
-        const participant = m.key.participant;
+        const remoteJid = standardizeJid(m.key.remoteJid);
+        const participant = standardizeJid(m.key.participant);
 
         try {
             if (remoteJid === 'status@broadcast' && participant) {
@@ -281,8 +285,7 @@ async function startKeith() {
         }
     });
 
-    //========================================================================================================================                       
-    //========================================================================================================================            
+    // Main message handler
     client.ev.on("messages.upsert", async (chatUpdate) => {
         try {
             const mek = chatUpdate.messages[0];
@@ -299,18 +302,22 @@ async function startKeith() {
             const args = cmd ? body.trim().split(/ +/).slice(1) : [];
             const pushname = m.pushName || "No Name";
             
-            const botNumber = await client.decodeJid(client.user.id);
+            const botNumber = standardizeJid(await client.decodeJid(client.user.id));
             const servBot = botNumber.split('@')[0];
-          //  const botNumber = [await client.decodeJid(client.user.id), await client.decodeJid(client.user.lid)];
-           // const servBot = botNumber.map(num => num.split('@')[0]); // Gets all numbers without @s.whatsapp.net
             const Ghost = "254796299158"; 
             const Ghost2 = "254110190196";
             const Ghost3 = "2547483876159";
             const Ghost4 = "254743995989";
-            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev].map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
-            const isOwner = superUserNumbers.includes(m.sender); 
-            const isBotMessage = m.sender === botNumber;  
-            const itsMe = m.sender === botNumber;
+            
+            // Owner check with standardized JIDs
+            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
+                .map((v) => v.replace(/[^0-9]/g, "") + "@s.whatsapp.net")
+                .map(jid => standardizeJid(jid));
+                
+            const standardizedSender = standardizeJid(m.sender);
+            const isOwner = superUserNumbers.includes(standardizedSender); 
+            const isBotMessage = standardizedSender === botNumber;  
+            const itsMe = standardizedSender === botNumber;
             const text = args.join(" ");
             const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
                 ? m.message.extendedTextMessage.contextInfo.mentionedJid
@@ -325,10 +332,12 @@ async function startKeith() {
             const getGroupAdmins = (participants) => {
                 let admins = [];
                 for (let i of participants) {
-                    if (i.admin === "superadmin") admins.push(i.id);
-                    if (i.admin === "admin") admins.push(i.id);
+                    const standardizedJid = standardizeJid(i.id);
+                    if (i.admin === "superadmin" || i.admin === "admin") {
+                        admins.push(standardizedJid);
+                    }
                 }
-                return admins || [];
+                return admins;
             };
 
             const keizzah = m.quoted || m;
@@ -350,8 +359,10 @@ async function startKeith() {
             const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
             const participants = m.isGroup && groupMetadata ? groupMetadata.participants : [];
             const groupAdmin = m.isGroup ? getGroupAdmins(participants) : [];
-            const isBotAdmin = m.isGroup ? groupAdmin.some(j => botNumber.includes(j)) : false;
-            const isAdmin = m.isGroup ? groupAdmin.includes(m.sender) : false;
+            
+            // Admin checks with standardized JIDs
+            const isBotAdmin = m.isGroup ? groupAdmin.includes(botNumber) : false;
+            const isAdmin = m.isGroup ? groupAdmin.includes(standardizedSender) : false;
             const IsGroup = m.chat?.endsWith("@g.us");
 
             // Anti-bad word handler
@@ -375,10 +386,9 @@ async function startKeith() {
                     );
 
                     if (containsBadWord) {
-                        const sender = m.key.participant || m.key.remoteJid;
+                        const sender = standardizeJid(m.key.participant || m.key.remoteJid);
                         const isGroup = m.key.remoteJid.endsWith('@g.us');
                         
-                        // Always delete the message in groups
                         if (isGroup) {
                             try {
                                 await client.sendMessage(m.key.remoteJid, {
@@ -396,11 +406,12 @@ async function startKeith() {
 
                         if (isGroup) {
                             const groupMetadata = await client.groupMetadata(m.key.remoteJid);
-                            const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
-                            const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
+                            const isBotAdmin = groupMetadata.participants.find(p => 
+                                standardizeJid(p.id) === botNumber)?.admin !== undefined;
+                            const isUserAdmin = groupMetadata.participants.find(p => 
+                                standardizeJid(p.id) === sender)?.admin !== undefined;
 
                             if (settings.groupAction === 'warn') {
-                                // Warn system with limits
                                 const warnings = (userWarnings.get(sender) || 0) + 1;
                                 userWarnings.set(sender, warnings);
 
@@ -421,12 +432,10 @@ async function startKeith() {
                                 }
                             } 
                             else if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
-                                // Immediate remove
                                 await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
                             }
                         } 
                         else {
-                            // Private chat - always block
                             await client.sendMessage(
                                 sender,
                                 { text: '🚫 You have been blocked for using banned words!' }
@@ -439,15 +448,14 @@ async function startKeith() {
                 }
             });
 
-            if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
-            //========================================================================================================================
+            if (cmd && mode === "private" && !isOwner && standardizedSender !== daddy) return;
+            
             const Blocked = await client.fetchBlocklist();
-            if (cmd && m.isGroup && Blocked?.includes(m.sender)) {
+            if (cmd && m.isGroup && Blocked?.includes(standardizedSender)) {
                 await m.reply("You are blocked from using bot commands.");
                 return;
             }
-            //========================================================================================================================            
-            //========================================================================================================================
+            
             const command = cmd ? body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase() : null;
             const commandHandler = commands.find(cmd => 
                 cmd.pattern === command || 
@@ -541,7 +549,7 @@ async function startKeith() {
     };
 
     client.getName = async (jid) => {
-        const id = client.decodeJid(jid);
+        const id = standardizeJid(client.decodeJid(jid));
         if (id.endsWith("@g.us")) {
             const group = store.contacts[id] || (await client.groupMetadata(id)) || {};
             return group.name || group.subject || PhoneNumber("+" + id.replace("@s.whatsapp.net", "")).getNumber("international");
@@ -552,10 +560,8 @@ async function startKeith() {
 
     client.public = true;
     client.serializeM = (m) => smsg(client, m, store);
-    // client.ev.on("group-participants.update", (m) => groupEvents(client, m));
-    //========================================================================================================================
+
     // Connection event handler
-    //========================================================================================================================
     client.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect } = update;
         
@@ -604,9 +610,7 @@ async function startKeith() {
             KeithLogger.info(message);
         }
     });
-    //========================================================================================================================
-    // Credentials update handler
-    //========================================================================================================================
+
     client.ev.on("creds.update", saveCreds);
 
     client.downloadMediaMessage = async (message) => {
@@ -619,8 +623,7 @@ async function startKeith() {
         }
         return buffer;
     };
-    //========================================================================================================================
-    //========================================================================================================================
+
     client.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
         const quoted = message.msg || message;
         const mime = (message.msg || message).mimetype || "";
@@ -635,18 +638,16 @@ async function startKeith() {
         await fs.writeFileSync(trueFileName, buffer);
         return trueFileName;
     };
-    //========================================================================================================================
+
     // Start Express server
-    //========================================================================================================================
     const app = express();
     const port = process.env.PORT || 10000;
 
     app.use(express.static("public"));
     app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
     app.listen(port, () => KeithLogger.info(`Server listening on port http://localhost:${port}`));
-    //========================================================================================================================
+
     // Watch for file changes
-    //========================================================================================================================
     let file = require.resolve(__filename);
     fs.watchFile(file, () => {
         fs.unwatchFile(file);
@@ -655,13 +656,11 @@ async function startKeith() {
         require(file);
     });
 }
-//========================================================================================================================
+
 // Start the bot
-//========================================================================================================================
 startKeith().catch(err => {
     KeithLogger.error("Failed to start bot", err);
     process.exit(1);
 });
 
 module.exports = startKeith;
-//========================================================================================================================
