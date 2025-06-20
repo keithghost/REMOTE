@@ -599,7 +599,7 @@ async function startKeith() {
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
-                `║ ʟɪʙʀᴀʀʏ panl\n` +
+                `║ ʟɪʙʀᴀʀʏ panel\n` +
                 `╰═════════════════⊷`;
 
             await client.sendMessage(client.user.id, { text: message });
