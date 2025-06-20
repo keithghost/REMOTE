@@ -292,14 +292,11 @@ async function startKeith() {
             if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
 
             const m = smsg(client, mek, store);
-
-            const body = m.mtype === "conversation" ? m.message.conversation :
-                m.mtype === "imageMessage" ? m.message.imageMessage.caption :
-                m.mtype === "extendedTextMessage" ? m.message.extendedTextMessage.text : "";
-
-            //const cmd = body.startsWith(prefix);
-            const cmd = body ? body.startsWith(prefix) : false;
-            const args = body.trim().split(/ +/).slice(1);
+            const body = (m.mtype === "conversation" ? m.message?.conversation :
+             m.mtype === "imageMessage" ? m.message?.imageMessage?.caption :
+             m.mtype === "extendedTextMessage" ? m.message?.extendedTextMessage?.text : "") || ""           
+            const cmd = typeof body === 'string' && body.startsWith(prefix);
+            const args = cmd ? body.trim().split(/ +/).slice(1) : [];
             const pushname = m.pushName || "No Name";
             const botNumber = await client.decodeJid(client.user.id);
             const servBot = botNumber.split('@')[0];
