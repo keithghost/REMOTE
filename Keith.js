@@ -298,18 +298,9 @@ async function startKeith() {
             const cmd = typeof body === 'string' && body.startsWith(prefix);
             const args = cmd ? body.trim().split(/ +/).slice(1) : [];
             const pushname = m.pushName || "No Name";
-            try {
-    const botNumber = [
-        await client.decodeJid(client.user.id),
-        await client.decodeJid(client.user.lid)
-    ];
-    const servBot = botNumber.map(num => num.split('@')[0]);
-} catch (error) {
-    console.error("Error decoding JID:", error);
-    // Handle the error appropriately (e.g., default values)
-}
-          //  const botNumber = await client.decodeJid(client.user.id);
-         //   const servBot = botNumber.split('@')[0];
+            
+            const botNumber = await client.decodeJid(client.user.id);
+            const servBot = botNumber.split('@')[0];
           //  const botNumber = [await client.decodeJid(client.user.id), await client.decodeJid(client.user.lid)];
            // const servBot = botNumber.map(num => num.split('@')[0]); // Gets all numbers without @s.whatsapp.net
             const Ghost = "254796299158"; 
