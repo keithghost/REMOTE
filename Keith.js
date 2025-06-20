@@ -340,6 +340,10 @@ async function startKeith() {
             const color = (text, color) => {
                 return color ? chalk.keyword(color)(text) : chalk.green(text);
             };
+            
+            const reply = (teks) => {
+                client.sendMessage(m.chat, { text: teks }, { quoted: m });
+            };
 
             const mime = quoted.mimetype || "";
             const qmsg = quoted;
@@ -482,6 +486,7 @@ async function startKeith() {
                         url,
                         dev, 
                         m,
+                        reply,
                         saveUserJid,
                         mode, 
                         mime, 
