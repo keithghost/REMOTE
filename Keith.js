@@ -106,10 +106,32 @@ function loadAllCommands() {
 //========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
+const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
+const { initAntiLinkDB } = require('./database/antilink');
+const { initAutoLikeStatusDB } = require('./database/autolikestatus');
 const { initAntiBadDB } = require('./database/antibad');
+const { initAutoViewDB } = require('./database/autoview');
+const { initPresenceDB } = require('./database/presence');
+const { initAutoReadDB } = require('./database/autoread');
+const { initAntiDeleteDB } = require('./database/antidelete');
+const { initChatbotDB } = require('./database/chatbot');
+const { initGreetDB } = require('./database/greet');
+const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
+//========================================================================================================================
+
+
 
 // Initialize databases
+initAutoReadDB().catch(console.error);
+initAutoViewDB().catch(console.error);
+initAntiLinkDB().catch(console.error);
+initAntiDeleteDB().catch(console.error);
+initChatbotDB().catch(console.error);
+initGreetDB().catch(console.error);
+initGroupEventsDB().catch(console.error);
+initAutoLikeStatusDB().catch(console.error);
 initAntiBadDB().catch(console.error);
+initPresenceDB().catch(console.error);
 initAutoBioDB().catch(console.error);
 initAntiCallDB().catch(console.error);
 
@@ -210,6 +232,11 @@ async function startKeith() {
             console.error('Error handling call:', error);
         }
     });
+//========================================================================================================================
+//========================================================================================================================
+
+
+    
 
     function saveUserJid(jid) {
         try {
@@ -250,8 +277,10 @@ async function startKeith() {
             throw error;
         }
     }
-
+//========================================================================================================================
     // Listener
+//========================================================================================================================
+
     client.ev.on("messages.upsert", async ({ messages }) => {
         const m = messages[0];
         if (!m.message) return;
@@ -438,8 +467,9 @@ async function startKeith() {
                             : (m.key.participant || m.key.remoteJid);            
 
             const IsGroup = m.chat?.endsWith("@g.us");
-
+//========================================================================================================================
             // Anti-bad word handler
+//========================================================================================================================
             client.ev.on('messages.upsert', async ({ messages }) => {
                 try {
                     const m = messages[0];
@@ -523,7 +553,83 @@ async function startKeith() {
                     console.error('Anti-bad word error:', error);
                 }
             });
+//========================================================================================================================            
+ // Chatbot handler
+//========================================================================================================================            
 
+const { getChatbotSettings } = require('./database/chatbot');
+const chatbotSettings = await getChatbotSettings();
+let lastTextTime = 0;
+
+// Skip conditions:
+// 1. If message is from the bot itself
+// 2. If quoted message is from the bot
+// 3. If sender is not owner
+if (m.sender === client.user.id || (m.quoted?.fromMe) || !m.isOwner) return;
+
+// Text Chatbot
+if ((!IsGroup && chatbotSettings.textPrivate) || (IsGroup && chatbotSettings.textGroup)) {
+    try {
+        const currentTime = Date.now();
+        if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
+            console.log('Message skipped: Rate limit exceeded');
+            return;
+        }
+
+        const response = await axios.get(`https://apis-keith.vercel.app/ai/gpt?q=${encodeURIComponent(text)}`);
+        
+        if (!response.data?.status || !response.data?.result) {
+            throw new Error('Invalid API response');
+        }
+
+        await client.sendMessage(m.chat, { 
+            text: response.data.result,
+            mentions: [m.sender],
+            quoted: m
+        });
+        
+        lastTextTime = currentTime;
+    } catch (error) {
+        console.error('Error in text chatbot:', error);
+    }
+}
+
+// Voice Chatbot
+if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.voiceGroup)) {
+    try {
+        const currentTime = Date.now();
+        if (currentTime - lastTextTime < chatbotSettings.messageDelay) {
+            console.log('Message skipped: Rate limit exceeded for voice');
+            return;
+        }
+
+        const response = await axios.get(`https://apis-keith.vercel.app/ai/gpt?q=${encodeURIComponent(text)}`);
+        
+        if (!response.data?.status || !response.data?.result) {
+            throw new Error('Invalid API response');
+        }
+
+        const audioUrl = googleTTS.getAudioUrl(response.data.result, {
+            lang: 'en',
+            slow: false,
+            host: 'https://translate.google.com'
+        });
+
+        await client.sendMessage(m.chat, { 
+            audio: { url: audioUrl },
+            mimetype: 'audio/mp4',
+            ptt: true,
+            quoted: m
+        });
+
+        lastTextTime = currentTime;
+    } catch (error) {
+        console.error('Error in voice chatbot:', error);
+    }
+}           
+            
+//========================================================================================================================            
+//========================================================================================================================
             if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
             
             const Blocked = await client.fetchBlocklist();
@@ -531,7 +637,7 @@ async function startKeith() {
                 await m.reply("You are blocked from using bot commands.");
                 return;
             }
-            
+//========================================================================================================================            
             const command = cmd ? body.replace(prefix, "").trim().split(/ +/).shift().toLowerCase() : null;
             const commandHandler = commands.find(cmd => 
                 cmd.pattern === command || 
@@ -606,7 +712,7 @@ async function startKeith() {
             KeithLogger.error("Error processing message", error);
         }
     });
-
+//========================================================================================================================
     process.on("unhandledRejection", (reason, promise) => {
         KeithLogger.error(`Unhandled Rejection at: ${promise}`, reason);
     });
