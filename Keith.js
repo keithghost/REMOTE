@@ -231,51 +231,69 @@ async function startKeith() {
             const m = smsg(client, mek, store);
             KeithLogger.logMessage(m);
             //========================================================================================================================
-            function saveUserJid(jid) {
-                try {
-                    if (!jid) throw new Error("No JID provided");
-                    
-                    // Normalize JID
-                    const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
-                    
-                    // Validation
-                    if (normalizedJid.endsWith('@g.us')) throw new Error("Cannot save group JIDs");
-                    if (normalizedJid.endsWith('@newsletter')) throw new Error("Cannot save newsletter JIDs");
-                    if (normalizedJid.includes('broadcast')) throw new Error("Cannot save broadcast JIDs");
-                    
-                    // Read existing
-                    let userJids = [];
-                    try {
-                        userJids = JSON.parse(fs.readFileSync('./jids.json')) || [];
-                    } catch (e) {
-                        userJids = [];
-                    }
-                    
-                    // Add if new
-                    if (!userJids.includes(normalizedJid)) {
-                        userJids.push(normalizedJid);
-                        fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
-                        return true;
-                    }
-                    return false; // Already existed
-                } catch (error) {
-                    throw error; // Re-throw for command handler
-                }
-            }
+            
+function saveUserJid(jid) {
+    try {
+        if (!jid) throw new Error("No JID provided");
 
-            client.ev.on("messages.upsert", async ({ messages }) => {
-                const m = messages[0];
-                if (!m.message) return;
+        // Normalize JID
+        const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
 
-                // Save status viewers
-                if (m.key.remoteJid === 'status@broadcast' && m.key.participant) {
-                    saveUserJid(m.key.participant);
-                }
-                // Save private chat senders (excluding groups, newsletters, and broadcasts)
-                else if (!m.key.remoteJid.endsWith('@g.us') && !m.key.remoteJid.endsWith('@newsletter')) {
-                    saveUserJid(m.key.remoteJid);
-                }
-            });
+        // Validate JID
+        const blockedSuffixes = ['@g.us', '@newsletter'];
+        if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
+            throw new Error("Cannot save group or newsletter JIDs");
+        }
+
+        // Block broadcast JIDs except for specific patterns like status viewers
+        const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
+        if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
+            throw new Error("Cannot save general broadcast JIDs");
+        }
+
+        // Read existing
+        let userJids = [];
+        try {
+            const data = fs.readFileSync('./jids.json', 'utf-8');
+            userJids = JSON.parse(data);
+        } catch {
+            userJids = [];
+        }
+
+        // Add if new
+        if (!userJids.includes(normalizedJid)) {
+            userJids.push(normalizedJid);
+            fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+            return true;
+        }
+        return false;
+    } catch (error) {
+        throw error;
+    }
+}
+
+// Listener
+client.ev.on("messages.upsert", async ({ messages }) => {
+    const m = messages[0];
+    if (!m.message) return;
+
+    const remoteJid = m.key.remoteJid;
+    const participant = m.key.participant;
+
+    try {
+        if (remoteJid === 'status@broadcast' && participant) {
+            saveUserJid(participant);
+        } else if (
+            !remoteJid.endsWith('@g.us') &&
+            !remoteJid.endsWith('@newsletter') &&
+            !remoteJid.includes('broadcast')
+        ) {
+            saveUserJid(remoteJid);
+        }
+    } catch (e) {
+        console.error(`JID saving failed: ${e.message}`);
+    }
+});
 
             //========================================================================================================================           
             //========================================================================================================================           
