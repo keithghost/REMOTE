@@ -236,7 +236,6 @@ async function startKeith() {
 //========================================================================================================================
 // Message storage setup
 //========================================================================================================================
-
 const baseDir = path.join(__dirname, 'tmp');
 if (!fs.existsSync(baseDir)) {
     fs.mkdirSync(baseDir, { recursive: true });
@@ -308,38 +307,47 @@ async function sendDeletedMessageNotification(client, settings, {
         });
     }
     else if (settings.includeMedia) {
-        if (deletedMsg.message.imageMessage) {
-            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
+        try {
+            if (deletedMsg.message.imageMessage) {
+                const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.imageMessage);
+                await client.sendMessage(targetJid, {
+                    image: { url: buffer },
+                    caption: notification,
+                    mentions: [deleterJid, senderJid],
+                    contextInfo
+                });
+            }
+            else if (deletedMsg.message.videoMessage) {
+                const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.videoMessage);
+                await client.sendMessage(targetJid, {
+                    video: { url: buffer },
+                    caption: notification,
+                    mentions: [deleterJid, senderJid],
+                    contextInfo
+                });
+            }
+            else if (deletedMsg.message.audioMessage) {
+                const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.audioMessage);
+                await client.sendMessage(targetJid, {
+                    audio: { url: buffer },
+                    ptt: deletedMsg.message.audioMessage.ptt,
+                    caption: notification,
+                    mentions: [deleterJid, senderJid],
+                    contextInfo
+                });
+            }
+            else if (deletedMsg.message.stickerMessage) {
+                const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.stickerMessage);
+                await client.sendMessage(targetJid, {
+                    sticker: { url: buffer },
+                    mentions: [deleterJid, senderJid],
+                    contextInfo
+                });
+            }
+        } catch (mediaError) {
+            console.error('Error processing media message:', mediaError);
             await client.sendMessage(targetJid, {
-                image: buffer,
-                caption: notification,
-                mentions: [deleterJid, senderJid],
-                contextInfo
-            });
-        }
-        else if (deletedMsg.message.videoMessage) {
-            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
-            await client.sendMessage(targetJid, {
-                video: buffer,
-                caption: notification,
-                mentions: [deleterJid, senderJid],
-                contextInfo
-            });
-        }
-        else if (deletedMsg.message.audioMessage) {
-            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
-            await client.sendMessage(targetJid, {
-                audio: buffer,
-                ptt: deletedMsg.message.audioMessage.ptt,
-                caption: notification,
-                mentions: [deleterJid, senderJid],
-                contextInfo
-            });
-        }
-        else if (deletedMsg.message.stickerMessage) {
-            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
-            await client.sendMessage(targetJid, {
-                sticker: buffer,
+                text: `${notification}\n\n⚠️ A media message was deleted but could not be retrieved`,
                 mentions: [deleterJid, senderJid],
                 contextInfo
             });
@@ -365,7 +373,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         const remoteJid = message.key.remoteJid;
         const chatData = loadChatData(remoteJid);
         
-        chatData.push(message);
+        // Store the entire message object including media info
+        chatData.push(JSON.parse(JSON.stringify(message)));
         if (chatData.length > 100) chatData.shift();
         
         saveChatData(remoteJid, chatData);
@@ -406,7 +415,6 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         console.error('Error in antidelete handler:', error);
     }
 });
-            
 //========================================================================================================================    
 //========================================================================================================================
 client.ev.on("messages.upsert", async (chatUpdate) => {
