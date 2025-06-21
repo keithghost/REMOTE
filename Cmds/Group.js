@@ -1,6 +1,6 @@
 
 const { keith } = require('../commandHandler');
-const ownerMiddleware = require('../utility/botUtil/ownerMiddleware');
+const ownerMiddleware = require('../utility/botUtil/ownermiddleware');
 
 keith({
   pattern: "gprofile",
