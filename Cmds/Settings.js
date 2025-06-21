@@ -33,7 +33,7 @@ keith({
             const status = settings.status ? '✅ ON' : '❌ OFF';
             const target = settings.targetChat || 'Not set';
             
-            return await m.reply(
+            return await reply(
                 `*Auto-Download Status Settings*\n\n` +
                 `🔹 Status: ${status}\n` +
                 `🔹 Target Chat: ${target}\n\n` +
