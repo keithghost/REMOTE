@@ -117,6 +117,9 @@ const { initAntiDeleteDB, getAntiDeleteSettings } = require('./database/antidele
 const { initChatbotDB } = require('./database/chatbot');
 const { initGreetDB } = require('./database/greet');
 const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
+ const { initAutoStatusDB, getAutoStatusSettings } = require('./database/autostatus');
+
+
 //========================================================================================================================
 
 
@@ -124,6 +127,7 @@ const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupe
 // Initialize databases
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
+initAutoStatusDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
 initChatbotDB().catch(console.error);
@@ -681,7 +685,45 @@ if (mek.key?.remoteJid) {
 }
 //========================================================================================================================
 //========================================================================================================================    
- 
+
+// Status handler
+client.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const mek = messages[0];
+        if (!mek.key || mek.key.remoteJid !== 'status@broadcast') return;
+
+        const settings = await getAutoStatusSettings();
+        if (!settings.enabled) return;
+
+        const targetJid = settings.notifyOwner ? dev : idBot;
+        const quoted = settings.saveToInbox ? mek : null;
+
+        // Handle text status
+        if (mek.message.extendedTextMessage) {
+            await client.sendMessage(targetJid, { 
+                text: mek.message.extendedTextMessage.text 
+            }, { quoted });
+        }
+        // Handle image status
+        else if (mek.message.imageMessage) {
+            const buffer = await client.downloadMediaMessage(mek);
+            await client.sendMessage(targetJid, {
+                image: buffer,
+                caption: mek.message.imageMessage.caption || ''
+            }, { quoted });
+        }
+        // Handle video status
+        else if (mek.message.videoMessage) {
+            const buffer = await client.downloadMediaMessage(mek);
+            await client.sendMessage(targetJid, {
+                video: buffer,
+                caption: mek.message.videoMessage.caption || ''
+            }, { quoted });
+        }
+    } catch (error) {
+        console.error('Error processing status:', error);
+    }
+});
 //========================================================================================================================
             // Anti-bad word handler
 //========================================================================================================================
