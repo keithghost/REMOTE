@@ -11,6 +11,65 @@ const { getChatbotSettings, updateChatbotSettings } = require('../database/chatb
 const { getGreetSettings, updateGreetSettings, clearRepliedContacts } = require('../database/greet');
 const { getGroupEventsSettings, updateGroupEventsSettings } = require('../database/groupevents');
 const { getAntiDeleteSettings, updateAntiDeleteSettings } = require('../database/antidelete');
+const { getAutoStatusSettings, updateAutoStatusSettings } = require('../database/autostatus');
+//========================================================================================================================
+//========================================================================================================================
+ 
+keith({
+    pattern: "autodownloadstatus",
+    alias: ["statusdownloader", "autostatus"],
+    desc: "Manage automatic status downloader",
+    category: "Settings",
+    react: "📥",
+    filename: __filename
+}, async (context) => {
+    await ownerMiddleware(context, async () => {
+        const { args, prefix, reply } = context;
+        const [action, value] = args.map(arg => arg?.toLowerCase());
+
+        const settings = await getAutoStatusSettings();
+
+        if (!action) {
+            const statusText = (setting, name) => `${setting ? '✅ ON' : '❌ OFF'} - *${name}*`;
+            
+            return await reply(
+                `*📥 Auto-Status Settings*\n\n` +
+                `${statusText(settings.enabled, 'Main Switch')}\n` +
+                `${statusText(settings.saveToInbox, 'Save to Inbox')}\n` +
+                `${statusText(settings.notifyOwner, 'Notify Owner')}\n\n` +
+                `*🛠 Usage Instructions:*\n` +
+                `▸ *${prefix}autostatus on/off* - Toggle main switch\n` +
+                `▸ *${prefix}autostatus inbox on/off* - Toggle saving to inbox\n` +
+                `▸ *${prefix}autostatus notify on/off* - Toggle owner notifications`
+            );
+        }
+
+        const toggleSetting = async (field, name) => {
+            if (!['on', 'off'].includes(value)) {
+                return await reply(`❌ Please specify "on" or "off" for ${name}`);
+            }
+            const newValue = value === 'on';
+            await updateAutoStatusSettings({ [field]: newValue });
+            return await reply(`✅ ${name} ${newValue ? 'enabled' : 'disabled'}`);
+        };
+
+        switch (action) {
+            case 'on':
+            case 'off':
+                await updateAutoStatusSettings({ enabled: action === 'on' });
+                return await reply(`✅ Auto-status downloader ${action === 'on' ? 'enabled' : 'disabled'}`);
+
+            case 'inbox':
+                return await toggleSetting('saveToInbox', 'Inbox saving');
+
+            case 'notify':
+                return await toggleSetting('notifyOwner', 'Owner notifications');
+
+            default:
+                return await reply('❌ Invalid command. Use without arguments to see usage.');
+        }
+    });
+});
 //========================================================================================================================
 //========================================================================================================================
  
