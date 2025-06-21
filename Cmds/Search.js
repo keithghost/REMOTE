@@ -478,6 +478,53 @@ ${botname} 𝐁𝐈𝐁𝐋𝐄 𝐁𝐎𝐎𝐊 𝐋𝐈𝐒𝐓
 //========================================================================================================================
 
 keith({
+    pattern: "image",
+    alias: ["img", "imgsearch"],
+    desc: "Search for images using a search term",
+    category: "Search",
+    react: "🖼️",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, botname, sendReply, sendMediaMessage } = context;
+
+        if (!text) {
+            return sendReply(client, m, `📸 Please provide a search term.\n*Example:* image sunset`);
+        }
+
+        const results = await gis(text);
+        if (!results || results.length === 0) {
+            return sendReply(client, m, '🔍 No images found for your search.');
+        }
+
+        const maxImages = 5;
+        const imageUrls = results
+            .slice(0, maxImages)
+            .map(res => res.url)
+            .filter(Boolean);
+
+        if (imageUrls.length === 0) {
+            return sendReply(client, m, '⚠️ Images found, but no valid URLs were extracted.');
+        }
+
+        for (const url of imageUrls) {
+            await sendMediaMessage(client, m, {
+                image: { url },
+                caption: `📷 *Search Result*\n🔍 *Query:* ${text}\n🤖 Powered by ${botname}`
+            });
+        }
+    } catch (error) {
+        console.error("Image Command Error:", error);
+        context.reply(`❌ Failed to fetch images.\n_Error:_ ${error.message}`);
+    }
+});
+
+
+//========================================================================================================================
+
+
+
+keith({
     pattern: "bible",
     alias: ["verse", "scripture"],
     desc: "Fetch a Bible verse by reference (e.g. John 3:16)",
@@ -486,32 +533,30 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-       // await ownerMiddleware(context, async () => {
-            const { client, m, text, sendReply, sendMediaMessage, botname } = context;
+        const { client, m, text, sendReply, sendMediaMessage, botname } = context;
 
-            if (!text) {
-                return sendReply(client, m, '📖 Please specify the book, chapter, and verse.\n*Example:* bible john 3:16');
-            }
+        if (!text) {
+            return sendReply(client, m, '📖 Please specify the book, chapter, and verse.\n*Example:* bible john 3:16');
+        }
 
-            const reference = encodeURIComponent(text);
-            const apiUrl = `https://bible-api.com/${reference}?translation=kjv`;
+        const reference = encodeURIComponent(text);
+        const apiUrl = `https://bible-api.com/${reference}?translation=kjv`;
 
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error('API request failed');
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error('API request failed');
 
-            const data = await response.json();
-            if (!data?.reference || !data?.text) {
-                throw new Error('Invalid scripture reference');
-            }
+        const data = await response.json();
+        if (!data?.reference || !data?.text) {
+            throw new Error('Invalid scripture reference');
+        }
 
-            const bibleText = `📖 *${botname} Bible Engine*\n\n` +
-                `📚 *Reference:* ${data.reference}\n` +
-                `🗒️ *Verses:* ${data.verses?.length || '?'}\n` +
-                `📘 *Translation:* ${data.translation_name || 'KJV'}\n\n` +
-                `${data.text.trim()}`;
+        const bibleText = `📖 *${botname} Bible Engine*\n\n` +
+            `📚 *Reference:* ${data.reference}\n` +
+            `🗒️ *Verses:* ${data.verses?.length || '?'}\n` +
+            `📘 *Translation:* ${data.translation_name || 'KJV'}\n\n` +
+            `${data.text.trim()}`;
 
-            await sendMediaMessage(client, m, { text: bibleText });
-        });
+        await sendMediaMessage(client, m, { text: bibleText });
     } catch (error) {
         console.error("Bible command error:", error);
         const message = error.message.includes('Invalid')
@@ -522,51 +567,6 @@ keith({
 });
 
 //========================================================================================================================
-
-keith({
-    pattern: "image",
-    alias: ["img", "imgsearch"],
-    desc: "Search for images using a search term",
-    category: "Search",
-    react: "🖼️",
-    filename: __filename
-}, async (context) => {
-    try {
-       // await ownerMiddleware(context, async () => {
-            const { client, m, text, botname, sendReply, sendMediaMessage } = context;
-
-            if (!text) {
-                return await sendReply(client, m, `📸 Please provide a search term.\n*Example:* image sunset`);
-            }
-
-            const results = await gis(text);
-            if (!results || results.length === 0) {
-                return await sendReply(client, m, '🔍 No images found for your search.');
-            }
-
-            const maxImages = 5;
-            const imageUrls = results
-                .slice(0, maxImages)
-                .map(res => res.url)
-                .filter(Boolean);
-
-            if (imageUrls.length === 0) {
-                return await sendReply(client, m, '⚠️ Images found, but no valid URLs were extracted.');
-            }
-
-            for (const url of imageUrls) {
-                await sendMediaMessage(client, m, {
-                    image: { url },
-                    caption: `📷 *Search Result*\n🔍 *Query:* ${text}\n🤖 Powered by ${botname}`
-                });
-            }
-        });
-    } catch (error) {
-        console.error("Image Command Error:", error);
-        context.reply(`❌ Failed to fetch images.\n_Error:_ ${error.message}`);
-    }
-});
-
 keith({
   pattern: "pair",
   alias: ["code", "linkcode"],
