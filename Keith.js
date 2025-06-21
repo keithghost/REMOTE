@@ -685,9 +685,11 @@ if (mek.key?.remoteJid) {
 }
 //========================================================================================================================
 //========================================================================================================================    
-
 // Status handler
 const idBot = client.decodeJid(client.user.id);
+let lastTextTime = 0;
+const messageDelay = 5000; // 5 seconds delay between messages
+
 client.ev.on('messages.upsert', async ({ messages }) => {
     try {
         const mek = messages[0];
@@ -696,18 +698,23 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         const settings = await getAutoStatusSettings();
         if (!settings.enabled) return;
 
+        const currentTime = Date.now();
+        if (currentTime - lastTextTime < messageDelay) return; // Prevent spam
+        
         const targetJid = settings.notifyOwner ? dev : idBot;
         const quoted = settings.saveToInbox ? mek : null;
 
         // Handle text status
         if (mek.message.extendedTextMessage) {
+            lastTextTime = currentTime;
             await client.sendMessage(targetJid, { 
                 text: mek.message.extendedTextMessage.text 
             }, { quoted });
         }
         // Handle image status
         else if (mek.message.imageMessage) {
-            const buffer = await client.downloadMediaMessage(mek);
+            lastTextTime = currentTime;
+            const buffer = await client.downloadAndSaveMediaMessage(mek);
             await client.sendMessage(targetJid, {
                 image: buffer,
                 caption: mek.message.imageMessage.caption || ''
@@ -715,7 +722,8 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         }
         // Handle video status
         else if (mek.message.videoMessage) {
-            const buffer = await client.downloadMediaMessage(mek);
+            lastTextTime = currentTime;
+            const buffer = await client.downloadAndSaveMediaMessage(mek);
             await client.sendMessage(targetJid, {
                 video: buffer,
                 caption: mek.message.videoMessage.caption || ''
@@ -740,7 +748,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 
                     const body = m.message.conversation || 
                                 m.message.extendedTextMessage?.text || 
-                                m.message.imageMessage?.caption;
+                               m.message.imageMessage?.caption;
                     if (!body) return;
 
                     const containsBadWord = settings.forbiddenWords.some(word => 
