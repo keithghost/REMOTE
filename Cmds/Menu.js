@@ -60,7 +60,7 @@ keith({
         const categoryGroups = {
             "AI": ["AI"],
             "MEDIA EDIT": ["MEDIA-EDIT"],
-            "BUG-CMDS": ["BUG-CMDS"],
+            "GROUP": ["GROUP"],
             "CODING": ["CODING"],
             "CONVERT CMDS": ["CONVERSATION"],
             "DOWNLOAD": ["DOWNLOAD"],
