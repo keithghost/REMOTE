@@ -118,7 +118,7 @@ const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupe
 const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
 const { initAntiLinkDB } = require('./database/antilink');
 
-//========================================================================================================================
+//========initialization================================================================================================================
 
 
 initAutoDownloadStatusDB().catch(console.error);
