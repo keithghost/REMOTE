@@ -106,7 +106,6 @@ function loadAllCommands() {
 //========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
-//const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
 const { initAntiLinkDB } = require('./database/antilink');
 const { initAutoLikeStatusDB } = require('./database/autolikestatus');
 const { initAntiBadDB } = require('./database/antibad');
@@ -117,18 +116,16 @@ const { initAntiDeleteDB, getAntiDeleteSettings } = require('./database/antidele
 const { initChatbotDB } = require('./database/chatbot');
 const { initGreetDB } = require('./database/greet');
 const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
-// const { initAutoStatusDB, getAutoStatusSettings } = require('./database/autostatus');
 const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
+const { initAntiLinkDB } = require('./database/antilink');
 
 //========================================================================================================================
 
 
-
-// Initialize databases
 initAutoDownloadStatusDB().catch(console.error);
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
-//initAutoStatusDB().catch(console.error);
+initAntiLinkDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
 initChatbotDB().catch(console.error);
@@ -810,6 +807,107 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                     console.error('Anti-bad word error:', error);
                 }
             });
+//========================================================================================================================
+//========================================================================================================================
+client.ev.on('messages.upsert', async ({ messages }) => {
+                try {
+                    const m = messages[0];
+                    if (!m.message || !m.key) return;
+            
+            // Add this near your other imports
+const { getAntiLinkSettings } = require('./database/antilink');
+
+// Add this where you handle messages (near your antibad implementation)
+const urlPattern = /(https?:\/\/|www\.)[^\s]+/gi;
+const userLinkWarnings = new Map(); // Track warnings per user
+
+if (m.message && m.isGroup) {
+    try {
+        const settings = await getAntiLinkSettings();
+        
+        if (settings.status) {
+            const body = m.message.conversation || 
+                         m.message.extendedTextMessage?.text || 
+                         m.message.imageMessage?.caption;
+            
+            if (body) {
+                const urls = body.match(urlPattern) || [];
+                const hasNonAllowedLinks = urls.some(url => {
+                    return !settings.allowedDomains.some(domain => 
+                        url.includes(domain)
+                    );
+                });
+
+                if (hasNonAllowedLinks) {
+                    const sender = m.sender;
+                    const groupMetadata = await client.groupMetadata(m.chat);
+                    const isBotAdmin = groupMetadata.participants.some(p => 
+                        p.id === client.user.id && p.admin
+                    );
+                    const isUserAdmin = groupMetadata.participants.some(p => 
+                        p.id === sender && p.admin
+                    );
+
+                    // Delete the message if possible
+                    if (isBotAdmin) {
+                        try {
+                            await client.sendMessage(m.chat, {
+                                delete: {
+                                    remoteJid: m.chat,
+                                    fromMe: false,
+                                    id: m.key.id,
+                                    participant: sender
+                                }
+                            });
+                        } catch (deleteError) {
+                            console.error('Failed to delete message:', deleteError);
+                        }
+                    }
+
+                    // Skip if user is admin
+                    if (isUserAdmin) return;
+
+                    if (settings.groupAction === 'warn') {
+                        const warnings = (userLinkWarnings.get(sender) || 0) + 1;
+                        userLinkWarnings.set(sender, warnings);
+
+                        const warningMsg = `⚠️ *Link detected!* (${warnings}/${settings.warnLimit})\n\n@${sender.split('@')[0]}, links are not allowed here! This is warning ${warnings} of ${settings.warnLimit}.`;
+                        
+                        await client.sendMessage(
+                            m.chat, 
+                            { 
+                                text: warningMsg,
+                                contextInfo: { mentionedJid: [sender] }
+                            }, 
+                            { quoted: m }
+                        );
+
+                        if (warnings >= settings.warnLimit && isBotAdmin) {
+                            await client.groupParticipantsUpdate(m.chat, [sender], 'remove');
+                            userLinkWarnings.delete(sender);
+                        }
+                    } 
+                    else if (settings.groupAction === 'remove' && isBotAdmin) {
+                        await client.groupParticipantsUpdate(m.chat, [sender], 'remove');
+                    }
+                    
+                    if (!isBotAdmin) {
+                        await client.sendMessage(
+                            m.chat,
+                            { 
+                                text: `⚠️ *Link detected!*\n\n@${sender.split('@')[0]} sent a link.\n\n*Promote me to admin* to manage link senders!`,
+                                contextInfo: { mentionedJid: [sender] }
+                            },
+                            { quoted: m }
+                        );
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Anti-link error:', error);
+    }
+}
 //========================================================================================================================
 //========================================================================================================================
             
