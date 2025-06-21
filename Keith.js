@@ -815,8 +815,7 @@ const { getAntiLinkSettings } = require('./database/antilink');
 const urlPattern = /(https?:\/\/|www\.)[^\s]+/gi;
 const userLinkWarnings = new Map(); // Track warnings per user
 
-if (m.message && m.isGroup) {
-    try {
+
         const settings = await getAntiLinkSettings();
         
         if (settings.status) {
