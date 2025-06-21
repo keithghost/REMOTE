@@ -807,11 +807,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
             });
 //========================================================================================================================
 //========================================================================================================================
-client.ev.on('messages.upsert', async ({ messages }) => {
-                try {
-                    const m = messages[0];
-                    if (!m.message || !m.key) return;
-            
+
             // Add this near your other imports
 const { getAntiLinkSettings } = require('./database/antilink');
 
