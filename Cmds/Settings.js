@@ -19,7 +19,7 @@ keith({
     react: "🎉",
     filename: __filename
 }, async (context) => {
-    await adminMiddleware(context, async () => {
+    await ownerMiddleware(context, async () => {
         const { args, prefix, reply } = context;
         const [action, ...rest] = args;
         const value = rest.join(' ');
