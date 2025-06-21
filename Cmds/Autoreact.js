@@ -2,7 +2,7 @@ const { keith } = require('../commandHandler');
 const { getAntiBadSettings, updateAntiBadSettings } = require('../database/antibad');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 //const { keith } = require('../commandHandler');
-const { getAntiLinkSettings, updateAntiLinkSettings } = require('../database/antilink');
+/*const { getAntiLinkSettings, updateAntiLinkSettings } = require('../database/antilink');
 
 keith({
   pattern: "antilink",
@@ -113,7 +113,7 @@ keith({
           );
     }
   });
-});
+});*/
 const {
   addSudoNumber,
   getAllSudoNumbers,
