@@ -117,10 +117,11 @@ const { initGreetDB } = require('./database/greet');
 const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
 const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
 const { initAntiLinkDB } = require('./database/antilink');
+const { initAntiMentionDB } = require('./database/antimention');
 
 //========initialization================================================================================================================
 
-
+initAntiMentionDB().catch(console.error);
 initAutoDownloadStatusDB().catch(console.error);
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
@@ -805,6 +806,86 @@ client.ev.on('messages.upsert', async ({ messages }) => {
                     console.error('Anti-bad word error:', error);
                 }
             });
+//========================================================================================================================
+
+// Add this with other imports
+const { getAntiMentionSettings } = require('./database/antimention');
+
+// In your message handler
+if (m.message) {
+    try {
+        // Check for status mentions
+        const isStatusMention = 
+            m.message?.protocolMessage?.type === 'STATUS_MENTION_MESSAGE' ||
+            m.message?.groupStatusMentionMessage?.message?.protocolMessage?.type === 'STATUS_MENTION_MESSAGE' ||
+            m.message?.statusMentionMessage?.message?.protocolMessage?.type === 'STATUS_MENTION_MESSAGE';
+
+        if (isStatusMention) {
+            const settings = await getAntiMentionSettings();
+            
+            if (settings.status) {
+                const sender = m.key.participant || m.key.remoteJid;
+                const isGroup = m.key.remoteJid.endsWith('@g.us');
+
+                // Always delete the message first if possible
+                try {
+                    await client.sendMessage(m.key.remoteJid, {
+                        delete: {
+                            remoteJid: m.key.remoteJid,
+                            fromMe: false,
+                            id: m.key.id,
+                            participant: sender
+                        }
+                    });
+                } catch (deleteError) {
+                    console.error('Failed to delete status mention:', deleteError);
+                }
+
+                if (isGroup) {
+                    const groupMetadata = await client.groupMetadata(m.key.remoteJid);
+                    const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
+                    const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
+
+                    if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
+                        await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                        await client.sendMessage(
+                            m.key.remoteJid, 
+                            { 
+                                text: `🚫 @${sender.split('@')[0]} has been removed for mentioning status.`,
+                                contextInfo: { mentionedJid: [sender] }
+                            }
+                        );
+                    } else {
+                        await client.sendMessage(
+                            m.key.remoteJid, 
+                            { 
+                                text: `⚠️ @${sender.split('@')[0]}, mentioning status is not allowed here!`,
+                                contextInfo: { mentionedJid: [sender] }
+                            }
+                        );
+                    }
+                } else {
+                    // Private chat handling
+                    if (settings.privateAction === 'block') {
+                        await client.sendMessage(
+                            sender,
+                            { text: '🚫 You have been blocked for mentioning status!' }
+                        );
+                        await client.updateBlockStatus(sender, 'block');
+                    } else {
+                        await client.sendMessage(
+                            sender,
+                            { text: '⚠️ Mentioning status is not allowed!' }
+                        );
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Anti-mention error:', error);
+    }
+}
+            
 //========================================================================================================================
 //========================================================================================================================
 // Add this near your other imports
