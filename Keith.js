@@ -396,7 +396,16 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         console.error('Error in antidelete handler:', error);
     }
 });
-
+//========================================================================================================================    
+//========================================================================================================================
+client.ev.on("messages.upsert", async (chatUpdate) => {
+        try {
+            const mek = chatUpdate.messages[0];
+            if (!mek.message) return;
+            mek.message = mek.message.ephemeralMessage?.message || mek.message;
+            
+            const m = smsg(client, mek, store);
+            KeithLogger.logMessage(m);
 
     
 //========================================================================================================================
@@ -486,15 +495,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
     }
 
     //========================================================================================================================            
-    client.ev.on("messages.upsert", async (chatUpdate) => {
-        try {
-            const mek = chatUpdate.messages[0];
-            if (!mek.message) return;
-            mek.message = mek.message.ephemeralMessage?.message || mek.message;
-            
-            const m = smsg(client, mek, store);
-            KeithLogger.logMessage(m);
-
+    
             if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
 
             const body = (m.mtype === "conversation" ? m.message?.conversation :
