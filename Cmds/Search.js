@@ -1,13 +1,59 @@
 
 const { keith } = require('../commandHandler');
 const fetch = require('node-fetch');
+const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
+const { promisify } = require('util');
+const gis = promisify(require('g-i-s'));
 
+keith({
+    pattern: "image",
+    alias: ["img", "imgsearch"],
+    desc: "Search for images using a search term",
+    category: "Search",
+    react: "🖼️",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, botname, sendReply, sendMediaMessage } = context;
+
+            if (!text) {
+                return await sendReply(client, m, `📸 Please provide a search term.\n*Example:* image sunset`);
+            }
+
+            const results = await gis(text);
+            if (!results || results.length === 0) {
+                return await sendReply(client, m, '🔍 No images found for your search.');
+            }
+
+            const maxImages = 5;
+            const imageUrls = results
+                .slice(0, maxImages)
+                .map(res => res.url)
+                .filter(Boolean);
+
+            if (imageUrls.length === 0) {
+                return await sendReply(client, m, '⚠️ Images found, but no valid URLs were extracted.');
+            }
+
+            for (const url of imageUrls) {
+                await sendMediaMessage(client, m, {
+                    image: { url },
+                    caption: `📷 *Search Result*\n🔍 *Query:* ${text}\n🤖 Powered by ${botname}`
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Image Command Error:", error);
+        context.reply(`❌ Failed to fetch images.\n_Error:_ ${error.message}`);
+    }
+});
 
 keith({
   pattern: "pair",
   alias: ["code", "linkcode"],
   desc: "Check if phone number is on WhatsApp and fetch pairing code",
-  category: "Owner",
+  category: "Search",
   react: "🔗",
   filename: __filename
 }, async (context) => {
