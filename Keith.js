@@ -429,7 +429,7 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 
     
 //========================================================================================================================
-             (mek.key && mek.key.remoteJid === 'status@broadcast') {
+            if (mek.key && mek.key.remoteJid === 'status@broadcast') {
                 try {
                     const { getAutoLikeStatusSettings } = require('./database/autolikestatus');
                     const settings = await getAutoLikeStatusSettings();
@@ -490,7 +490,7 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                 } catch (error) {
                     console.error('Error handling auto-read:', error);
                 }
-            }
+              }
            
 
 
