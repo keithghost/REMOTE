@@ -11,10 +11,8 @@ const { getChatbotSettings, updateChatbotSettings } = require('../database/chatb
 const { getGreetSettings, updateGreetSettings, clearRepliedContacts } = require('../database/greet');
 const { getGroupEventsSettings, updateGroupEventsSettings } = require('../database/groupevents');
 const { getAntiDeleteSettings, updateAntiDeleteSettings } = require('../database/antidelete');
-const { getAutoStatusSettings, updateAutoStatusSettings } = require('../database/autostatus');
+const { getAutoDownloadStatusSettings, updateAutoDownloadStatusSettings } = require('../database/autodownloadstatus');
 //========================================================================================================================
-//========================================================================================================================
- 
 keith({
     pattern: "autodownloadstatus",
     alias: ["statusdownloader", "autostatus"],
@@ -24,49 +22,48 @@ keith({
     filename: __filename
 }, async (context) => {
     await ownerMiddleware(context, async () => {
-        const { args, prefix, reply } = context;
-        const [action, value] = args.map(arg => arg?.toLowerCase());
+        const { m, args, prefix, reply } = context;
+        const subcommand = args[0]?.toLowerCase();
+        const value = args[1]?.toLowerCase();
 
-        const settings = await getAutoStatusSettings();
-
-        if (!action) {
-            const statusText = (setting, name) => `${setting ? '✅ ON' : '❌ OFF'} - *${name}*`;
+        const settings = await getAutoDownloadStatusSettings();
+        
+        if (!subcommand) {
+            // Show current settings
+            const status = settings.status ? '✅ ON' : '❌ OFF';
+            const target = settings.targetChat || 'Not set';
             
-            return await reply(
-                `*📥 Auto-Status Settings*\n\n` +
-                `${statusText(settings.enabled, 'Main Switch')}\n` +
-                `${statusText(settings.saveToInbox, 'Save to Inbox')}\n` +
-                `${statusText(settings.notifyOwner, 'Notify Owner')}\n\n` +
-                `*🛠 Usage Instructions:*\n` +
-                `▸ *${prefix}autostatus on/off* - Toggle main switch\n` +
-                `▸ *${prefix}autostatus inbox on/off* - Toggle saving to inbox\n` +
-                `▸ *${prefix}autostatus notify on/off* - Toggle owner notifications`
+            return await m.reply(
+                `*Auto-Download Status Settings*\n\n` +
+                `🔹 Status: ${status}\n` +
+                `🔹 Target Chat: ${target}\n\n` +
+                `*Usage:*\n` +
+                `▸ ${prefix}autodownloadstatus on/off - Toggle feature\n` +
+                `▸ ${prefix}autodownloadstatus target <chat-id> - Set target chat\n` +
+                `(Use "me" for your personal chat)`
             );
         }
 
-        const toggleSetting = async (field, name) => {
-            if (!['on', 'off'].includes(value)) {
-                return await reply(`❌ Please specify "on" or "off" for ${name}`);
-            }
-            const newValue = value === 'on';
-            await updateAutoStatusSettings({ [field]: newValue });
-            return await reply(`✅ ${name} ${newValue ? 'enabled' : 'disabled'}`);
-        };
-
-        switch (action) {
+        switch (subcommand) {
             case 'on':
-            case 'off':
-                await updateAutoStatusSettings({ enabled: action === 'on' });
-                return await reply(`✅ Auto-status downloader ${action === 'on' ? 'enabled' : 'disabled'}`);
-
-            case 'inbox':
-                return await toggleSetting('saveToInbox', 'Inbox saving');
-
-            case 'notify':
-                return await toggleSetting('notifyOwner', 'Owner notifications');
-
+            case 'off': {
+                const newStatus = subcommand === 'on';
+                if (settings.status === newStatus) {
+                    return await reply(`Auto-download status is already ${newStatus ? 'enabled' : 'disabled'}.`);
+                }
+                await updateAutoDownloadStatusSettings({ status: newStatus });
+                return await reply(`Auto-download status has been ${newStatus ? 'enabled' : 'disabled'}.`);
+            }
+                
+            case 'target': {
+                if (!value) return await m.reply('Please provide a target chat ID or "me".');
+                const targetChat = value === 'me' ? m.sender : value;
+                await updateAutoDownloadStatusSettings({ targetChat });
+                return await reply(`Target chat set to: ${targetChat}`);
+            }
+                
             default:
-                return await reply('❌ Invalid command. Use without arguments to see usage.');
+                return await reply('Invalid subcommand. Use "on", "off", or "target".');
         }
     });
 });
