@@ -6,6 +6,39 @@ const PDFDocument = require('pdfkit');
 const { Document, Packer, Paragraph, TextRun } = require('docx');
 const XLSX = require('xlsx');
 const path = require('path');
+const translatte = require('translatte');
+
+keith({
+    pattern: "translate",
+    alias: ["trt", "tr"],
+    desc: "Translate a quoted message to your target language",
+    category: "Utility",
+    react: "🌐",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, reply } = context;
+
+        if (!m.quoted || !m.quoted.text) {
+            return reply("❌ Please quote a message to translate.");
+        }
+
+        const langCode = text.trim();
+
+        if (!langCode) {
+            return reply("❌ Provide a target language code.\n*Example:* `translate en`\nUse `langcode` to view available language codes.");
+        }
+
+        const quotedText = m.quoted.text;
+
+        const translation = await translatte(quotedText, { to: langCode });
+
+        reply(`🔤 *Translated Text:* \n${translation.text}`);
+    } catch (error) {
+        console.error("Translate command error:", error);
+        context.reply("❌ An error occurred while translating the message. Please try again later.");
+    }
+});
 
 
 keith({
