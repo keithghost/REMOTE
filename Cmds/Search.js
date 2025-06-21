@@ -5,6 +5,165 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { promisify } = require('util');
 const gis = promisify(require('g-i-s'));
 
+
+//========================================================================================================================
+keith({
+    pattern: "element",
+    alias: ["chemical", "atom"],
+    desc: "Search for a chemical element by name or symbol",
+    category: "Search",
+    react: "🧪",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, sendReply, sendMediaMessage, botname } = context;
+
+        if (!text) {
+            return sendReply(client, m, '🔬 Please provide an element name.\n*Example:* `element sodium`\n\nType *elementlist* to view all elements.');
+        }
+
+        const apiUrl = `https://api.popcat.xyz/periodic-table?element=${encodeURIComponent(text)}`;
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) throw new Error('Element not found');
+
+        const data = await response.json();
+
+        if (!data?.name) {
+            return sendReply(client, m, '❌ Element not found. Try using its symbol or type *elementlist*.');
+        }
+
+        const {
+            name, symbol, atomic_number,
+            atomic_mass, period, phase,
+            summary, image
+        } = data;
+
+        const caption = `⚛️ *${botname} ELEMENT DATA*\n\n` +
+            `*Name:* ${name}\n` +
+            `*Symbol:* ${symbol}\n` +
+            `*Atomic Number:* ${atomic_number}\n` +
+            `*Atomic Mass:* ${atomic_mass}\n` +
+            `*Period:* ${period}\n` +
+            `*Phase:* ${phase}\n\n` +
+            `📝 *Summary:*\n${summary.trim()}\n\n` +
+            `🔎 Type *elementlist* to see all elements.`;
+
+        await sendMediaMessage(client, m, {
+            image: { url: image },
+            caption
+        });
+
+    } catch (error) {
+        console.error("Element command error:", error);
+        const message = error.message.includes('not found')
+            ? '🔍 Element not found. Check the spelling or try using its chemical symbol.'
+            : '⚠️ An error occurred while fetching element data.';
+        context.reply(message);
+    }
+});
+
+//========================================================================================================================
+
+
+keith({
+    pattern: "biblelist",
+    alias: ["bbooks", "scripturebooks"],
+    desc: "Get a list of all Bible books (Old & New Testament)",
+    category: "Search",
+    react: "📚",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, botname, author, sendMediaMessage } = context;
+
+        const image = {
+            url: "https://files.catbox.moe/yldsxj.jpg"
+        };
+
+        const caption = `
+${botname} 𝐁𝐈𝐁𝐋𝐄 𝐁𝐎𝐎𝐊 𝐋𝐈𝐒𝐓
+
+*Old Testament:*
+1. Genesis     2. Exodus       3. Leviticus     4. Numbers      5. Deuteronomy
+6. Joshua      7. Judges       8. Ruth          9. 1 Samuel     10. 2 Samuel
+11. 1 Kings    12. 2 Kings     13. 1 Chronicles 14. 2 Chronicles 15. Ezra
+16. Nehemiah   17. Esther      18. Job          19. Psalms      20. Proverbs
+21. Ecclesiastes 22. Song of Solomon 23. Isaiah   24. Jeremiah   25. Lamentations
+26. Ezekiel    27. Daniel      28. Hosea        29. Joel        30. Amos
+31. Obadiah    32. Jonah       33. Micah        34. Nahum       35. Habakkuk
+36. Zephaniah  37. Haggai      38. Zechariah    39. Malachi
+
+*New Testament:*
+1. Matthew     2. Mark         3. Luke          4. John         5. Acts
+6. Romans      7. 1 Corinthians 8. 2 Corinthians 9. Galatians   10. Ephesians
+11. Philippians 12. Colossians 13. 1 Thessalonians 14. 2 Thessalonians 15. 1 Timothy
+16. 2 Timothy  17. Titus       18. Philemon     19. Hebrews     20. James
+21. 1 Peter    22. 2 Peter     23. 1 John       24. 2 John      25. 3 John
+26. Jude       27. Revelation
+
+*✍️ Regards:* ${author}
+        `;
+
+        await sendMediaMessage(client, m, {
+            image,
+            caption
+        });
+
+    } catch (error) {
+        console.error("Bible list command error:", error);
+        context.reply("❌ Unable to fetch Bible book list. Please try again later.");
+    }
+});
+
+//========================================================================================================================
+
+keith({
+    pattern: "bible",
+    alias: ["verse", "scripture"],
+    desc: "Fetch a Bible verse by reference (e.g. John 3:16)",
+    category: "Search",
+    react: "📖",
+    filename: __filename
+}, async (context) => {
+    try {
+       // await ownerMiddleware(context, async () => {
+            const { client, m, text, sendReply, sendMediaMessage, botname } = context;
+
+            if (!text) {
+                return sendReply(client, m, '📖 Please specify the book, chapter, and verse.\n*Example:* bible john 3:16');
+            }
+
+            const reference = encodeURIComponent(text);
+            const apiUrl = `https://bible-api.com/${reference}?translation=kjv`;
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error('API request failed');
+
+            const data = await response.json();
+            if (!data?.reference || !data?.text) {
+                throw new Error('Invalid scripture reference');
+            }
+
+            const bibleText = `📖 *${botname} Bible Engine*\n\n` +
+                `📚 *Reference:* ${data.reference}\n` +
+                `🗒️ *Verses:* ${data.verses?.length || '?'}\n` +
+                `📘 *Translation:* ${data.translation_name || 'KJV'}\n\n` +
+                `${data.text.trim()}`;
+
+            await sendMediaMessage(client, m, { text: bibleText });
+        });
+    } catch (error) {
+        console.error("Bible command error:", error);
+        const message = error.message.includes('Invalid')
+            ? '❌ Invalid scripture reference. Try something like `bible John 3:16`'
+            : '⛔ Error fetching Bible text. Please try again later.';
+        context.reply(message);
+    }
+});
+
+//========================================================================================================================
+
 keith({
     pattern: "image",
     alias: ["img", "imgsearch"],
@@ -14,7 +173,7 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-        await ownerMiddleware(context, async () => {
+       // await ownerMiddleware(context, async () => {
             const { client, m, text, botname, sendReply, sendMediaMessage } = context;
 
             if (!text) {
