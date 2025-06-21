@@ -20,7 +20,7 @@ keith({
             } = context;
 
             if (!text) {
-                return sendReply(client, m, "📌 Provide number(s) like:\n`add 254114018035` or `add 2547xxxxxxx,2541xxxxxxx`");
+                return sendReply(client, m, "📌 Provide number(s) like:\n`add 254748387615` or `add 2547xxxxxxx,2541xxxxxxx`");
             }
 
             const currentParticipants = participants.map(p => p.id);
