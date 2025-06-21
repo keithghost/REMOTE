@@ -2,9 +2,86 @@
 const { keith } = require('../commandHandler');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
+const { getBinaryNodeChild, getBinaryNodeChildren } = require('@whiskeysockets/baileys');
 
-const { keith } = require('../commandHandler');
-const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
+keith({
+    pattern: "add",
+    alias: ["adduser"],
+    desc: "Add one or more users to the group",
+    category: "Group",
+    react: "➕",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const {
+                client, m, text, participants, pushname,
+                groupMetadata, sendReply
+            } = context;
+
+            if (!text) {
+                return sendReply(client, m, "📌 Provide number(s) like:\n`add 254114018035` or `add 2547xxxxxxx,2541xxxxxxx`");
+            }
+
+            const currentParticipants = participants.map(p => p.id);
+            const targets = text.split(',')
+                .map(num => num.replace(/[^0-9]/g, ''))
+                .filter(num => num.length > 4 && num.length < 20 && !currentParticipants.includes(num + '@s.whatsapp.net'));
+
+            if (targets.length === 0) {
+                return sendReply(client, m, "❌ No valid or unique numbers found to add.");
+            }
+
+            const existingUsers = (await Promise.all(
+                targets.map(async num => [
+                    num,
+                    await client.onWhatsApp(num + '@s.whatsapp.net')
+                ])
+            )).filter(([_, exists]) => exists?.[0]?.exists)
+              .map(([num]) => num + '@c.us');
+
+            if (existingUsers.length === 0) {
+                return sendReply(client, m, "🚫 None of the numbers are registered on WhatsApp.");
+            }
+
+            const response = await client.query({
+                tag: 'iq',
+                attrs: {
+                    type: 'set',
+                    xmlns: 'w:g2',
+                    to: m.chat
+                },
+                content: existingUsers.map(jid => ({
+                    tag: 'add',
+                    attrs: {},
+                    content: [{ tag: 'participant', attrs: { jid } }]
+                }))
+            });
+
+            const addNode = getBinaryNodeChild(response, 'add');
+            const failed = getBinaryNodeChildren(addNode, 'participant');
+            const inviteCode = await client.groupInviteCode(m.chat);
+
+            for (const user of failed.filter(p => ['401', '403', '408'].includes(p.attrs.error))) {
+                const jid = user.attrs.jid;
+                const reason = {
+                    '401': 'has blocked the bot.',
+                    '403': 'has group privacy enabled.',
+                    '408': 'recently left the group.'
+                }[user.attrs.error] || 'could not be added.';
+
+                await m.reply(`⚠️ @${jid.split('@')[0]} ${reason}`);
+
+                const inviteMsg = `${pushname} is inviting you to join the group *${groupMetadata.subject}*:\n\nhttps://chat.whatsapp.com/${inviteCode}\n\n_By ${context.botname}_`;
+
+                await client.sendMessage(jid, { text: inviteMsg }, { quoted: m });
+            }
+        });
+    } catch (error) {
+        console.error("Add command error:", error);
+        context.reply("❌ Failed to add user(s). Please check numbers and permissions.");
+    }
+});
 
 keith({
     pattern: "del",
