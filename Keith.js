@@ -117,17 +117,18 @@ const { initAntiDeleteDB, getAntiDeleteSettings } = require('./database/antidele
 const { initChatbotDB } = require('./database/chatbot');
 const { initGreetDB } = require('./database/greet');
 const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
- const { initAutoStatusDB, getAutoStatusSettings } = require('./database/autostatus');
-
+// const { initAutoStatusDB, getAutoStatusSettings } = require('./database/autostatus');
+const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
 
 //========================================================================================================================
 
 
 
 // Initialize databases
+initAutoDownloadStatusDB().catch(console.error);
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
-initAutoStatusDB().catch(console.error);
+//initAutoStatusDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
 initChatbotDB().catch(console.error);
@@ -686,51 +687,41 @@ if (mek.key?.remoteJid) {
 //========================================================================================================================
 //========================================================================================================================    
 // Status handler
-const idBot = client.decodeJid(client.user.id);
-let lastTextTime = 0;
-const messageDelay = 5000; // 5 seconds delay between messages
-
+            // Status download handler
 client.ev.on('messages.upsert', async ({ messages }) => {
     try {
         const mek = messages[0];
         if (!mek.key || mek.key.remoteJid !== 'status@broadcast') return;
 
-        const settings = await getAutoStatusSettings();
-        if (!settings.enabled) return;
-
-        const currentTime = Date.now();
-        if (currentTime - lastTextTime < messageDelay) return; // Prevent spam
+        const { getAutoDownloadStatusSettings } = require('./database/autodownloadstatus');
+        const settings = await getAutoDownloadStatusSettings();
         
-        const targetJid = settings.notifyOwner ? dev : idBot;
-        const quoted = settings.saveToInbox ? mek : null;
+        if (!settings.status || !settings.targetChat) return;
 
-        // Handle text status
+        const targetChat = settings.targetChat === 'me' ? m.sender : settings.targetChat;
+
         if (mek.message.extendedTextMessage) {
-            lastTextTime = currentTime;
-            await client.sendMessage(targetJid, { 
-                text: mek.message.extendedTextMessage.text 
-            }, { quoted });
-        }
-        // Handle image status
+            const stTxt = mek.message.extendedTextMessage.text;
+            await client.sendMessage(targetChat, { text: stTxt }, { quoted: mek });
+        } 
         else if (mek.message.imageMessage) {
-            lastTextTime = currentTime;
-            const buffer = await client.downloadAndSaveMediaMessage(mek);
-            await client.sendMessage(targetJid, {
-                image: buffer,
-                caption: mek.message.imageMessage.caption || ''
-            }, { quoted });
-        }
-        // Handle video status
+            const stMsg = mek.message.imageMessage.caption;
+            const stImg = await client.downloadAndSaveMediaMessage(mek.message.imageMessage);
+            await client.sendMessage(targetChat, 
+                { image: { url: stImg }, caption: stMsg }, 
+                { quoted: mek }
+            );
+        } 
         else if (mek.message.videoMessage) {
-            lastTextTime = currentTime;
-            const buffer = await client.downloadAndSaveMediaMessage(mek);
-            await client.sendMessage(targetJid, {
-                video: buffer,
-                caption: mek.message.videoMessage.caption || ''
-            }, { quoted });
+            const stMsg = mek.message.videoMessage.caption;
+            const stVideo = await client.downloadAndSaveMediaMessage(mek.message.videoMessage);
+            await client.sendMessage(targetChat, 
+                { video: { url: stVideo }, caption: stMsg }, 
+                { quoted: mek }
+            );
         }
     } catch (error) {
-        console.error('Error processing status:', error);
+        console.error('Error handling status download:', error);
     }
 });
 //========================================================================================================================
