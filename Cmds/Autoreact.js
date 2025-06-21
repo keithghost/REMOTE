@@ -1,7 +1,119 @@
 const { keith } = require('../commandHandler');
 const { getAntiBadSettings, updateAntiBadSettings } = require('../database/antibad');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
+//const { keith } = require('../commandHandler');
+const { getAntiLinkSettings, updateAntiLinkSettings } = require('../database/antilink');
 
+keith({
+  pattern: "antilink",
+  desc: "Anti-link manager",
+  category: "Moderation",
+  filename: __filename
+}, async (context) => {
+  await ownerMiddleware(context, async () => {
+    const { m, args, prefix, reply } = context;
+    const subcommand = args[0]?.toLowerCase();
+    const value = args[1]?.toLowerCase();
+
+    const settings = await getAntiLinkSettings();
+
+    if (!subcommand) {
+      const status = settings.status ? '✅ ON' : '❌ OFF';
+      const action = settings.groupAction.toUpperCase();
+      const domainList = settings.allowedDomains.slice(0, 5).join(', ') +
+        (settings.allowedDomains.length > 5 ? '...' : '');
+
+      return await reply(
+        `*Anti-Link Settings*\n\n` +
+        `🔹 Status: ${status}\n` +
+        `🔹 Group Action: ${action}\n` +
+        `🔹 Warn Limit: ${settings.warnLimit} warnings\n` +
+        `🔹 Allowed Domains: ${settings.allowedDomains.length} (${domainList})\n\n` +
+        `*Usage:*\n` +
+        `▸ ${prefix}antilink on/off\n` +
+        `▸ ${prefix}antilink action <warn/remove>\n` +
+        `▸ ${prefix}antilink warns <1-10>\n` +
+        `▸ ${prefix}antilink add <domain>\n` +
+        `▸ ${prefix}antilink remove <domain>\n` +
+        `▸ ${prefix}antilink list\n\n` +
+        `*Note:* WhatsApp domains (whatsapp.com, wa.me) are always allowed`
+      );
+    }
+
+    switch (subcommand) {
+      case 'on':
+      case 'off':
+        await updateAntiLinkSettings({ status: subcommand === 'on' });
+        return await reply(`Anti-link ${subcommand === 'on' ? 'enabled' : 'disabled'}.`);
+
+      case 'action':
+        if (!['warn', 'remove'].includes(value)) {
+          return await reply('Invalid action. Use either "warn" or "remove"');
+        }
+        await updateAntiLinkSettings({ groupAction: value });
+        return await reply(`Group action set to: ${value.toUpperCase()}`);
+
+      case 'warns':
+        case 'warnlimit':
+          const warnLimit = parseInt(value);
+          if (isNaN(warnLimit) || warnLimit < 1 || warnLimit > 10) {
+            return await reply('Warning limit must be a number between 1 and 10');
+          }
+          await updateAntiLinkSettings({ warnLimit });
+          return await reply(`Warning limit set to: ${warnLimit}`);
+
+      case 'add':
+          const domainToAdd = args[1]?.toLowerCase();
+          if (!domainToAdd || !domainToAdd.includes('.')) {
+            return await reply('Please provide a valid domain (e.g., "example.com")');
+          }
+          if (settings.allowedDomains.includes(domainToAdd)) {
+            return await reply(`"${domainToAdd}" is already in the allowed list`);
+          }
+          await updateAntiLinkSettings({ 
+              allowedDomains: [...settings.allowedDomains, domainToAdd] 
+          });
+          return await reply(`✅ Added "${domainToAdd}" to allowed domains`);
+
+      case 'remove':
+          const domainToRemove = args[1]?.toLowerCase();
+          if (!settings.allowedDomains.includes(domainToRemove)) {
+            return await reply(`"${domainToRemove}" not found in the allowed list`);
+          }
+          // Prevent removing WhatsApp domains
+          if (['whatsapp.com', 'wa.me'].includes(domainToRemove)) {
+            return await reply('Cannot remove WhatsApp domains');
+          }
+          await updateAntiLinkSettings({
+              allowedDomains: settings.allowedDomains.filter(d => d !== domainToRemove)
+          });
+          return await reply(`✅ Removed "${domainToRemove}" from allowed domains`);
+
+      case 'list':
+          if (settings.allowedDomains.length === 0) {
+            return await reply('The allowed domains list is currently empty');
+          }
+          const chunkSize = 20;
+          const domainChunks = [];
+          for (let i = 0; i < settings.allowedDomains.length; i += chunkSize) {
+            domainChunks.push(settings.allowedDomains.slice(i, i + chunkSize));
+          }
+
+          for (let i = 0; i < domainChunks.length; i++) {
+            await reply(
+              `*Allowed Domains (Chunk ${i + 1}/${domainChunks.length})*\n\n` +
+              domainChunks[i].map((d, j) => `${i * chunkSize + j + 1}. ${d}`).join('\n')
+            );
+          }
+          return;
+
+      default:
+          return await reply(
+            `Invalid command. Use ${prefix}antilink to see available options.\nExample: ${prefix}antilink add example.com`
+          );
+    }
+  });
+});
 const {
   addSudoNumber,
   getAllSudoNumbers,
