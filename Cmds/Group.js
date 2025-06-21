@@ -2,6 +2,43 @@
 const { keith } = require('../commandHandler');
 const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
+
+const { keith } = require('../commandHandler');
+const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
+
+keith({
+    pattern: "del",
+    alias: ["dele"],
+    desc: "Delete a quoted message (bot's or others')",
+    category: "Group",
+    react: "🗑️",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, reply } = context;
+
+            if (!m.quoted) {
+                return reply('⚠️ Please reply to the message you want to delete.');
+            }
+
+            const deleteParams = {
+                remoteJid: m.chat,
+                fromMe: m.quoted.isBaileys || m.quoted.sender === client.user.id, // `true` if it was sent by the bot
+                id: m.quoted.id,
+                participant: m.quoted.sender
+            };
+
+            await client.sendMessage(m.chat, { delete: deleteParams });
+
+            await client.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+        });
+    } catch (error) {
+        console.error("Delete command error:", error);
+        context.reply('❌ Failed to delete the message.');
+    }
+});
+
 //========================================================================================================================
 
 keith({
@@ -521,7 +558,7 @@ keith({
 
 keith({
     pattern: "delete",
-    alias: ["del", "remove"],
+    alias: ["deletee"],
     desc: "Delete a quoted message from the group",
     category: "Group",
     react: "🗑️",
@@ -740,8 +777,8 @@ keith({
 
 keith({
     pattern: "tagadmin",
-    alias: ["admins", "mentionadmins"],
-    desc: "Mention only group admins",
+    alias: ["mentionadmins", "admins"],
+    desc: "Mention all group admins with optional message",
     category: "Group",
     react: "🧑‍💼",
     filename: __filename
@@ -750,28 +787,35 @@ keith({
         await ownerMiddleware(context, async () => {
             const { client, m, participants, text, reply } = context;
 
-            const groupAdmins = participants.filter(member => member.admin).map(member => member.id);
+            const admins = participants.filter(p => p.admin).map(p => p.id);
 
-            if (groupAdmins.length === 0) {
-                return reply('_No admins found in the group._');
+            if (!admins || admins.length === 0) {
+                return reply("⚠️ No admins found in this group.");
             }
 
-            let message = `You have been tagged by ${m.pushName}.\n\nMessage: ${text || 'No Message!'}\n\n`;
+            let message = `🔔 *Admin Tag*\nYou have been tagged by @${m.sender.split('@')[0]}\n`;
+            message += `💬 *Message:* ${text || 'No message provided'}\n\n`;
 
-            groupAdmins.forEach((admin, i) => {
-                message += `${i + 1}. 🗿 @${admin.split('@')[0]}\n`;
+            admins.forEach((admin, i) => {
+                message += `${i + 1}. @${admin.split('@')[0]}\n`;
             });
 
             await client.sendMessage(
                 m.chat,
-                { text: message, mentions: groupAdmins },
+                {
+                    text: message,
+                    mentions: admins
+                },
                 { quoted: m }
             );
         });
     } catch (error) {
-        console.error("Error in tagadmin command:", error);
+        console.error("Tagadmin Error:", error);
+        context.reply("❌ Failed to tag admins.");
     }
 });
+
+
 
 //========================================================================================================================
 
@@ -818,32 +862,43 @@ keith({
 });
 
 //========================================================================================================================
+
+
 keith({
     pattern: "tagall",
-    alias: ["mentionall", "alltag"],
-    desc: "Mention everyone in the group with an optional message",
+    alias: ["mentionall", "allmembers"],
+    desc: "Mention every member in the group with an optional message",
     category: "Group",
-    react: "📣",
+    react: "📢",
     filename: __filename
 }, async (context) => {
     try {
         await ownerMiddleware(context, async () => {
-            const { client, m, participants, text } = context;
+            const { client, m, participants, text, reply } = context;
 
-            let message = `You have been tagged by ${m.pushName}.\n\nMessage: ${text || 'No Message!'}\n\n`;
+            if (!participants || participants.length === 0) {
+                return reply("⚠️ No participants found in this group.");
+            }
+
+            let message = `📢 *Tag All*\nYou have been tagged by @${m.sender.split('@')[0]}.\n\n`;
+            message += `💬 *Message:* ${text || 'No additional message.'}\n\n`;
 
             participants.forEach((member, index) => {
-                message += `${index + 1}. 📧 @${member.id.split('@')[0]}\n`;
+                message += `${index + 1}. @${member.id.split('@')[0]}\n`;
             });
 
             await client.sendMessage(
                 m.chat,
-                { text: message, mentions: participants.map(p => p.id) },
+                {
+                    text: message,
+                    mentions: participants.map(p => p.id)
+                },
                 { quoted: m }
             );
         });
     } catch (error) {
-        console.error("Error sending tagall message:", error);
+        console.error("TagAll Error:", error);
+        context.reply("❌ Failed to tag all group members.");
     }
 });
 
