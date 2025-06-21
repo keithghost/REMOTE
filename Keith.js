@@ -687,6 +687,7 @@ if (mek.key?.remoteJid) {
 //========================================================================================================================    
 
 // Status handler
+const idBot = client.decodeJid(client.user.id);
 client.ev.on('messages.upsert', async ({ messages }) => {
     try {
         const mek = messages[0];
