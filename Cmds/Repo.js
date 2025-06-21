@@ -47,7 +47,7 @@ keith({
         │ ✞ *Last Update:* ${lastUpdateDate}
         │ ✞ *Owner:* ${repoInfo.owner}
         │ ✞ *sc:* ${repoInfo.url}
-        │ ✞ *Session:* keithpair.onrender.com
+        │ ✞ *Session:* keithpairing.zone.id
         ╰───────────────────
         `;
 
