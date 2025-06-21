@@ -429,6 +429,76 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 
     
 //========================================================================================================================
+             (mek.key && mek.key.remoteJid === 'status@broadcast') {
+                try {
+                    const { getAutoLikeStatusSettings } = require('./database/autolikestatus');
+                    const settings = await getAutoLikeStatusSettings();
+                    
+                    if (settings.status && settings.emojis && settings.emojis.length > 0) {
+                        const keithlike = await client.decodeJid(client.user.id);
+                        const randomEmoji = settings.emojis[Math.floor(Math.random() * settings.emojis.length)];
+
+                        await client.sendMessage(mek.key.remoteJid, {
+                            react: {
+                                text: randomEmoji,
+                                key: mek.key,
+                            }
+                        }, { statusJidList: [mek.key.participant, keithlike] });
+                        
+                        if (settings.delay > 0) {
+                            await new Promise(resolve => setTimeout(resolve, settings.delay));
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling status reaction:', error);
+                }
+            }
+    
+//========================================================================================================================            
+
+              if (mek.key && mek.key.remoteJid === 'status@broadcast') {
+                try {
+                    const { getAutoViewSettings } = require('./database/autoview');
+                    const settings = await getAutoViewSettings();
+                    
+                    if (settings.status) {
+                        await client.readMessages([mek.key]);
+                    }
+                } catch (error) {
+                    console.error('Error handling status view:', error);
+                }
+              }
+    
+//========================================================================================================================
+            
+              if (mek.key?.remoteJid) {
+                try {
+                    const { getAutoReadSettings } = require('./database/autoread');
+                    const settings = await getAutoReadSettings();
+                    
+                    if (settings.status) {
+                        const isPrivate = mek.key.remoteJid.endsWith('@s.whatsapp.net');
+                        const isGroup = mek.key.remoteJid.endsWith('@g.us');
+                        
+                        const shouldReadPrivate = settings.chatTypes.includes('private') && isPrivate;
+                        const shouldReadGroup = settings.chatTypes.includes('group') && isGroup;
+
+                        if (shouldReadPrivate || shouldReadGroup) {
+                            await client.readMessages([mek.key]);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling auto-read:', error);
+                }
+            }
+           
+
+
+
+            
+
+    
+//========================================================================================================================
 
     function saveUserJid(jid) {
         try {
@@ -722,41 +792,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 });
 //========================================================================================================================
 //========================================================================================================================     if (mek.key && mek.key.remoteJid === 'status@broadcast') {
-   if (mek.key && mek.key.remoteJid === 'status@broadcast') {
-                try {
-                    const { getAutoViewSettings } = require('./database/autoview');
-                    const settings = await getAutoViewSettings();
-                    
-                    if (settings.status) {
-                        await client.readMessages([mek.key]);
-                    }
-                } catch (error) {
-                    console.error('Error handling status view:', error);
-                }
-            }
-//========================================================================================================================
-//========================================================================================================================
-
-             (mek.key?.remoteJid) {
-                try {
-                    const { getAutoReadSettings } = require('./database/autoread');
-                    const settings = await getAutoReadSettings();
-                    
-                    if (settings.status) {
-                        const isPrivate = mek.key.remoteJid.endsWith('@s.whatsapp.net');
-                        const isGroup = mek.key.remoteJid.endsWith('@g.us');
-                        
-                        const shouldReadPrivate = settings.chatTypes.includes('private') && isPrivate;
-                        const shouldReadGroup = settings.chatTypes.includes('group') && isGroup;
-
-                        if (shouldReadPrivate || shouldReadGroup) {
-                            await client.readMessages([mek.key]);
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error handling auto-read:', error);
-                }
-            }
+   
 //========================================================================================================================
             // Anti-bad word handler
 //========================================================================================================================
