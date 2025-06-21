@@ -106,7 +106,7 @@ function loadAllCommands() {
 //========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
-const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
+//const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
 const { initAntiLinkDB } = require('./database/antilink');
 const { initAutoLikeStatusDB } = require('./database/autolikestatus');
 const { initAntiBadDB } = require('./database/antibad');
