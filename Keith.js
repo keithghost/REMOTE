@@ -721,6 +721,43 @@ client.ev.on('messages.upsert', async ({ messages }) => {
     }
 });
 //========================================================================================================================
+//========================================================================================================================     if (mek.key && mek.key.remoteJid === 'status@broadcast') {
+   if (mek.key && mek.key.remoteJid === 'status@broadcast') {
+                try {
+                    const { getAutoViewSettings } = require('./database/autoview');
+                    const settings = await getAutoViewSettings();
+                    
+                    if (settings.status) {
+                        await client.readMessages([mek.key]);
+                    }
+                } catch (error) {
+                    console.error('Error handling status view:', error);
+                }
+            }
+//========================================================================================================================
+//========================================================================================================================
+
+             (mek.key?.remoteJid) {
+                try {
+                    const { getAutoReadSettings } = require('./database/autoread');
+                    const settings = await getAutoReadSettings();
+                    
+                    if (settings.status) {
+                        const isPrivate = mek.key.remoteJid.endsWith('@s.whatsapp.net');
+                        const isGroup = mek.key.remoteJid.endsWith('@g.us');
+                        
+                        const shouldReadPrivate = settings.chatTypes.includes('private') && isPrivate;
+                        const shouldReadGroup = settings.chatTypes.includes('group') && isGroup;
+
+                        if (shouldReadPrivate || shouldReadGroup) {
+                            await client.readMessages([mek.key]);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error handling auto-read:', error);
+                }
+            }
+//========================================================================================================================
             // Anti-bad word handler
 //========================================================================================================================
             client.ev.on('messages.upsert', async ({ messages }) => {
