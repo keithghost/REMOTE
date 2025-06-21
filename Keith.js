@@ -234,9 +234,36 @@ async function startKeith() {
     });
 //========================================================================================================================
 //========================================================================================================================
-
-
-    
+if (mek.key?.remoteJid) {
+    try {
+        const { getPresenceSettings } = require('./database/presence');
+        const presenceSettings = await getPresenceSettings();
+        
+        // Handle private chat presence
+        if (mek.key.remoteJid.endsWith("@s.whatsapp.net") && presenceSettings.privateChat !== 'off') {
+            const presenceType = 
+                presenceSettings.privateChat === "online" ? "available" :
+                presenceSettings.privateChat === "typing" ? "composing" :
+                presenceSettings.privateChat === "recording" ? "recording" : 
+                "unavailable";
+            await client.sendPresenceUpdate(presenceType, mek.key.remoteJid);
+        }
+        
+        // Handle group chat presence
+        if (mek.key.remoteJid.endsWith("@g.us") && presenceSettings.groupChat !== 'off') {
+            const presenceType = 
+                presenceSettings.groupChat === "online" ? "available" :
+                presenceSettings.groupChat === "typing" ? "composing" :
+                presenceSettings.groupChat === "recording" ? "recording" : 
+                "unavailable";
+            await client.sendPresenceUpdate(presenceType, mek.key.remoteJid);
+        }
+    } catch (error) {
+        console.error('Error handling presence:', error);
+    }
+}
+//========================================================================================================================
+//========================================================================================================================    
 
     function saveUserJid(jid) {
         try {
