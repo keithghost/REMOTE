@@ -557,7 +557,7 @@ async function startKeith() {
  // Chatbot handler
 //========================================================================================================================            
 
-const { getChatbotSettings } = require('./database/chatbot');
+/*const { getChatbotSettings } = require('./database/chatbot');
 const chatbotSettings = await getChatbotSettings();
 let lastTextTime = 0;
 
@@ -627,7 +627,7 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
         console.error('Error in voice chatbot:', error);
     }
 }           
-            
+ */           
 //========================================================================================================================            
 //========================================================================================================================
             if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
