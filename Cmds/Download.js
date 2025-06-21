@@ -11,7 +11,7 @@ const { keith } = require('../commandHandler');
 const yts = require("yt-search");
 
 keith({
-    pattern: "playy",
+    pattern: "play",
     alias: ["audio", "song"],
     desc: "Download high quality audio from YouTube (320kbps)",
     category: "Download",
