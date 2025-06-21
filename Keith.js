@@ -232,6 +232,173 @@ async function startKeith() {
             console.error('Error handling call:', error);
         }
     });
+    
+//========================================================================================================================
+// Message storage setup
+//========================================================================================================================
+const baseDir = path.join(__dirname, 'message_data');
+if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
+
+const getChatFilePath = (remoteJid) => {
+    const safeJid = remoteJid.replace(/[^a-zA-Z0-9@]/g, '_');
+    return path.join(baseDir, `${safeJid}.json`);
+};
+
+const loadChatData = (remoteJid) => {
+    const filePath = getChatFilePath(remoteJid);
+    try {
+        return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf8')) || [] : [];
+    } catch (error) {
+        console.error('Error loading chat data:', error);
+        return [];
+    }
+};
+
+const saveChatData = (remoteJid, messages) => {
+    try {
+        fs.writeFileSync(getChatFilePath(remoteJid), JSON.stringify(messages, null, 2));
+    } catch (error) {
+        console.error('Error saving chat data:', error);
+    }
+};
+
+// Enhanced media download function
+async function downloadMedia(deletedMsg) {
+    try {
+        const stream = await downloadAndSaveMediaMessage(deletedMsg, {});
+        let buffer = Buffer.from([]);
+        for await (const chunk of stream) {
+            buffer = Buffer.concat([buffer, chunk]);
+        }
+        return buffer;
+    } catch (error) {
+        console.error('Error downloading media:', error);
+        return null;
+    }
+}
+
+// Anti-delete handler
+client.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const settings = await getAntiDeleteSettings();
+        if (!settings.status) return;
+
+        const message = messages[0];
+        if (!message.message || message.key.remoteJid === 'status@broadcast') return;
+
+        const remoteJid = message.key.remoteJid;
+        const chatData = loadChatData(remoteJid);
+        
+        chatData.push(message);
+        if (chatData.length > 100) chatData.shift();
+        saveChatData(remoteJid, chatData);
+
+        if (message.message.protocolMessage?.type === 0) {
+            const deletedKey = message.message.protocolMessage.key;
+            const deletedMsg = chatData.find(m => m.key.id === deletedKey.id);
+            if (!deletedMsg) return;
+
+            const deleterJid = message.key.participant || message.key.remoteJid;
+            const senderJid = deletedMsg.key.participant || deletedMsg.key.remoteJid;
+            if (deleterJid.includes(client.user.id.split(':')[0])) return;
+
+            const isGroup = remoteJid.endsWith('@g.us');
+            let groupInfo = '';
+            
+            if (isGroup && settings.includeGroupInfo) {
+                try {
+                    const groupMetadata = await client.groupMetadata(remoteJid);
+                    groupInfo = `\n• Group: ${groupMetadata.subject}`;
+                } catch (e) {
+                    console.error('Error fetching group metadata:', e);
+                }
+            }
+
+            const notification = `${settings.notification}\n` +
+                               `• Deleted by: @${deleterJid.split('@')[0]}\n` +
+                               `• Original sender: @${senderJid.split('@')[0]}\n` +
+                               `${groupInfo}\n` +
+                               `• Chat type: ${isGroup ? 'Group' : 'Private'}`;
+
+            const contextInfo = {
+                mentionedJid: [deleterJid, senderJid],
+                forwardingScore: 0,
+                isForwarded: false
+            };
+
+            const sendOptions = {
+                mentions: [deleterJid, senderJid],
+                contextInfo
+            };
+
+            // Determine where to send the notification
+            const targetJid = settings.sendToOwner ? dev : remoteJid;
+
+            if (deletedMsg.message.conversation) {
+                await client.sendMessage(targetJid, {
+                    text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMsg.message.conversation}`,
+                    ...sendOptions
+                });
+            } 
+            else if (deletedMsg.message.extendedTextMessage) {
+                await client.sendMessage(targetJid, {
+                    text: `${notification}\n\n📝 *Deleted Text:*\n${deletedMsg.message.extendedTextMessage.text}`,
+                    ...sendOptions
+                });
+            }
+            else if (settings.includeMedia) {
+                const buffer = await downloadMedia(deletedMsg);
+                if (!buffer) {
+                    await client.sendMessage(targetJid, {
+                        text: `${notification}\n\n⚠️ Failed to capture deleted media`,
+                        ...sendOptions
+                    });
+                    return;
+                }
+
+                if (deletedMsg.message.imageMessage) {
+                    await client.sendMessage(targetJid, {
+                        image: buffer,
+                        caption: notification,
+                        ...sendOptions
+                    });
+                }
+                else if (deletedMsg.message.videoMessage) {
+                    await client.sendMessage(targetJid, {
+                        video: buffer,
+                        caption: notification,
+                        ...sendOptions
+                    });
+                }
+                else if (deletedMsg.message.audioMessage) {
+                    await client.sendMessage(targetJid, {
+                        audio: buffer,
+                        ptt: deletedMsg.message.audioMessage.ptt,
+                        caption: notification,
+                        ...sendOptions
+                    });
+                }
+                else if (deletedMsg.message.stickerMessage) {
+                    await client.sendMessage(targetJid, {
+                        sticker: buffer,
+                        ...sendOptions
+                    });
+                }
+            }
+            else {
+                await client.sendMessage(targetJid, {
+                    text: `${notification}\n\n⚠️ A media message was deleted (media capture is disabled)`,
+                    ...sendOptions
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error in antidelete handler:', error);
+    }
+});
+
+
+    
 //========================================================================================================================
 //========================================================================================================================
 if (mek.key?.remoteJid) {
