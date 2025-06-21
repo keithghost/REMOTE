@@ -1,6 +1,6 @@
 
 const { keith } = require('../commandHandler');
-const middleware = require('../utility/botUtil/middleware');
+const ownerMiddleware = require('../utility/botUtil/ownerMiddleware');
 
 keith({
   pattern: "gprofile",
@@ -76,7 +76,7 @@ keith({
     filename: __filename
 }, async (context) => {
     try {
-        await middleware(context, async () => {
+        await ownerMiddleware(context, async () => {
             const { client, m, reply } = context;
             await client.groupSettingUpdate(m.chat, 'not_announcement');
             reply('Group opened.');
