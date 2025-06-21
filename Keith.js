@@ -309,7 +309,7 @@ async function sendDeletedMessageNotification(client, settings, {
     }
     else if (settings.includeMedia) {
         if (deletedMsg.message.imageMessage) {
-            const buffer = await client.downloadMediaMessage(deletedMsg);
+            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
             await client.sendMessage(targetJid, {
                 image: buffer,
                 caption: notification,
@@ -318,7 +318,7 @@ async function sendDeletedMessageNotification(client, settings, {
             });
         }
         else if (deletedMsg.message.videoMessage) {
-            const buffer = await client.downloadMediaMessage(deletedMsg);
+            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
             await client.sendMessage(targetJid, {
                 video: buffer,
                 caption: notification,
@@ -327,7 +327,7 @@ async function sendDeletedMessageNotification(client, settings, {
             });
         }
         else if (deletedMsg.message.audioMessage) {
-            const buffer = await client.downloadMediaMessage(deletedMsg);
+            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
             await client.sendMessage(targetJid, {
                 audio: buffer,
                 ptt: deletedMsg.message.audioMessage.ptt,
@@ -337,7 +337,7 @@ async function sendDeletedMessageNotification(client, settings, {
             });
         }
         else if (deletedMsg.message.stickerMessage) {
-            const buffer = await client.downloadMediaMessage(deletedMsg);
+            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg);
             await client.sendMessage(targetJid, {
                 sticker: buffer,
                 mentions: [deleterJid, senderJid],
