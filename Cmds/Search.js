@@ -7,6 +7,8 @@ const gis = promisify(require('g-i-s'));
 const axios = require('axios');
 const translatte = require('translatte');
 const { Sticker, StickerTypes } = require("wa-sticker-formatter");
+const wiki = require('wikipedia');
+const yts = require('yt-search');
 //========================================================================================================================
 
 
@@ -15,10 +17,85 @@ const { Sticker, StickerTypes } = require("wa-sticker-formatter");
 //========================================================================================================================
 
 
+keith({
+    pattern: "ytsearch",
+    alias: ["yts", "youtube"],
+    desc: "Search YouTube videos using a query",
+    category: "Search",
+    react: "🔎",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, botname, reply } = context;
+
+        if (!text) {
+            return reply("📺 Please provide a media title to search.\n*Example:* ytsearch imagine dragons");
+        }
+
+        const { videos } = await yts(text);
+
+        if (!videos?.length) {
+            return reply("❌ No results found.");
+        }
+
+        let resultText = `🔍 *YouTube Search Results*\n\n`;
+        videos.slice(0, 10).forEach((v, i) => {
+            resultText += `${i + 1}. *${v.title}*\n⏱️ ${v.timestamp}\n🔗 ${v.url}\n\n`;
+        });
+
+        resultText += `*Powered by ${botname}*`;
+
+        await client.sendMessage(m.chat, {
+            image: { url: videos[0].thumbnail },
+            caption: resultText
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error("YouTube Search Error:", error);
+        context.reply(`❌ An error occurred while searching:\n${error.message}`);
+    }
+});
+
+
 
 
 //========================================================================================================================
 
+
+keith({
+    pattern: "wiki",
+    alias: ["wikipedia", "wikifind"],
+    desc: "Fetch a Wikipedia summary for the given term",
+    category: "Search",
+    react: "📚",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, reply } = context;
+
+        if (!text) {
+            return reply("📝 Provide the term to search.\n*Example:* `wiki JavaScript`");
+        }
+
+        const result = await wiki.summary(text);
+
+        if (!result?.extract) {
+            return reply("📭 No matching article found. Try a simpler term.");
+        }
+
+        const message = `🌐 *Wikipedia Summary*\n\n` +
+            `*📌 Title:* ${result.title || 'N/A'}\n` +
+            `*📝 Description:* ${result.description || 'No short description'}\n\n` +
+            `📖 *Summary:*\n${result.extract.trim()}\n\n` +
+            `🔗 *URL:* ${result.content_urls?.mobile?.page}`;
+
+        reply(message);
+
+    } catch (err) {
+        console.error("Wikipedia command error:", err);
+        context.reply("❌ Could not fetch the article. Please try another topic.");
+    }
+});
 
 
 //========================================================================================================================
