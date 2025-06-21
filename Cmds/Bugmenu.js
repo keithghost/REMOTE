@@ -4,7 +4,7 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { getAntiDeleteSettings, updateAntiDeleteSettings } = require('../database/antidelete');
  
 keith({
-    pattern: "antidelete",
+    pattern: "antidelet",
     alias: ["deleteset", "antideletesetting"],
     desc: "Manage anti-delete settings",
     category: "Settings",
