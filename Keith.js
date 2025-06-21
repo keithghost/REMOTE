@@ -808,93 +808,84 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 //========================================================================================================================
 //========================================================================================================================
 // Add this near your other imports
-const { getAntiLinkSettings } = require('./database/antilink');
-
-// URL pattern and user warnings tracking
-const urlPattern = /(https?:\/\/|www\.)[^\s]+/gi;
-const userLinkWarnings = new Map(); // Track warnings per user
-
-client.ev.on('messages.upsert', async ({ messages }) => {
+if (m.message) {
     try {
-        const m = messages[0];
-        if (!m.message || !m.key) return;
-
+        const { getAntiLinkSettings } = require('./database/antilink');
         const settings = await getAntiLinkSettings();
         
         if (settings.status) {
             const body = m.message.conversation || 
-                         m.message.extendedTextMessage?.text || 
-                         m.message.imageMessage?.caption;
+                        m.message.extendedTextMessage?.text || 
+                        m.message.imageMessage?.caption;
             
             if (body) {
-                const urls = body.match(urlPattern) || [];
-                const hasNonAllowedLinks = urls.some(url => {
-                    return !settings.allowedDomains.some(domain => 
-                        url.includes(domain)
-                    );
-                });
-
-                if (hasNonAllowedLinks) {
-                    const sender = m.sender;
-                    const groupMetadata = await client.groupMetadata(m.chat);
-                    const isBotAdmin = groupMetadata.participants.some(p => 
-                        p.id === client.user.id && p.admin
-                    );
-                    const isUserAdmin = groupMetadata.participants.some(p => 
-                        p.id === sender && p.admin
-                    );
-
-                    // Delete the message if possible
-                    if (isBotAdmin) {
+                // Detect URLs in message
+                const urlRegex = /(https?:\/\/[^\s]+)/gi;
+                const urls = body.match(urlRegex);
+                
+                if (urls && urls.length > 0) {
+                    const containsUnauthorizedLink = urls.some(url => {
                         try {
-                            await client.sendMessage(m.chat, {
-                                delete: {
-                                    remoteJid: m.chat,
-                                    fromMe: false,
-                                    id: m.key.id,
-                                    participant: sender
-                                }
-                            });
-                        } catch (deleteError) {
-                            console.error('Failed to delete message:', deleteError);
+                            const domain = new URL(url).hostname.replace('www.', '');
+                            return !settings.allowedDomains.some(allowed => 
+                                domain.endsWith(allowed)
+                            );
+                        } catch {
+                            return true; // Invalid URL format
                         }
-                    }
+                    });
 
-                    // Skip if user is admin
-                    if (isUserAdmin) return;
-
-                    if (settings.groupAction === 'warn') {
-                        const warnings = (userLinkWarnings.get(sender) || 0) + 1;
-                        userLinkWarnings.set(sender, warnings);
-
-                        const warningMsg = `⚠️ *Link detected!* (${warnings}/${settings.warnLimit})\n\n@${sender.split('@')[0]}, links are not allowed here! This is warning ${warnings} of ${settings.warnLimit}.`;
+                    if (containsUnauthorizedLink) {
+                        const sender = m.key.participant || m.key.remoteJid;
+                        const isGroup = m.key.remoteJid.endsWith('@g.us');
                         
-                        await client.sendMessage(
-                            m.chat, 
-                            { 
-                                text: warningMsg,
-                                contextInfo: { mentionedJid: [sender] }
-                            }, 
-                            { quoted: m }
-                        );
-
-                        if (warnings >= settings.warnLimit && isBotAdmin) {
-                            await client.groupParticipantsUpdate(m.chat, [sender], 'remove');
-                            userLinkWarnings.delete(sender);
+                        // Always delete the message if it contains unauthorized links
+                        if (isGroup) {
+                            try {
+                                await client.sendMessage(m.key.remoteJid, {
+                                    delete: {
+                                        remoteJid: m.key.remoteJid,
+                                        fromMe: false,
+                                        id: m.key.id,
+                                        participant: sender
+                                    }
+                                });
+                            } catch (deleteError) {
+                                console.error('Failed to delete message:', deleteError);
+                            }
                         }
-                    } else if (settings.groupAction === 'remove' && isBotAdmin) {
-                        await client.groupParticipantsUpdate(m.chat, [sender], 'remove');
-                    }
-                    
-                    if (!isBotAdmin) {
-                        await client.sendMessage(
-                            m.chat,
-                            { 
-                                text: `⚠️ *Link detected!*\n\n@${sender.split('@')[0]} sent a link.\n\n*Promote me to admin* to manage link senders!`,
-                                contextInfo: { mentionedJid: [sender] }
-                            },
-                            { quoted: m }
-                        );
+
+                        if (isGroup) {
+                            const groupMetadata = await client.groupMetadata(m.key.remoteJid);
+                            const isBotAdmin = groupMetadata.participants.find(p => p.id === client.user.id)?.admin !== undefined;
+                            const isUserAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined;
+
+                            if (settings.groupAction === 'remove' && isBotAdmin && !isUserAdmin) {
+                                await client.groupParticipantsUpdate(m.key.remoteJid, [sender], 'remove');
+                                await client.sendMessage(
+                                    m.key.remoteJid, 
+                                    { 
+                                        text: `@${sender.split('@')[0]} has been removed for sending unauthorized links.`,
+                                        contextInfo: { mentionedJid: [sender] }
+                                    }
+                                );
+                            } else {
+                                await client.sendMessage(
+                                    m.key.remoteJid, 
+                                    { 
+                                        text: `@${sender.split('@')[0]}, links are not allowed here!`,
+                                        contextInfo: { mentionedJid: [sender] }
+                                    }, 
+                                    { quoted: m }
+                                );
+                            }
+                        } else {
+                            await client.sendMessage(
+                                sender,
+                                { text: '🚫 You have been blocked for sending unauthorized links!' }
+                            );
+                            await client.updateBlockStatus(sender, 'block');
+                        }
                     }
                 }
             }
@@ -902,7 +893,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
     } catch (error) {
         console.error('Anti-link error:', error);
     }
-});
+}
 //========================================================================================================================
 //========================================================================================================================
             
