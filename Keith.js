@@ -117,11 +117,11 @@ const { initGreetDB } = require('./database/greet');
 const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
 const { initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
 const { initAntiLinkDB } = require('./database/antilink');
-const { initAntiMentionDB } = require('./database/antimention');
+//const { initAntiMentionDB } = require('./database/antimention');
 
 //========initialization================================================================================================================
 
-initAntiMentionDB().catch(console.error);
+//initAntiMentionDB().catch(console.error);
 initAutoDownloadStatusDB().catch(console.error);
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
@@ -882,7 +882,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 //========================================================================================================================
 
 // Add this with other imports
-const { getAntiMentionSettings } = require('./database/antimention');
+/*const { getAntiMentionSettings } = require('./database/antimention');
 
 // In your message handler
 if (m.message) {
@@ -957,7 +957,7 @@ if (m.message) {
     } catch (error) {
         console.error('Anti-mention error:', error);
     }
-}
+}*/
             
 //========================================================================================================================
 //========================================================================================================================
