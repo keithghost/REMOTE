@@ -807,14 +807,17 @@ client.ev.on('messages.upsert', async ({ messages }) => {
             });
 //========================================================================================================================
 //========================================================================================================================
-
-            // Add this near your other imports
+// Add this near your other imports
 const { getAntiLinkSettings } = require('./database/antilink');
 
-// Add this where you handle messages (near your antibad implementation)
+// URL pattern and user warnings tracking
 const urlPattern = /(https?:\/\/|www\.)[^\s]+/gi;
 const userLinkWarnings = new Map(); // Track warnings per user
 
+client.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+        const m = messages[0];
+        if (!m.message || !m.key) return;
 
         const settings = await getAntiLinkSettings();
         
@@ -879,8 +882,7 @@ const userLinkWarnings = new Map(); // Track warnings per user
                             await client.groupParticipantsUpdate(m.chat, [sender], 'remove');
                             userLinkWarnings.delete(sender);
                         }
-                    } 
-                    else if (settings.groupAction === 'remove' && isBotAdmin) {
+                    } else if (settings.groupAction === 'remove' && isBotAdmin) {
                         await client.groupParticipantsUpdate(m.chat, [sender], 'remove');
                     }
                     
@@ -900,7 +902,7 @@ const userLinkWarnings = new Map(); // Track warnings per user
     } catch (error) {
         console.error('Anti-link error:', error);
     }
-}
+});
 //========================================================================================================================
 //========================================================================================================================
             
