@@ -106,7 +106,6 @@ function loadAllCommands() {
 //========================================================================================================================
 const { initAntiCallDB } = require('./database/anticall');
 const { initAutoBioDB } = require('./database/autobio');
-const { initAntiLinkDB } = require('./database/antilink');
 const { initAutoLikeStatusDB } = require('./database/autolikestatus');
 const { initAntiBadDB } = require('./database/antibad');
 const { initAutoViewDB } = require('./database/autoview');
@@ -125,7 +124,6 @@ const { initAntiLinkDB } = require('./database/antilink');
 initAutoDownloadStatusDB().catch(console.error);
 initAutoReadDB().catch(console.error);
 initAutoViewDB().catch(console.error);
-initAntiLinkDB().catch(console.error);
 initAntiLinkDB().catch(console.error);
 initAntiDeleteDB().catch(console.error);
 initChatbotDB().catch(console.error);
