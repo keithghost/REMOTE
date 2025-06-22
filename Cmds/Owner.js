@@ -5,6 +5,55 @@ const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const fs = require("fs");
 
 keith({
+    pattern: "privacy",
+    alias: ["privstatus", "pps"],
+    desc: "Display current privacy settings of the bot",
+    category: "Control",
+    react: "🔐",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, reply } = context;
+
+            const botJid = await client.decodeJid(client.user.id);
+
+            const {
+                readreceipts,
+                profile,
+                status,
+                online,
+                last,
+                groupadd,
+                calladd
+            } = await client.fetchPrivacySettings(true);
+
+            const settingsText = `*🔐 Current Privacy Settings:*
+
+👤 *Name:* ${client.user.name}
+🟢 *Online:* ${online}
+🖼️ *Profile Picture:* ${profile}
+⏱️ *Last Seen:* ${last}
+✅ *Read Receipts:* ${readreceipts}
+👥 *Group Add:* ${groupadd}
+📶 *Status:* ${status}
+📞 *Call Add:* ${calladd}`;
+
+            const avatar = await client.profilePictureUrl(botJid, 'image')
+                .catch(() => 'https://telegra.ph/file/b34645ca1e3a34f1b3978.jpg');
+
+            await client.sendMessage(m.chat, {
+                image: { url: avatar },
+                caption: settingsText
+            }, { quoted: m });
+        });
+    } catch (error) {
+        console.error("Privacy status command error:", error);
+        context.reply("❌ Failed to retrieve privacy settings.");
+    }
+});
+
+keith({
     pattern: "delpfp",
     alias: ["rpp", "removepic"],
     desc: "Remove the bot’s profile picture",
@@ -53,7 +102,7 @@ keith({
 
 keith({
     pattern: "listonline",
-    alias: ["privacy", "lastseen"],
+    alias: ["lastseen"],
     desc: "Update online visibility setting (owner only)",
     category: "Owner",
     react: "🛡️",
