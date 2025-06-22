@@ -1,107 +1,87 @@
-const YT_AUDIO_APIS = [
-    "https://api.giftedtech.web.id/api/download/ytmp3?apikey=gifted&url=",
-    "https://api.giftedtech.web.id/api/download/yta?apikey=gifted&url=",
-    "https://api.giftedtech.web.id/api/download/dlmp3?apikey=gifted&url=",
-    "https://api.giftedtech.web.id/api/download/mp3?apikey=gifted&url=",
-    "https://api.giftedtech.web.id/api/download/ytaudio?apikey=gifted&url=",
-    "https://api.giftedtech.web.id/api/download/ytmusic?apikey=gifted&url="
-];
-
 const { keith } = require('../commandHandler');
-const yts = require("yt-search");
 
 keith({
     pattern: "play",
-    alias: ["audio", "song"],
-    desc: "Download high quality audio from YouTube (320kbps)",
-    category: "Download",
-    react: "🎵",
+    alias: ["song", "music", "track"],
+    desc: "Download music from YouTube, Spotify or SoundCloud",
+    category: "Search",
+    react: "🎧",
     filename: __filename
 }, async (context) => {
-    const { client, m, text, fetchJson, botname, sendReply, sendMediaMessage } = context;
-
     try {
-        if (!text) return sendReply(client, m, "🎵 Please provide a song name to download.");
+        const {
+            downloadYouTube, downloadSoundCloud, downloadSpotify,
+            searchYouTube, searchSoundCloud, searchSpotify,
+            client, m, text, botname, sendReply, sendMediaMessage
+        } = context;
 
-        // Search YouTube for the song
-        const search = await yts(text);
-        if (!search.all.length) return sendReply(client, m, "❌ No results found for your query.");
-        
-        const video = search.all[0];
-        const videoUrl = video.url;
-        const apis = YT_AUDIO_APIS.map(api => api + encodeURIComponent(videoUrl));
+        if (!text) {
+            return sendReply(client, m, "🎵 Please specify the song title.\n*Example:* play Shape of You");
+        }
 
-        let success = false;
-        
-        for (const api of apis) {
-            try {
-                const { status, result } = await fetchJson(api);
-                
-                if (status !== 200 || !result?.download_url) continue;
+        let result, downloadResult, platform;
 
-                // Format duration (convert from "10:28" to seconds if needed)
-                const duration = result.duration || video.duration || "N/A";
-                
-                // Send song info with beautiful formatting
-                await sendMediaMessage(client, m, {
-                    image: { url: result.thumbnail || video.thumbnail },
-                    caption: `
-🎧 *${result.title || video.title}*
+        // Try YouTube
+        result = await searchYouTube(text);
+        if (result) {
+            downloadResult = await downloadYouTube(result.url);
+            platform = 'YouTube';
+        }
 
-👤 *Artist:* ${video.author?.name || "Unknown"}
-⏱ *Duration:* ${duration}
-🔊 *Quality:* ${result.quality || "320kbps"}
-🔗 *YouTube URL:* ${videoUrl}
-
-*Powered by ${botname}*`
-                }, { quoted: m });
-
-                // Send as audio with rich preview
-                await client.sendMessage(
-                    m.chat,
-                    {
-                        audio: { url: result.download_url },
-                        mimetype: "audio/mpeg",
-                        contextInfo: {
-                            externalAdReply: {
-                                title: result.title || video.title,
-                                body: `By ${video.author?.name || "Unknown Artist"} | ${duration}`,
-                                thumbnailUrl: result.thumbnail || video.thumbnail,
-                                mediaType: 2,
-                                mediaUrl: videoUrl,
-                                sourceUrl: videoUrl
-                            }
-                        }
-                    },
-                    { quoted: m }
-                );
-
-                // Send as downloadable file
-                await client.sendMessage(
-                    m.chat,
-                    {
-                        document: { url: result.download_url },
-                        mimetype: "audio/mpeg",
-                        fileName: `${(result.title || video.title).replace(/[^\w\s]/gi, '')}.mp3`,
-                    },
-                    { quoted: m }
-                );
-
-                success = true;
-                break;
-                
-            } catch (error) {
-                console.error(`API ${api} failed:`, error.message);
-                continue;
+        // Fallback to Spotify
+        if (!downloadResult) {
+            result = await searchSpotify(text);
+            if (result) {
+                downloadResult = await downloadSpotify(result.url);
+                platform = 'Spotify';
             }
         }
 
-        if (!success) {
-            return sendReply(client, m, "❌ All download servers are currently busy. Please try again later.");
+        // Fallback to SoundCloud
+        if (!downloadResult) {
+            result = await searchSoundCloud(text);
+            if (result) {
+                downloadResult = await downloadSoundCloud(result.url);
+                platform = 'SoundCloud';
+            }
         }
 
+        if (!result || !downloadResult) {
+            return sendReply(client, m, "❌ Couldn't find or download the requested song.");
+        }
+
+        const caption = `
+🎶 *Song Info*
+╭─────────────────────
+📝 *Title:* ${result.title}
+🎧 *Source:* ${platform}
+🔗 *URL:* ${result.url}
+📦 *Format:* ${downloadResult.format}
+${result.artist ? `👤 *Artist:* ${result.artist}` : ""}
+╰─────────────────────
+*Powered by ${botname}*
+        `.trim();
+
+        if (result.thumbnail || downloadResult.thumbnail) {
+            await sendMediaMessage(client, m, {
+                image: { url: downloadResult.thumbnail || result.thumbnail },
+                caption
+            });
+        }
+
+        await sendMediaMessage(client, m, {
+            audio: { url: downloadResult.downloadUrl },
+            mimetype: "audio/mp4"
+        });
+
+        await sendMediaMessage(client, m, {
+            document: { url: downloadResult.downloadUrl },
+            mimetype: "audio/mp3",
+            fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`
+        });
+
     } catch (error) {
-        console.error("Error in playy command:", error);
-        sendReply(client, m, `❌ Error: ${error.message}`);
+        console.error("Play command error:", error);
+        context.reply(`❌ Error fetching song:\n${error.message}`);
     }
 });
