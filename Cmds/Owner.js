@@ -4,6 +4,58 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const fs = require("fs");
 
+keith({
+    pattern: "join",
+    alias: ["joingroup", "gjoin"],
+    desc: "Join a WhatsApp group using an invite link",
+    category: "Owner",
+    react: "🔗",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, args, reply } = context;
+
+            if (!text || !text.includes("chat.whatsapp.com/")) {
+                return reply("🔗 Please provide a valid WhatsApp group invite link.");
+            }
+
+            const inviteCode = args[0].split("https://chat.whatsapp.com/")[1];
+            if (!inviteCode) {
+                return reply("❌ Invalid invite link format.");
+            }
+
+            let subject = "";
+
+            try {
+                const info = await client.groupGetInviteInfo(inviteCode);
+                subject = info?.subject || "the group";
+            } catch (error) {
+                console.error("Group info fetch failed:", error);
+                return reply("⚠️ Failed to fetch group information. Check the link.");
+            }
+
+            await client.groupAcceptInvite(inviteCode)
+                .then(() => reply(`✅ Bot has successfully joined *${subject}*.`))
+                .catch((res) => {
+                    const code = res?.data;
+                    const failMsg = {
+                        400: '❌ Group does not exist.',
+                        401: '🚫 Bot was previously removed and cannot rejoin.',
+                        409: 'ℹ️ Bot is already in the group.',
+                        410: '🔁 This group link is expired. Please provide a new one.',
+                        500: '🚷 Group is full. Bot cannot join.'
+                    }[code] || '❌ Failed to join group.';
+
+                    reply(failMsg);
+                });
+        });
+    } catch (error) {
+        console.error("Join command error:", error);
+        context.reply("❌ Something went wrong while processing the group join request.");
+    }
+});
+
 
 keith({
     pattern: "block",
