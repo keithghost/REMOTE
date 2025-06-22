@@ -6,6 +6,40 @@ const fs = require("fs");
 
 
 keith({
+    pattern: "block",
+    alias: ["bl"],
+    desc: "Block a user by mention, reply, or number",
+    category: "Owner",
+    react: "⛔",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, reply } = context;
+
+            const target =
+                m.mentionedJid?.[0] ||
+                m.quoted?.sender ||
+                (text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null);
+
+            if (!target) {
+                return reply("⚠️ Please tag, quote, or enter the number of the user you want to block.");
+            }
+
+            const jidBase = target.split('@')[0];
+            await client.updateBlockStatus(target, 'block');
+
+            reply(`🚫 User @${jidBase} has been *blocked*.`, undefined, {
+                mentions: [target]
+            });
+        });
+    } catch (error) {
+        console.error("Block command error:", error);
+        context.reply("❌ Failed to block the user.");
+    }
+});
+
+keith({
   pattern: "delete",
   alias: ["del", "d"],
   desc: "Delete a message sent by the bot",
@@ -77,41 +111,7 @@ keith({
 });
 
 
-keith({
-  pattern: "mygroups",
-  alias: ["listgroups", "groupz"],
-  desc: "List all groups the bot is participating in",
-  category: "Owner",
-  react: "👥",
-  filename: __filename
-}, async (context) => {
-  await ownerMiddleware(context, async () => {
-    const { client, m, reply } = context;
 
-    try {
-      const groupData = await client.groupFetchAllParticipating();
-      const groups = Object.values(groupData);
-
-      if (groups.length === 0) {
-        return reply("🤖 Bot is currently not part of any groups.");
-      }
-
-      await reply(`📦 Bot is in *${groups.length}* group(s). Fetching details...`);
-
-      let result = `*📋 My Groups:*\n\n`;
-
-      for (const group of groups) {
-        result += `📌 *Subject*: ${group.subject}\n👥 *Members*: ${group.participants.length}\n🔗 *JID*: ${group.id}\n\n`;
-      }
-
-      await m.reply(result);
-
-    } catch (error) {
-      console.error("Error fetching group list:", error);
-      reply(`❌ Failed to fetch group list:\n${error.message}`);
-    }
-  });
-});
 
 keith({
   pattern: "rpp",
@@ -178,40 +178,6 @@ keith({
   });
 });
 
-keith({
-  pattern: "blocklist",
-  alias: ["blocked", "blockedusers"],
-  desc: "List all blocked contacts by JID",
-  category: "Owner",
-  react: "📛",
-  filename: __filename
-}, async (context) => {
-  await ownerMiddleware(context, async () => {
-    const { client, m, reply } = context;
-
-    try {
-      const blocklist = await client.fetchBlocklist();
-
-      if (!blocklist || blocklist.length === 0) {
-        return reply("✅ You have no blocked contacts.");
-      }
-
-      await reply(`🔒 You have blocked *${blocklist.length}* contact(s):`);
-
-      let result = `*Blocked Contacts:*\n\n`;
-      blocklist.forEach((jid, i) => {
-        const number = jid.split('@')[0];
-        result += `${i + 1}. +${number}\n`;
-      });
-
-      await m.reply(result);
-
-    } catch (err) {
-      console.error("Error fetching blocklist:", err);
-      return reply("❌ Failed to fetch blocked contacts. Please try again.");
-    }
-  });
-});
 
 keith({
   pattern: "vcard",
