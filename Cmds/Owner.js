@@ -5,6 +5,85 @@ const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const fs = require("fs");
 
 keith({
+    pattern: "delpfp",
+    alias: ["rpp", "removepic"],
+    desc: "Remove the bot’s profile picture",
+    category: "Owner",
+    react: "🗑️",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, reply } = context;
+
+            await client.rPP();
+            reply("🗑️ Profile picture has been removed.");
+        });
+    } catch (error) {
+        console.error("Profile picture removal error:", error);
+        context.reply("❌ Failed to remove profile picture. Try again later.");
+    }
+});
+
+keith({
+    pattern: "myname",
+    alias: ["setname", "setbotname"],
+    desc: "Change the bot’s profile name",
+    category: "Owner",
+    react: "✏️",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, reply } = context;
+
+            const newName = text || m.quoted?.text;
+            if (!newName) {
+                return reply("_Please provide the new profile name._");
+            }
+
+            await client.updateProfileName(newName);
+            reply(`✅ Profile name updated to *${newName}* successfully.`);
+        });
+    } catch (error) {
+        console.error("Profile name update error:", error);
+        context.reply("_❌ Failed to update profile name. Try again later._");
+    }
+});
+
+keith({
+    pattern: "listonline",
+    alias: ["privacy", "lastseen"],
+    desc: "Update online visibility setting (owner only)",
+    category: "Owner",
+    react: "🛡️",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, reply } = context;
+
+            const available = ['all', 'match_last_seen'];
+
+            if (!text) {
+                return reply("🛠️ Provide a setting to update.\n*Example:* `online all`\nAvailable: " + available.join(" / "));
+            }
+
+            const setting = text.trim().toLowerCase();
+            if (!available.includes(setting)) {
+                return reply(`⚠️ Invalid option. Available settings:\n${available.join(' / ')}`);
+            }
+
+            await client.updateOnlinePrivacy(setting);
+            reply(`✅ Online privacy updated to *${setting}*.`);
+        });
+    } catch (error) {
+        console.error("Online privacy command error:", error);
+        context.reply("❌ Failed to update privacy setting. Try again.");
+    }
+});
+
+keith({
     pattern: "unblock",
     alias: ["ubl", "free"],
     desc: "Unblock a user by mention, reply, or number",
