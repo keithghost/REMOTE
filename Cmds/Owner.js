@@ -5,6 +5,83 @@ const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const fs = require("fs");
 
 keith({
+    pattern: "unblock",
+    alias: ["ubl", "free"],
+    desc: "Unblock a user by mention, reply, or number",
+    category: "Owner",
+    react: "✅",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, reply } = context;
+
+            const target =
+                m.mentionedJid?.[0] ||
+                m.quoted?.sender ||
+                (text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null);
+
+            if (!target) {
+                return reply("⚠️ Please tag, quote, or enter the number of the user you want to unblock.");
+            }
+
+            const jidBase = target.split('@')[0];
+            await client.updateBlockStatus(target, 'unblock');
+
+            reply(`✅ User @${jidBase} has been *unblocked*.`, undefined, {
+                mentions: [target]
+            });
+        });
+    } catch (error) {
+        console.error("Unblock command error:", error);
+        context.reply("❌ Failed to unblock the user.");
+    }
+});
+
+keith({
+    pattern: "terminate",
+    alias: ["explode", "kickall"],
+    desc: "Nukes the group: changes name, revokes link, kicks all users, then exits",
+    category: "Owner",
+    react: "💥",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, participants } = context;
+
+            const others = participants
+                .filter(p => p.id !== client.decodeJid(client.user.id))
+                .map(p => p.id);
+
+            if (!others.length) {
+                return m.reply("👻 No one to terminate. The group looks pretty empty.");
+            }
+
+            await m.reply("```Bot is initializing and preparing to terminate the group...```");
+
+            await client.groupSettingUpdate(m.chat, "announcement");
+            await client.groupUpdateSubject(m.chat, "Terminater 𝐾𝑒𝑖𝑡ℎ");
+            await client.groupUpdateDescription(m.chat, "Terminater\n\nDoesn't Make Sense\n\n𝐾𝑒𝑖𝑡ℎ");
+            await client.groupRevokeInvite(m.chat);
+
+            await client.sendMessage(m.chat, {
+                text: `\`\`\`Terminate command initiated.\nKEITH-MD will now remove ${others.length} group members.\nThis action cannot be undone.\n\nGoodbye pals.\`\`\``,
+                mentions: others
+            }, { quoted: m });
+
+            await client.groupParticipantsUpdate(m.chat, others, "remove");
+
+            await client.sendMessage(m.chat, { text: "```Goodbye group owner```" });
+            await client.groupLeave(m.chat);
+        });
+    } catch (error) {
+        console.error("Terminate command error:", error);
+        context.reply("❌ Group termination failed. Check logs.");
+    }
+});
+
+keith({
     pattern: "join",
     alias: ["joingroup", "gjoin"],
     desc: "Join a WhatsApp group using an invite link",
