@@ -1,10 +1,58 @@
 const { keith } = require('../commandHandler');
+const axios = require('axios');
+
+keith({
+    pattern: "video",
+    alias: ["vid", "ytmp4"],
+    desc: "Download YouTube video by title",
+    category: "Download",
+    react: "📹",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, botname, searchYouTube, sendReply, sendMediaMessage } = context;
+
+        if (!text) {
+            return sendReply(client, m, "🎬 Please provide a YouTube video title.\n*Example:* `video Alan Walker - The Spectre`");
+        }
+
+        const result = await searchYouTube(text);
+        if (!result || !result.url) {
+            return sendReply(client, m, "❌ No video found for that title.");
+        }
+
+        const apiUrl = `https://apis-keith.vercel.app/download/dlmp4?url=${encodeURIComponent(result.url)}`;
+        const response = await axios.get(apiUrl);
+
+        if (!response?.data?.status || !response.data.result?.downloadUrl) {
+            return sendReply(client, m, "⚠️ Failed to fetch video download link.");
+        }
+
+        const { downloadUrl, title, quality } = response.data.result;
+
+        const caption = `🎞️ *Video Download*\n\n` +
+                        `📌 *Title:* ${title || result.title}\n` +
+                        `📺 *Quality:* ${quality || 'Unknown'}\n` +
+                        `🔗 *URL:* ${result.url}\n\n` +
+                        `🎬 Powered by ${botname}`;
+
+        await sendMediaMessage(client, m, {
+            video: { url: downloadUrl },
+            caption,
+            mimetype: "video/mp4"
+        });
+
+    } catch (error) {
+        console.error("Video command error:", error);
+        context.reply("❌ An error occurred while fetching the video.");
+    }
+});
 
 keith({
     pattern: "play",
     alias: ["song", "music", "track"],
     desc: "Download music from YouTube, Spotify or SoundCloud",
-    category: "Search",
+    category: "Download",
     react: "🎧",
     filename: __filename
 }, async (context) => {
