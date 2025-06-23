@@ -14,9 +14,9 @@ keith({
 }, async (context) => {
     try {
         await ownerMiddleware(context, async () => {
-            const { client, m, text, reply, isGroup } = context;
+            const { client, m, text, reply } = context;
 
-            if (!isGroup) return reply("🚫 This command can only be used in groups.");
+           // if (!isGroup) return reply("🚫 This command can only be used in groups.");
 
             const target =
                 m.mentionedJid?.[0] ||
