@@ -1164,7 +1164,11 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
         console.error('Error in voice chatbot:', error);
     }
 }           
- */           
+ */ 
+            if (m.chat.endsWith('@s.whatsapp.net') && cmd && permit === 'true' && !isOwner) {
+    await m.reply("You have no access to commands here. ❌");
+    return;
+}
 //========================================================================================================================            
 //========================================================================================================================
             if (cmd && mode === "private" && !isOwner && m.sender !== daddy) return;
