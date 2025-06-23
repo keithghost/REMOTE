@@ -5,6 +5,7 @@ const { session } = require("./settings");
 const chalk = require('chalk');
 const path = require('path');
 const { DateTime } = require("luxon");
+const permit = process.env.PERMIT || 'true';
 const { Boom } = require("@hapi/boom");
 const pino = require("pino");
 const { useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
@@ -1248,6 +1249,13 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
             KeithLogger.error("Error processing message", error);
         }
     });
+      if (m.chat.endsWith('@s.whatsapp.net') && cmd && permit === 'true' && !isOwner) {
+        await m.reply("You have no access to commands here. ❌");
+        return;
+    }
+} catch (error) {
+    console.error("An error occurred while processing the command:", error);
+}
 //========================================================================================================================
     process.on("unhandledRejection", (reason, promise) => {
         KeithLogger.error(`Unhandled Rejection at: ${promise}`, reason);
