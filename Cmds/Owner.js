@@ -5,6 +5,42 @@ const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const fs = require("fs");
 
 keith({
+    pattern: "kick",
+    alias: ["remove", "kik"],
+    desc: "Kick a user from the group by mention, quote, or number",
+    category: "Owner",
+    react: "🥾",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, reply, isGroup } = context;
+
+            if (!isGroup) return reply("🚫 This command can only be used in groups.");
+
+            const target =
+                m.mentionedJid?.[0] ||
+                m.quoted?.sender ||
+                (text ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net' : null);
+
+            if (!target) {
+                return reply("👥 Please tag, quote, or provide a number to kick.");
+            }
+
+            const jidBase = target.split('@')[0];
+
+            await client.groupParticipantsUpdate(m.chat, [target], "remove");
+            reply(`🥾 User @${jidBase} has been *kicked* from the group.`, undefined, {
+                mentions: [target]
+            });
+        });
+    } catch (error) {
+        console.error("Kick command error:", error);
+        context.reply("❌ Failed to remove the user. I might lack admin rights.");
+    }
+});
+
+keith({
     pattern: "privacy",
     alias: ["privstatus", "pps"],
     desc: "Display current privacy settings of the bot",
