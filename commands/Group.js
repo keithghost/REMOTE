@@ -44,10 +44,6 @@ keith({ nomCom: "tagall", categorie: 'Group', reaction: "📣" }, async (dest, z
 keith({ nomCom: "invite", categorie: 'Group', reaction: "🙋" }, async (dest, zk, commandeOptions) => {
   const { ms, nomGroupe, nomAuteurMessage, verifGroupe } = commandeOptions;
 
-  if (!verifGroupe) {
-    return repondre(zk, dest, ms, "Wait bro, you want the link to my DM?");
-  }
-
   const link = await zk.groupInviteCode(dest);
   const lien = `https://chat.whatsapp.com/${link}`;
   const mess = `Hello ${nomAuteurMessage}, here is the group link of ${nomGroupe}\n\nClick Here To Join: ${lien}`;
@@ -59,9 +55,7 @@ keith({ nomCom: "invite", categorie: 'Group', reaction: "🙋" }, async (dest, z
 keith({ nomCom: "promote", categorie: 'Group', reaction: "👨🏿‍💼" }, async (dest, zk, commandeOptions) => {
   const { ms, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot } = commandeOptions;
 
-  if (!verifGroupe) {
-    return repondre(zk, dest, ms, "For groups only");
-  }
+  
 
   const membresGroupe = verifGroupe ? await infosGroupe.participants : [];
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
@@ -106,9 +100,7 @@ keith({ nomCom: "promote", categorie: 'Group', reaction: "👨🏿‍💼" }, as
 keith({ nomCom: "demote", categorie: 'Group', reaction: "👨🏿‍💼" }, async (dest, zk, commandeOptions) => {
   const { ms, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot } = commandeOptions;
 
-  if (!verifGroupe) {
-    return repondre(zk, dest, ms, "For groups only");
-  }
+  
 
   const membresGroupe = verifGroupe ? await infosGroupe.participants : [];
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
