@@ -1101,7 +1101,9 @@ zk.ev.on('messages.upsert', async (msg) => {
         const indiceAleatoire = Math.floor(Math.random() * lien.length);
         const lienAleatoire = lien[indiceAleatoire];
         return lienAleatoire;
-    }
+          }
+});
+        
 
     var commandeOptions = {
         superUser, 
@@ -1126,7 +1128,7 @@ zk.ev.on('messages.upsert', async (msg) => {
         ms,
         mybotpic
     };
-});
+
 
 /*zk.ev.on("messages.upsert", async (m) => {
     const { messages } = m;
