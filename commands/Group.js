@@ -10,7 +10,7 @@ const { repondre, sendMessage } = require('../keizzah/context');
 const conf = require(__dirname + "/../set");
 
 // Tagall Command
-keith({ nomCom: "tagall", categorie: 'Group', reaction: "📣" }, async (dest, zk, commandeOptions) => {
+keith({ nomCom: "tagll", categorie: 'Group', reaction: "📣" }, async (dest, zk, commandeOptions) => {
   const { ms, arg, nomGroupe, infosGroupe, nomAuteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
