@@ -732,6 +732,32 @@ setTimeout(() => {
                 ms,
                 mybotpic
             };
+          
+//========================================================================================================================
+          // Replace the old AUTO_READ_STATUS code with this:
+
+          
+//========================================================================================================================
+
+          
+           if (!superUser && origineMessage === auteurMessage) {
+    const autoReactSettings = await getAutoReactSettings();
+    if (autoReactSettings.status === 'on') {
+        const randomEmoji = autoReactSettings.emojis[
+            Math.floor(Math.random() * autoReactSettings.emojis.length)
+        ];
+        try {
+            await zk.sendMessage(origineMessage, {
+                react: {
+                    text: randomEmoji,
+                    key: ms.key
+                }
+            });
+        } catch (error) {
+            console.error('AutoReact error:', error);
+        }
+    }
+}
 //========================================================================================================================
             if (!superUser && origineMessage === auteurMessage) {
                 const chatbotSettings = await getChatbotSettings();
