@@ -9,6 +9,12 @@ const { default: axios } = require('axios');
 const { repondre, sendMessage } = require('../keizzah/context');
 const conf = require(__dirname + "/../set");
 
+// Helper function to check admin status
+const isAdmin = async (zk, dest, userId) => {
+  const metadata = await zk.groupMetadata(dest);
+  return metadata.participants.some(p => p.id === userId && p.admin);
+};
+
 // Tagall Command
 keith({ nomCom: "tagll", categorie: 'Group', reaction: "📣" }, async (dest, zk, commandeOptions) => {
   const { ms, arg, nomGroupe, infosGroupe, nomAuteurMessage, superUser } = commandeOptions;
@@ -16,6 +22,12 @@ keith({ nomCom: "tagll", categorie: 'Group', reaction: "📣" }, async (dest, zk
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "✋🏿 This command is reserved for groups ❌");
+  }
+
+  // Only allow admins or super users
+  const isUserAdmin = await isAdmin(zk, dest, commandeOptions.auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, 'Command reserved for admins');
   }
 
   const mess = arg && arg.length > 0 ? arg.join(' ') : 'No message provided';
@@ -30,23 +42,25 @@ keith({ nomCom: "tagll", categorie: 'Group', reaction: "📣" }, async (dest, zk
     tag += `${emoji[random]} @${membre.id.split("@")[0]}\n`;
   });
 
-  if (superUser) {
-    await sendMessage(zk, dest, ms, {
-      text: tag,
-      mentions: membresGroupe.map((i) => i.id)
-    });
-  } else {
-    repondre(zk, dest, ms, 'Command reserved for admins');
-  }
+  await sendMessage(zk, dest, ms, {
+    text: tag,
+    mentions: membresGroupe.map((i) => i.id)
+  });
 });
 
 // Invite Command
 keith({ nomCom: "invite", categorie: 'Group', reaction: "🙋" }, async (dest, zk, commandeOptions) => {
-  const { ms, nomGroupe, nomAuteurMessage } = commandeOptions;
+  const { ms, nomGroupe, nomAuteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "This command is reserved for groups");
+  }
+
+  // Only allow admins or super users
+  const isUserAdmin = await isAdmin(zk, dest, commandeOptions.auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, 'Command reserved for admins');
   }
 
   const link = await zk.groupInviteCode(dest);
@@ -65,6 +79,12 @@ keith({ nomCom: "promote", categorie: 'Group', reaction: "👨🏿‍💼" }, as
     return repondre(zk, dest, ms, "This command is reserved for groups");
   }
 
+  // Only allow admins or super users
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, "Sorry, you don't have permission to use this command");
+  }
+
   const membresGroupe = metadata.participants;
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
   const memberAdmin = (membresGroupe) => membresGroupe.filter(m => m.admin).map(m => m.id);
@@ -72,32 +92,27 @@ keith({ nomCom: "promote", categorie: 'Group', reaction: "👨🏿‍💼" }, as
   const admins = memberAdmin(membresGroupe);
   const admin = admins.includes(auteurMsgRepondu);
   const membre = verifMember(auteurMsgRepondu);
-  const autAdmin = admins.includes(auteurMessage);
   const zkad = admins.includes(idBot);
 
   try {
-    if (autAdmin || superUser) {
-      if (msgRepondu) {
-        if (zkad) {
-          if (membre) {
-            if (!admin) {
-              const txt = `🎊🍾 @${auteurMsgRepondu.split("@")[0]} has been promoted as a group admin.`;
-              await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "promote");
-              await sendMessage(zk, dest, ms, { text: txt, mentions: [auteurMsgRepondu] });
-            } else {
-              repondre(zk, dest, ms, "This member is already an administrator of the group.");
-            }
+    if (msgRepondu) {
+      if (zkad) {
+        if (membre) {
+          if (!admin) {
+            const txt = `🎊🍾 @${auteurMsgRepondu.split("@")[0]} has been promoted as a group admin.`;
+            await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "promote");
+            await sendMessage(zk, dest, ms, { text: txt, mentions: [auteurMsgRepondu] });
           } else {
-            repondre(zk, dest, ms, "This user is not part of the group.");
+            repondre(zk, dest, ms, "This member is already an administrator of the group.");
           }
         } else {
-          repondre(zk, dest, ms, "Sorry, I cannot perform this action because I am not an administrator of the group.");
+          repondre(zk, dest, ms, "This user is not part of the group.");
         }
       } else {
-        repondre(zk, dest, ms, "Please tag the member to be nominated.");
+        repondre(zk, dest, ms, "Sorry, I cannot perform this action because I am not an administrator of the group.");
       }
     } else {
-      repondre(zk, dest, ms, "Sorry, I cannot perform this action because you are not an administrator of the group.");
+      repondre(zk, dest, ms, "Please tag the member to be nominated.");
     }
   } catch (e) {
     repondre(zk, dest, ms, "Oops! " + e);
@@ -113,6 +128,12 @@ keith({ nomCom: "demote", categorie: 'Group', reaction: "👨🏿‍💼" }, asy
     return repondre(zk, dest, ms, "This command is reserved for groups");
   }
 
+  // Only allow admins or super users
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, "Sorry, you don't have permission to use this command");
+  }
+
   const membresGroupe = metadata.participants;
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
   const memberAdmin = (membresGroupe) => membresGroupe.filter(m => m.admin).map(m => m.id);
@@ -120,32 +141,27 @@ keith({ nomCom: "demote", categorie: 'Group', reaction: "👨🏿‍💼" }, asy
   const admins = memberAdmin(membresGroupe);
   const admin = admins.includes(auteurMsgRepondu);
   const membre = verifMember(auteurMsgRepondu);
-  const autAdmin = admins.includes(auteurMessage);
   const zkad = admins.includes(idBot);
 
   try {
-    if (autAdmin || superUser) {
-      if (msgRepondu) {
-        if (zkad) {
-          if (membre) {
-            if (admin) {
-              const txt = `@${auteurMsgRepondu.split("@")[0]} was removed from their position as a group administrator.\n`;
-              await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "demote");
-              await sendMessage(zk, dest, ms, { text: txt, mentions: [auteurMsgRepondu] });
-            } else {
-              repondre(zk, dest, ms, "This member is not a group administrator.");
-            }
+    if (msgRepondu) {
+      if (zkad) {
+        if (membre) {
+          if (admin) {
+            const txt = `@${auteurMsgRepondu.split("@")[0]} was removed from their position as a group administrator.\n`;
+            await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "demote");
+            await sendMessage(zk, dest, ms, { text: txt, mentions: [auteurMsgRepondu] });
           } else {
-            repondre(zk, dest, ms, "This user is not part of the group.");
+            repondre(zk, dest, ms, "This member is not a group administrator.");
           }
         } else {
-          repondre(zk, dest, ms, "Sorry, I cannot perform this action because I am not an administrator of the group.");
+          repondre(zk, dest, ms, "This user is not part of the group.");
         }
       } else {
-        repondre(zk, dest, ms, "Please tag the member to be removed.");
+        repondre(zk, dest, ms, "Sorry, I cannot perform this action because I am not an administrator of the group.");
       }
     } else {
-      repondre(zk, dest, ms, "Sorry, I cannot perform this action because you are not an administrator of the group.");
+      repondre(zk, dest, ms, "Please tag the member to be removed.");
     }
   } catch (e) {
     repondre(zk, dest, ms, "Oops! " + e);
@@ -161,6 +177,12 @@ keith({ nomCom: "remove", categorie: 'Group', reaction: "👨🏿‍💼" }, asy
     return repondre(zk, dest, ms, "For groups only");
   }
 
+  // Only allow admins or super users
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, "Sorry, you don't have permission to use this command");
+  }
+
   const membresGroupe = metadata.participants;
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
   const memberAdmin = (membresGroupe) => membresGroupe.filter(m => m.admin).map(m => m.id);
@@ -168,44 +190,39 @@ keith({ nomCom: "remove", categorie: 'Group', reaction: "👨🏿‍💼" }, asy
   const admins = memberAdmin(membresGroupe);
   const admin = admins.includes(auteurMsgRepondu);
   const membre = verifMember(auteurMsgRepondu);
-  const autAdmin = admins.includes(auteurMessage);
   const zkad = admins.includes(idBot);
 
   try {
-    if (autAdmin || superUser) {
-      if (msgRepondu) {
-        if (zkad) {
-          if (membre) {
-            if (!admin) {
-              const gifLink = "https://raw.githubusercontent.com/djalega8000/Zokou-MD/main/media/remover.gif";
-              const sticker = new Sticker(gifLink, {
-                pack: 'ALPHA-MD',
-                author: nomAuteurMessage,
-                type: StickerTypes.FULL,
-                categories: ['🤩', '🎉'],
-                id: '12345',
-                quality: 50,
-                background: '#000000'
-              });
+    if (msgRepondu) {
+      if (zkad) {
+        if (membre) {
+          if (!admin) {
+            const gifLink = "https://raw.githubusercontent.com/djalega8000/Zokou-MD/main/media/remover.gif";
+            const sticker = new Sticker(gifLink, {
+              pack: 'ALPHA-MD',
+              author: nomAuteurMessage,
+              type: StickerTypes.FULL,
+              categories: ['🤩', '🎉'],
+              id: '12345',
+              quality: 50,
+              background: '#000000'
+            });
 
-              await sticker.toFile("st.webp");
-              const txt = `@${auteurMsgRepondu.split("@")[0]} was removed from the group.\n`;
-              await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "remove");
-              await sendMessage(zk, dest, ms, { text: txt, mentions: [auteurMsgRepondu] });
-            } else {
-              repondre(zk, dest, ms, "This member cannot be removed because they are an administrator of the group.");
-            }
+            await sticker.toFile("st.webp");
+            const txt = `@${auteurMsgRepondu.split("@")[0]} was removed from the group.\n`;
+            await zk.groupParticipantsUpdate(dest, [auteurMsgRepondu], "remove");
+            await sendMessage(zk, dest, ms, { text: txt, mentions: [auteurMsgRepondu] });
           } else {
-            repondre(zk, dest, ms, "This user is not part of the group.");
+            repondre(zk, dest, ms, "This member cannot be removed because they are an administrator of the group.");
           }
         } else {
-          repondre(zk, dest, ms, "Sorry, I cannot perform this action because I am not an administrator of the group.");
+          repondre(zk, dest, ms, "This user is not part of the group.");
         }
       } else {
-        repondre(zk, dest, ms, "Please tag the member to be removed.");
+        repondre(zk, dest, ms, "Sorry, I cannot perform this action because I am not an administrator of the group.");
       }
     } else {
-      repondre(zk, dest, ms, "Sorry, I cannot perform this action because you are not an administrator of the group.");
+      repondre(zk, dest, ms, "Please tag the member to be removed.");
     }
   } catch (e) {
     repondre(zk, dest, ms, "Oops! " + e);
@@ -219,6 +236,12 @@ keith({ nomCom: "add", categorie: 'Group', reaction: "👨🏿‍💼" }, async 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "For groups only");
+  }
+
+  // Only allow admins or super users
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, "Sorry, you don't have permission to use this command");
   }
 
   const isImAdmin = metadata.participants.some(p => p.id === zk.user.id && p.admin);
@@ -247,6 +270,7 @@ keith({ nomCom: "del", categorie: 'Group', reaction: "🧹" }, async (dest, zk, 
     return repondre(zk, dest, ms, "Please mention the message to delete.");
   }
 
+  // Allow super users to delete bot's messages
   if (superUser && auteurMsgRepondu === idBot) {
     const key = {
       remoteJid: dest,
@@ -259,8 +283,8 @@ keith({ nomCom: "del", categorie: 'Group', reaction: "🧹" }, async (dest, zk, 
 
   const metadata = await zk.groupMetadata(dest);
   if (metadata) {
-    const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-    if (admins.includes(auteurMessage) || superUser) {
+    const isUserAdmin = await isAdmin(zk, dest, commandeOptions.auteurMessage);
+    if (isUserAdmin || superUser) {
       try {
         const key = {
           remoteJid: dest,
@@ -305,34 +329,34 @@ keith({ nomCom: "info", categorie: 'Group' }, async (dest, zk, commandeOptions) 
 
 // Group Command
 keith({ nomCom: "group", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, arg, superUser } = commandeOptions;
+  const { ms, repondre, arg, superUser, auteurMessage } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "Command reserved for groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (superUser || admins.includes(auteurMessage)) {
-    if (!arg[0]) {
-      return repondre(zk, dest, ms, 'Instructions:\n\nType group open or close');
-    }
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, "Command reserved for the administrator.");
+  }
 
-    const option = arg.join(' ');
-    switch (option) {
-      case "open":
-        await zk.groupSettingUpdate(dest, 'not_announcement');
-        repondre(zk, dest, ms, 'Group opened successfully.');
-        break;
-      case "close":
-        await zk.groupSettingUpdate(dest, 'announcement');
-        repondre(zk, dest, ms, 'Group closed successfully.');
-        break;
-      default:
-        repondre(zk, dest, ms, "Please don't invent an option.");
-    }
-  } else {
-    repondre(zk, dest, ms, "Command reserved for the administrator.");
+  if (!arg[0]) {
+    return repondre(zk, dest, ms, 'Instructions:\n\nType group open or close');
+  }
+
+  const option = arg.join(' ');
+  switch (option) {
+    case "open":
+      await zk.groupSettingUpdate(dest, 'not_announcement');
+      repondre(zk, dest, ms, 'Group opened successfully.');
+      break;
+    case "close":
+      await zk.groupSettingUpdate(dest, 'announcement');
+      repondre(zk, dest, ms, 'Group closed successfully.');
+      break;
+    default:
+      repondre(zk, dest, ms, "Please don't invent an option.");
   }
 });
 
@@ -355,15 +379,15 @@ keith({ nomCom: "left", categorie: "Mods" }, async (dest, zk, commandeOptions) =
 
 // Gname Command
 keith({ nomCom: "gname", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, arg } = commandeOptions;
+  const { ms, repondre, arg, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "Command reserved for groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "Command reserved for administrators of the group.");
   }
 
@@ -378,15 +402,15 @@ keith({ nomCom: "gname", categorie: 'Group' }, async (dest, zk, commandeOptions)
 
 // Gdesc Command
 keith({ nomCom: "gdesc", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, arg } = commandeOptions;
+  const { ms, repondre, arg, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "Command reserved for groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "Command reserved for administrators of the group.");
   }
 
@@ -401,15 +425,15 @@ keith({ nomCom: "gdesc", categorie: 'Group' }, async (dest, zk, commandeOptions)
 
 // Gpp Command
 keith({ nomCom: "gpp", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, msgRepondu } = commandeOptions;
+  const { ms, repondre, msgRepondu, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "Command reserved for groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "Command reserved for administrators of the group.");
   }
 
@@ -428,70 +452,70 @@ keith({ nomCom: "gpp", categorie: 'Group' }, async (dest, zk, commandeOptions) =
 
 // Hidetag Command
 keith({ nomCom: "hidetag", categorie: 'Group', reaction: "🎤" }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, msgRepondu, arg, superUser } = commandeOptions;
+  const { ms, repondre, msgRepondu, arg, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, 'This command is only allowed in groups.');
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (admins.includes(auteurMessage) || superUser) {
-    const tag = metadata.participants.map(p => p.id);
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, 'Command reserved for administrators.');
+  }
 
-    if (msgRepondu) {
-      let msg;
-      if (msgRepondu.imageMessage) {
-        const media = await zk.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
-        msg = {
-          image: { url: media },
-          caption: msgRepondu.imageMessage.caption,
-          mentions: tag
-        };
-      } else if (msgRepondu.videoMessage) {
-        const media = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
-        msg = {
-          video: { url: media },
-          caption: msgRepondu.videoMessage.caption,
-          mentions: tag
-        };
-      } else if (msgRepondu.audioMessage) {
-        const media = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
-        msg = {
-          audio: { url: media },
-          mimetype: 'audio/mp4',
-          mentions: tag
-        };
-      } else if (msgRepondu.stickerMessage) {
-        const media = await zk.downloadAndSaveMediaMessage(msgRepondu.stickerMessage);
-        const stickerMess = new Sticker(media, {
-          pack: 'ALPHA-MD-tag',
-          type: StickerTypes.CROPPED,
-          categories: ["🤩", "🎉"],
-          id: "12345",
-          quality: 70,
-          background: "transparent"
-        });
-        const stickerBuffer2 = await stickerMess.toBuffer();
-        msg = { sticker: stickerBuffer2, mentions: tag };
-      } else {
-        msg = {
-          text: msgRepondu.conversation,
-          mentions: tag
-        };
-      }
-      await sendMessage(zk, dest, ms, msg);
-    } else {
-      if (!arg || !arg[0]) {
-        return repondre(zk, dest, ms, 'Enter the text to announce or mention the message to announce.');
-      }
-      await sendMessage(zk, dest, ms, {
-        text: arg.join(' '),
+  const tag = metadata.participants.map(p => p.id);
+
+  if (msgRepondu) {
+    let msg;
+    if (msgRepondu.imageMessage) {
+      const media = await zk.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
+      msg = {
+        image: { url: media },
+        caption: msgRepondu.imageMessage.caption,
         mentions: tag
+      };
+    } else if (msgRepondu.videoMessage) {
+      const media = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
+      msg = {
+        video: { url: media },
+        caption: msgRepondu.videoMessage.caption,
+        mentions: tag
+      };
+    } else if (msgRepondu.audioMessage) {
+      const media = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
+      msg = {
+        audio: { url: media },
+        mimetype: 'audio/mp4',
+        mentions: tag
+      };
+    } else if (msgRepondu.stickerMessage) {
+      const media = await zk.downloadAndSaveMediaMessage(msgRepondu.stickerMessage);
+      const stickerMess = new Sticker(media, {
+        pack: 'ALPHA-MD-tag',
+        type: StickerTypes.CROPPED,
+        categories: ["🤩", "🎉"],
+        id: "12345",
+        quality: 70,
+        background: "transparent"
       });
+      const stickerBuffer2 = await stickerMess.toBuffer();
+      msg = { sticker: stickerBuffer2, mentions: tag };
+    } else {
+      msg = {
+        text: msgRepondu.conversation,
+        mentions: tag
+      };
     }
+    await sendMessage(zk, dest, ms, msg);
   } else {
-    repondre(zk, dest, ms, 'Command reserved for administrators.');
+    if (!arg || !arg[0]) {
+      return repondre(zk, dest, ms, 'Enter the text to announce or mention the message to announce.');
+    }
+    await sendMessage(zk, dest, ms, {
+      text: arg.join(' '),
+      mentions: tag
+    });
   }
 });
 
@@ -522,15 +546,15 @@ keith({ nomCom: "broadcast", aliase: "spread", categorie: "Group", reaction: '�
 
 // Disappearing Messages Command
 const handleDisapCommand = async (dest, zk, commandeOptions, duration) => {
-  const { ms, repondre } = commandeOptions;
+  const { ms, repondre, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -540,15 +564,15 @@ const handleDisapCommand = async (dest, zk, commandeOptions, duration) => {
 
 // Disappearing Messages Off Command
 keith({ nomCom: "disap-off", categorie: "Group", reaction: '㋛' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre } = commandeOptions;
+  const { ms, repondre, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -558,7 +582,18 @@ keith({ nomCom: "disap-off", categorie: "Group", reaction: '㋛' }, async (dest,
 
 // Poll Command
 keith({ nomCom: "poll", reaction: '✨', categorie: "Group" }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, arg } = commandeOptions;
+  const { ms, repondre, arg, auteurMessage, superUser } = commandeOptions;
+  
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "This command works in groups only.");
+  }
+
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
+    return repondre(zk, dest, ms, "You are not an admin here!");
+  }
+
   const [question, ...options] = arg.join(" ").split('/');
 
   if (options.length < 2) {
@@ -577,15 +612,15 @@ keith({ nomCom: "poll", reaction: '✨', categorie: "Group" }, async (dest, zk, 
 
 // Disappearing Messages Setup Command
 keith({ nomCom: 'disap', categorie: "Group", reaction: '❦' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre } = commandeOptions;
+  const { ms, repondre, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -605,15 +640,15 @@ keith({ nomCom: "disap90", categorie: 'Group', reaction: '⚪' }, async (dest, z
 
 // Requests Command
 keith({ nomCom: 'req', alias: 'requests', categorie: "Group", reaction: "⚪" }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre } = commandeOptions;
+  const { ms, repondre, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -630,15 +665,15 @@ keith({ nomCom: 'req', alias: 'requests', categorie: "Group", reaction: "⚪" },
 
 // Approve/Reject Requests Command
 const handleRequestCommand = async (dest, zk, commandeOptions, action) => {
-  const { ms, repondre } = commandeOptions;
+  const { ms, repondre, auteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
-  if (!admins.includes(auteurMessage)) {
+  const isUserAdmin = await isAdmin(zk, dest, auteurMessage);
+  if (!isUserAdmin && !superUser) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
