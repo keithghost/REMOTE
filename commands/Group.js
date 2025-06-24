@@ -5,21 +5,21 @@ const { writeFile } = require("fs/promises");
 const fs = require('fs-extra');
 const moment = require("moment-timezone");
 const { Sticker, StickerTypes } = require('wa-sticker-formatter');
-//const { search, download } = require("aptoide-scraper");
 const { default: axios } = require('axios');
 const { repondre, sendMessage } = require('../keizzah/context');
 const conf = require(__dirname + "/../set");
 
 // Tagall Command
 keith({ nomCom: "tagall", categorie: 'Group', reaction: "📣" }, async (dest, zk, commandeOptions) => {
-  const { ms, arg, verifGroupe, nomGroupe, infosGroupe, nomAuteurMessage, verifAdmin, superUser } = commandeOptions;
+  const { ms, arg, nomGroupe, infosGroupe, nomAuteurMessage, superUser } = commandeOptions;
 
-  if (!verifGroupe) {
-    return repondre(zk, dest, ms, "✋🏿 ✋🏿 This command is reserved for groups ❌");
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "✋🏿 This command is reserved for groups ❌");
   }
 
-  const mess = arg && arg.length > 0 ? arg.join(' ') : 'Aucun Message';
-  const membresGroupe = verifGroupe ? await infosGroupe.participants : [];
+  const mess = arg && arg.length > 0 ? arg.join(' ') : 'No message provided';
+  const membresGroupe = metadata.participants;
 
   let tag = `========================\n🌟 *ALPHA-MD* 🌟\n========================\n👥 Group: ${nomGroupe} 🚀\n👤 Author: *${nomAuteurMessage}* 👋\n📜 Message: *${mess}* 📝\n========================\n\n`;
 
@@ -30,7 +30,7 @@ keith({ nomCom: "tagall", categorie: 'Group', reaction: "📣" }, async (dest, z
     tag += `${emoji[random]} @${membre.id.split("@")[0]}\n`;
   });
 
-  if (verifAdmin || superUser) {
+  if (superUser) {
     await sendMessage(zk, dest, ms, {
       text: tag,
       mentions: membresGroupe.map((i) => i.id)
@@ -42,7 +42,12 @@ keith({ nomCom: "tagall", categorie: 'Group', reaction: "📣" }, async (dest, z
 
 // Invite Command
 keith({ nomCom: "invite", categorie: 'Group', reaction: "🙋" }, async (dest, zk, commandeOptions) => {
-  const { ms, nomGroupe, nomAuteurMessage, verifGroupe } = commandeOptions;
+  const { ms, nomGroupe, nomAuteurMessage } = commandeOptions;
+
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "This command is reserved for groups");
+  }
 
   const link = await zk.groupInviteCode(dest);
   const lien = `https://chat.whatsapp.com/${link}`;
@@ -53,19 +58,22 @@ keith({ nomCom: "invite", categorie: 'Group', reaction: "🙋" }, async (dest, z
 
 // Promote Command
 keith({ nomCom: "promote", categorie: 'Group', reaction: "👨🏿‍💼" }, async (dest, zk, commandeOptions) => {
-  const { ms, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot } = commandeOptions;
+  const { ms, msgRepondu, auteurMsgRepondu, auteurMessage, superUser, idBot } = commandeOptions;
 
-  
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "This command is reserved for groups");
+  }
 
-  const membresGroupe = verifGroupe ? await infosGroupe.participants : [];
+  const membresGroupe = metadata.participants;
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
   const memberAdmin = (membresGroupe) => membresGroupe.filter(m => m.admin).map(m => m.id);
 
-  const admins = verifGroupe ? memberAdmin(membresGroupe) : [];
-  const admin = verifGroupe ? admins.includes(auteurMsgRepondu) : false;
+  const admins = memberAdmin(membresGroupe);
+  const admin = admins.includes(auteurMsgRepondu);
   const membre = verifMember(auteurMsgRepondu);
-  const autAdmin = verifGroupe ? admins.includes(auteurMessage) : false;
-  const zkad = verifGroupe ? admins.includes(idBot) : false;
+  const autAdmin = admins.includes(auteurMessage);
+  const zkad = admins.includes(idBot);
 
   try {
     if (autAdmin || superUser) {
@@ -98,19 +106,22 @@ keith({ nomCom: "promote", categorie: 'Group', reaction: "👨🏿‍💼" }, as
 
 // Demote Command
 keith({ nomCom: "demote", categorie: 'Group', reaction: "👨🏿‍💼" }, async (dest, zk, commandeOptions) => {
-  const { ms, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, auteurMessage, superUser, idBot } = commandeOptions;
+  const { ms, msgRepondu, auteurMsgRepondu, auteurMessage, superUser, idBot } = commandeOptions;
 
-  
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "This command is reserved for groups");
+  }
 
-  const membresGroupe = verifGroupe ? await infosGroupe.participants : [];
+  const membresGroupe = metadata.participants;
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
   const memberAdmin = (membresGroupe) => membresGroupe.filter(m => m.admin).map(m => m.id);
 
-  const admins = verifGroupe ? memberAdmin(membresGroupe) : [];
-  const admin = verifGroupe ? admins.includes(auteurMsgRepondu) : false;
+  const admins = memberAdmin(membresGroupe);
+  const admin = admins.includes(auteurMsgRepondu);
   const membre = verifMember(auteurMsgRepondu);
-  const autAdmin = verifGroupe ? admins.includes(auteurMessage) : false;
-  const zkad = verifGroupe ? admins.includes(idBot) : false;
+  const autAdmin = admins.includes(auteurMessage);
+  const zkad = admins.includes(idBot);
 
   try {
     if (autAdmin || superUser) {
@@ -143,21 +154,22 @@ keith({ nomCom: "demote", categorie: 'Group', reaction: "👨🏿‍💼" }, asy
 
 // Remove Command
 keith({ nomCom: "remove", categorie: 'Group', reaction: "👨🏿‍💼" }, async (dest, zk, commandeOptions) => {
-  const { ms, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, nomAuteurMessage, auteurMessage, superUser, idBot } = commandeOptions;
+  const { ms, msgRepondu, nomAuteurMessage, auteurMessage, superUser, idBot, auteurMsgRepondu } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "For groups only");
   }
 
-  const membresGroupe = verifGroupe ? await infosGroupe.participants : [];
+  const membresGroupe = metadata.participants;
   const verifMember = (user) => membresGroupe.some(m => m.id === user);
   const memberAdmin = (membresGroupe) => membresGroupe.filter(m => m.admin).map(m => m.id);
 
-  const admins = verifGroupe ? memberAdmin(membresGroupe) : [];
-  const admin = verifGroupe ? admins.includes(auteurMsgRepondu) : false;
+  const admins = memberAdmin(membresGroupe);
+  const admin = admins.includes(auteurMsgRepondu);
   const membre = verifMember(auteurMsgRepondu);
-  const autAdmin = verifGroupe ? admins.includes(auteurMessage) : false;
-  const zkad = verifGroupe ? admins.includes(idBot) : false;
+  const autAdmin = admins.includes(auteurMessage);
+  const zkad = admins.includes(idBot);
 
   try {
     if (autAdmin || superUser) {
@@ -202,14 +214,14 @@ keith({ nomCom: "remove", categorie: 'Group', reaction: "👨🏿‍💼" }, asy
 
 // Add Command
 keith({ nomCom: "add", categorie: 'Group', reaction: "👨🏿‍💼" }, async (dest, zk, commandeOptions) => {
-  const { ms, msgRepondu, infosGroupe, auteurMsgRepondu, verifGroupe, nomAuteurMessage, auteurMessage, superUser, idBot } = commandeOptions;
+  const { ms, msgRepondu, auteurMsgRepondu, nomAuteurMessage, auteurMessage, superUser, idBot } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "For groups only");
   }
 
-  const participants = await zk.groupMetadata(dest);
-  const isImAdmin = participants.participants.some(p => p.id === zk.user.id && p.admin);
+  const isImAdmin = metadata.participants.some(p => p.id === zk.user.id && p.admin);
   if (!isImAdmin) {
     return repondre(zk, dest, ms, "I'm not an admin.");
   }
@@ -229,7 +241,7 @@ keith({ nomCom: "add", categorie: 'Group', reaction: "👨🏿‍💼" }, async 
 
 // Delete Command
 keith({ nomCom: "del", categorie: 'Group', reaction: "🧹" }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, verifGroupe, auteurMsgRepondu, idBot, msgRepondu, verifAdmin, superUser } = commandeOptions;
+  const { ms, repondre, auteurMsgRepondu, idBot, msgRepondu, superUser } = commandeOptions;
 
   if (!msgRepondu) {
     return repondre(zk, dest, ms, "Please mention the message to delete.");
@@ -245,8 +257,10 @@ keith({ nomCom: "del", categorie: 'Group', reaction: "🧹" }, async (dest, zk, 
     return;
   }
 
-  if (verifGroupe) {
-    if (verifAdmin || superUser) {
+  const metadata = await zk.groupMetadata(dest);
+  if (metadata) {
+    const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+    if (admins.includes(auteurMessage) || superUser) {
       try {
         const key = {
           remoteJid: dest,
@@ -266,9 +280,10 @@ keith({ nomCom: "del", categorie: 'Group', reaction: "🧹" }, async (dest, zk, 
 
 // Info Command
 keith({ nomCom: "info", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, verifGroupe } = commandeOptions;
+  const { ms, repondre } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "Command reserved for groups only.");
   }
 
@@ -279,7 +294,7 @@ keith({ nomCom: "info", categorie: 'Group' }, async (dest, zk, commandeOptions) 
     ppgroup = conf.URL;
   }
 
-  const info = await zk.groupMetadata(dest);
+  const info = metadata;
   const mess = {
     image: { url: ppgroup },
     caption: `*━━━━『GROUP INFO』━━━━*\n\n*🎐 Name:* ${info.subject}\n\n*🔩 Group's ID:* ${dest}\n\n*🔍 Description:* \n\n${info.desc}`
@@ -288,17 +303,17 @@ keith({ nomCom: "info", categorie: 'Group' }, async (dest, zk, commandeOptions) 
   await sendMessage(zk, dest, ms, mess);
 });
 
-
-
 // Group Command
 keith({ nomCom: "group", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, verifGroupe, verifAdmin, superUser, arg } = commandeOptions;
+  const { ms, repondre, arg, superUser } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "Command reserved for groups only.");
   }
 
-  if (superUser || verifAdmin) {
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (superUser || admins.includes(auteurMessage)) {
     if (!arg[0]) {
       return repondre(zk, dest, ms, 'Instructions:\n\nType group open or close');
     }
@@ -323,9 +338,10 @@ keith({ nomCom: "group", categorie: 'Group' }, async (dest, zk, commandeOptions)
 
 // Left Command
 keith({ nomCom: "left", categorie: "Mods" }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, verifGroupe, superUser } = commandeOptions;
+  const { ms, repondre, superUser } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "Command reserved for groups only.");
   }
 
@@ -339,9 +355,15 @@ keith({ nomCom: "left", categorie: "Mods" }, async (dest, zk, commandeOptions) =
 
 // Gname Command
 keith({ nomCom: "gname", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, arg, verifAdmin } = commandeOptions;
+  const { ms, repondre, arg } = commandeOptions;
 
-  if (!verifAdmin) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "Command reserved for groups only.");
+  }
+
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "Command reserved for administrators of the group.");
   }
 
@@ -356,9 +378,15 @@ keith({ nomCom: "gname", categorie: 'Group' }, async (dest, zk, commandeOptions)
 
 // Gdesc Command
 keith({ nomCom: "gdesc", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, arg, verifAdmin } = commandeOptions;
+  const { ms, repondre, arg } = commandeOptions;
 
-  if (!verifAdmin) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "Command reserved for groups only.");
+  }
+
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "Command reserved for administrators of the group.");
   }
 
@@ -373,9 +401,15 @@ keith({ nomCom: "gdesc", categorie: 'Group' }, async (dest, zk, commandeOptions)
 
 // Gpp Command
 keith({ nomCom: "gpp", categorie: 'Group' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, msgRepondu, verifAdmin } = commandeOptions;
+  const { ms, repondre, msgRepondu } = commandeOptions;
 
-  if (!verifAdmin) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
+    return repondre(zk, dest, ms, "Command reserved for groups only.");
+  }
+
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "Command reserved for administrators of the group.");
   }
 
@@ -394,14 +428,15 @@ keith({ nomCom: "gpp", categorie: 'Group' }, async (dest, zk, commandeOptions) =
 
 // Hidetag Command
 keith({ nomCom: "hidetag", categorie: 'Group', reaction: "🎤" }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, msgRepondu, verifGroupe, arg, verifAdmin, superUser } = commandeOptions;
+  const { ms, repondre, msgRepondu, arg, superUser } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, 'This command is only allowed in groups.');
   }
 
-  if (verifAdmin || superUser) {
-    const metadata = await zk.groupMetadata(dest);
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (admins.includes(auteurMessage) || superUser) {
     const tag = metadata.participants.map(p => p.id);
 
     if (msgRepondu) {
@@ -460,8 +495,6 @@ keith({ nomCom: "hidetag", categorie: 'Group', reaction: "🎤" }, async (dest, 
   }
 });
 
-
-
 // Broadcast Command
 keith({ nomCom: "broadcast", aliase: "spread", categorie: "Group", reaction: '⚪' }, async (dest, zk, commandeOptions) => {
   const { ms, repondre, arg, superUser, nomAuteurMessage } = commandeOptions;
@@ -489,13 +522,15 @@ keith({ nomCom: "broadcast", aliase: "spread", categorie: "Group", reaction: '�
 
 // Disappearing Messages Command
 const handleDisapCommand = async (dest, zk, commandeOptions, duration) => {
-  const { ms, repondre, verifGroupe, verifAdmin } = commandeOptions;
+  const { ms, repondre } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  if (!verifAdmin) {
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -505,13 +540,15 @@ const handleDisapCommand = async (dest, zk, commandeOptions, duration) => {
 
 // Disappearing Messages Off Command
 keith({ nomCom: "disap-off", categorie: "Group", reaction: '㋛' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, verifGroupe, verifAdmin } = commandeOptions;
+  const { ms, repondre } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  if (!verifAdmin) {
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -540,13 +577,15 @@ keith({ nomCom: "poll", reaction: '✨', categorie: "Group" }, async (dest, zk, 
 
 // Disappearing Messages Setup Command
 keith({ nomCom: 'disap', categorie: "Group", reaction: '❦' }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, verifGroupe, verifAdmin } = commandeOptions;
+  const { ms, repondre } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  if (!verifAdmin) {
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -566,13 +605,15 @@ keith({ nomCom: "disap90", categorie: 'Group', reaction: '⚪' }, async (dest, z
 
 // Requests Command
 keith({ nomCom: 'req', alias: 'requests', categorie: "Group", reaction: "⚪" }, async (dest, zk, commandeOptions) => {
-  const { ms, repondre, verifGroupe, verifAdmin } = commandeOptions;
+  const { ms, repondre } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  if (!verifAdmin) {
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
@@ -589,13 +630,15 @@ keith({ nomCom: 'req', alias: 'requests', categorie: "Group", reaction: "⚪" },
 
 // Approve/Reject Requests Command
 const handleRequestCommand = async (dest, zk, commandeOptions, action) => {
-  const { ms, repondre, verifGroupe, verifAdmin } = commandeOptions;
+  const { ms, repondre } = commandeOptions;
 
-  if (!verifGroupe) {
+  const metadata = await zk.groupMetadata(dest);
+  if (!metadata) {
     return repondre(zk, dest, ms, "This command works in groups only.");
   }
 
-  if (!verifAdmin) {
+  const admins = metadata.participants.filter(p => p.admin).map(p => p.id);
+  if (!admins.includes(auteurMessage)) {
     return repondre(zk, dest, ms, "You are not an admin here!");
   }
 
