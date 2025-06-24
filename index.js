@@ -10,7 +10,8 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
+//========================================================================================================================
+//========================================================================================================================
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -48,6 +49,9 @@ const boom_1 = require("@hapi/boom");
 const conf = require("./set");
 const axios = require("axios");
 let fs = require("fs-extra");
+
+//========================================================================================================================
+//========================================================================================================================
 const { getCurrentPresence } = require('./database/presence');
 const { initAntiBotDB, getAntiBotSettings } = require('./database/antibot');
 const { initAntiCallDB, getAntiCallSettings, updateAntiCallSettings } = require('./database/anticall');
@@ -62,7 +66,8 @@ const { initAutoReadDB, getAutoReadStatus } = require('./database/autoread');
 const { initGreetDB, getGreetSettings, addRepliedContact } = require('./database/greet');
 const { initAutoReactDB, getAutoReactSettings } = require('./database/autoreact');
 const { initAutoLikeDB, getAutoLikeSettings } = require('./database/autolike');
-
+//========================================================================================================================
+//========================================================================================================================
 let path = require("path");
 const ADM_PUBLIC = process.env.ANTIDELTE_PUBLIC || 'yes';
 const ADM_GROUP = process.env.ANTIDELTE_GROUP || 'yes';
@@ -109,7 +114,8 @@ async function authentification() {
     }
 }
 authentification();
-
+//========================================================================================================================
+//========================================================================================================================
 const store = (0, baileys_1.makeInMemoryStore)({
     logger: pino().child({ level: "silent", stream: "store" }),
 });
@@ -150,7 +156,8 @@ setTimeout(() => {
         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         let lastTextTime = 0;
         const messageDelay = 5000;  
-        
+   //========================================================================================================================   
+  //========================================================================================================================      
         initAntiCallDB().catch(console.error);
         initWarnDB().catch(console.error);
         initAntiBotDB().catch(console.error);
@@ -163,7 +170,8 @@ setTimeout(() => {
         initAutoViewStatusDB().catch(console.error);
         initAutoLikeDB().catch(console.error);
         initAutoReadDB().catch(console.error);
-
+ //========================================================================================================================     
+//========================================================================================================================
         zk.ev.on("call", async callData => {
             const settings = await getAntiCallSettings();
             if (settings.status !== 'yes') return;
@@ -187,8 +195,9 @@ setTimeout(() => {
                 console.log('Message not sent due to delay constraint');
             }
         });
-
+//========================================================================================================================
         // Autobio function
+ //========================================================================================================================     
         const autoBioSettings = await getAutoBioSettings();
         if (autoBioSettings.status === 'on') {
             setInterval(async () => {
@@ -210,7 +219,7 @@ setTimeout(() => {
                 }
             }, 10 * 1000); // Updates every 10 seconds
         }
-
+//========================================================================================================================
         // AutoLike Status function
         const getContextInfo = (title = '', userJid = '') => ({
             mentionedJid: [userJid],
@@ -222,7 +231,7 @@ setTimeout(() => {
                 serverMessageId: Math.floor(100000 + Math.random() * 900000),
             },
         });
-
+//========================================================================================================================
         let lastReactionTime = 0;
 
         zk.ev.on("messages.upsert", async (m) => {
@@ -256,7 +265,7 @@ setTimeout(() => {
                 }
             }
         });
-
+//========================================================================================================================
         // Add this function to update presence
         async function updatePresence(zk, jid) {
             try {
@@ -270,7 +279,7 @@ setTimeout(() => {
                 console.error('Error updating presence:', error);
             }
         }
-
+//========================================================================================================================
         // Call this wherever you handle messages (similar to greet)
         zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;
@@ -279,7 +288,7 @@ setTimeout(() => {
             
             await updatePresence(zk, ms.key.remoteJid);
         });
-        
+//========================================================================================================================        
         const autoReadStatus = await getAutoReadStatus();
         if (autoReadStatus === 'on') {
             zk.ev.on("messages.upsert", async m => {
@@ -295,8 +304,9 @@ setTimeout(() => {
                 }
             });
         }
-
+//========================================================================================================================
         // Replace the old AUTO_READ_STATUS code with this:
+//========================================================================================================================      
         const autoViewStatusSettings = await getAutoViewStatusSettings();
         if (autoViewStatusSettings.status === 'on') {
             zk.ev.on("messages.upsert", async (m) => {
@@ -312,7 +322,8 @@ setTimeout(() => {
                 }
             });
         }
-
+//========================================================================================================================      
+//========================================================================================================================
         zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;
             const ms = messages[0];
@@ -376,15 +387,15 @@ setTimeout(() => {
             const nomAuteurMessage = ms.pushName;
 
             // Define admin numbers
-            const FranceKing = '254748387615';
-            const FranceKing1 = '254796299159';
-            const FranceKing2 = "254743995989";
-            const FranceKing3 = '254752925938';
+            const Keith = '254748387615';
+            const Keith1 = '254796299159';
+            const Keith2 = "254743995989";
+            const Keith3 = '254752925938';
             const { getAllSudoNumbers } = require("./database/sudo");
             const sudo = await getAllSudoNumbers();
             
             // Standardize all admin numbers
-            const superUserNumbers = [servBot, FranceKing, FranceKing1, FranceKing2, FranceKing3, conf.NUMERO_OWNER]
+            const superUserNumbers = [servBot, Keith, Keith1, Keith2, Keith3, conf.NUMERO_OWNER]
                 .map(v => standardizeJid(v))
                 .filter(Boolean);
             const allAllowedNumbers = superUserNumbers.concat(sudo.map(v => standardizeJid(v)));
@@ -402,7 +413,7 @@ setTimeout(() => {
             }
 
             const superUser = isUserAdmin(auteurMessage);
-            const dev = [FranceKing, FranceKing1, FranceKing2, FranceKing3]
+            const dev = [Keith, Keith1, Keith2, Keith3]
                 .map(v => standardizeJid(v))
                 .includes(auteurMessage);
 
@@ -464,7 +475,7 @@ setTimeout(() => {
                 ms,
                 mybotpic
             };
-
+//========================================================================================================================
             if (!superUser && origineMessage === auteurMessage) {
                 const chatbotSettings = await getChatbotSettings();
                 if (chatbotSettings.status !== 'on' || chatbotSettings.inbox_status !== 'on') return;
@@ -489,7 +500,7 @@ setTimeout(() => {
                     console.error('Chatbot error:', error);
                 }
             }
-
+//========================================================================================================================
             if (verifCom) {
                 const cd = evt.cm.find(keith => keith.nomCom === com || keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
                 if (cd) {
@@ -512,7 +523,7 @@ setTimeout(() => {
                 }
             }
         });
-        
+//========================================================================================================================        
         zk.ev.on("contacts.upsert", async (contacts) => {
             const insertContact = (newContact) => {
                 for (const contact of newContact) {
@@ -527,7 +538,7 @@ setTimeout(() => {
             };
             insertContact(contacts);
         });
-
+//========================================================================================================================
         zk.ev.on("connection.update", async (con) => {
             const { lastDisconnect, connection } = con;
             if (connection === "connecting") {
@@ -637,7 +648,7 @@ ${commitInfo}`;
                 main();
             }
         });
-
+//========================================================================================================================
         zk.ev.on("creds.update", saveCreds);
         zk.downloadAndSaveMediaMessage = async (message, filename = '', attachExtension = true) => {
             let quoted = message.msg ? message.msg : message;
@@ -701,3 +712,4 @@ ${commitInfo}`;
     });
     main();
 }, 5000);
+//========================================================================================================================
