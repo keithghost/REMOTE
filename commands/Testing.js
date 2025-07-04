@@ -1,12 +1,8 @@
 const { keith } = require("../keizzah/keith");
 const { repondre } = require('../keizzah/context');
-//const axios = require('axios');
-const conf = require(__dirname + "/../set");
-//const { keith } = require("../keizzah/keith");
 const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
-//const { repondre } = require(__dirname + "/../keizzah/context");
 const FormData = require("form-data");
 
 // Temporary directory setup
@@ -97,6 +93,8 @@ keith(
     }
   }
 );
+
+// URL shortening command
 keith({
   nomCom: "tinyurl",
   aliases: ["shorturl", "urlshorten"],
