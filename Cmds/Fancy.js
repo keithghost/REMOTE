@@ -1,4 +1,3 @@
-
 const { keith } = require('../commandHandler');
 const fs = require('fs-extra');
 const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
@@ -11,16 +10,19 @@ async function uploadToUguu(filePath) {
   
   try {
     const form = new FormData();
-    form.append('file', fs.createReadStream(filePath));
+    form.append('files[]', fs.createReadStream(filePath)); // Correct field name: 'files[]'
 
-    const response = await axios.post('https://uguu.se/api.php?d=upload-tool', form, {
-      headers: form.getHeaders()
+    const response = await axios.post('https://uguu.se/upload', form, {
+      headers: {
+        ...form.getHeaders(),
+        'User-Agent': 'Mozilla/5.0 (Node.js)'
+      }
     });
 
-    if (response.data && response.data.url) {
-      return response.data.url;
+    if (response.data && response.data.files && response.data.files[0]?.url) {
+      return response.data.files[0].url;
     } else {
-      throw new Error("Failed to get URL from Uguu.se");
+      throw new Error("Uguu.se API did not return a valid URL.");
     }
   } catch (error) {
     throw new Error(`Uguu.se upload error: ${error.message}`);
@@ -46,8 +48,8 @@ async function saveMediaToTemp(client, quotedMedia, type) {
 }
 
 keith({
-  pattern: "url2",
-  alias: ["uploadd", "urlconvertt"],
+  pattern: "url3",
+  alias: ["upload", "urlconvert"],
   desc: "Convert quoted media to Uguu.se URL",
   category: "Download",
   react: "📦",
