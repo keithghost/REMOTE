@@ -408,6 +408,8 @@ async function sendFacebookResponse(context, fbData) {
     }
 }
                         
+
+
 keith({
     pattern: "tiktok",
     alias: ["tt", "tiktokdl"],
@@ -422,7 +424,7 @@ keith({
         if (!text) return sendReply(client, m, "Please provide a TikTok URL to download");
         
         // Validate TikTok URL
-        if (!text.match(/tiktok\.com|vm\.tiktok\.com/)) {
+        if (!text.match(/tiktok\.com|vm\.tiktok\.com|vt\.tiktok\.com/)) {
             return sendReply(client, m, "❌ Please provide a valid TikTok URL");
         }
 
@@ -440,19 +442,19 @@ keith({
 
 async function handleTikTok(url) {
     try {
-        const apiUrl = `https://ytdlp.giftedtech.web.id/api/ytmp4.php?url=${encodeURIComponent(url)}`;
+        const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl2?url=${encodeURIComponent(url)}`;
         const response = await axios.get(apiUrl, {
             timeout: 15000
         });
         
-        if (response.data?.status && response.data?.success) {
+        if (response.data?.status && response.data?.result?.status) {
             return {
-                title: response.data.result.title || "TikTok Video",
-                format: response.data.result.format || "Unknown",
-                videoUrl: response.data.result.stream_url,
-                downloadUrl: response.data.result.download_url,
+                title: response.data.result.description || "TikTok Video",
+                author: response.data.result.author || "Unknown Author",
+                videoUrl: response.data.result.video,
+                audioUrl: response.data.result.audio,
                 thumbnail: response.data.result.thumbnail,
-                srcUrl: response.data.result.src_url
+                uploadedAt: response.data.result.uploaded_at || Date.now()
             };
         }
         throw new Error("Invalid TikTok API response");
@@ -466,16 +468,18 @@ async function sendTikTokResponse(context, tiktokData) {
     const { client, m } = context;
     
     try {
+        const uploadDate = new Date(tiktokData.uploadedAt * 1000).toLocaleString();
         const caption = `╭═════════════════⊷
 ║  ⬇️ *TikTok Downloader* ⬇️
 ║━━━━━━━━━━━━━━━━━
-║ *Title*: ${tiktokData.title}
-║ *Quality*: ${tiktokData.format}
+║ *Author*: ${tiktokData.author}
+║ *Description*: ${tiktokData.title}
+║ *Uploaded*: ${uploadDate}
 ║━━━━━━━━━━━━━━━━━
 ║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗕𝗘𝗟𝗢𝗪 𝗡𝗨𝗠𝗕𝗘𝗥𝗦
 ║ 1. Stream Video (MP4)
 ║ 2. Download Video document 
-║ 3. tiktok audio
+║ 3. TikTok Audio (MP3)
 ╰═════════════════⊷`;
 
         const message = await client.sendMessage(m.chat, {
@@ -511,16 +515,17 @@ async function sendTikTokResponse(context, tiktokData) {
                             
                         case '2': // Download Video (MP4)
                             await client.sendMessage(chatId, {
-                                document: { url: tiktokData.downloadUrl },
+                                document: { url: tiktokData.videoUrl },
                                 mimetype: "video/mp4",
-                                fileName: `${tiktokData.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp4`
+                                fileName: `TikTok_${tiktokData.author}_${Date.now()}.mp4`
                             }, { quoted: messageContent });
                             break;
                             
-                        case '3': // Thumbnail (Image)
+                        case '3': // Audio (MP3)
                             await client.sendMessage(chatId, {
-                                audio: { url: tiktokData.downloadUrl },
-                                mimetype: "audio/mp4",
+                                audio: { url: tiktokData.audioUrl },
+                                mimetype: "audio/mpeg",
+                                fileName: `TikTok_Audio_${tiktokData.author}_${Date.now()}.mp3`
                             }, { quoted: messageContent });
                             break;
                             
