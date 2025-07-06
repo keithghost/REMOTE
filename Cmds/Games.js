@@ -1,4 +1,3 @@
-
 const fs = require("fs");
 const path = require("path");
 const { keith } = require('../commandHandler');
@@ -38,11 +37,12 @@ function pickWord(session) {
 }
 
 function getSessionId(context) {
+    const { m, user } = context;
     // For groups, use group ID. For private chats, create a unique ID for the pair
-    if (context.m.isGroup) {
-        return context.m.chat;
+    if (m.isGroup) {
+        return m.chat;
     } else {
-        const participants = [context.m.sender, context.user.jid].sort();
+        const participants = [m.sender, user?.jid || m.sender].sort();
         return `private_${participants.join('_')}`;
     }
 }
