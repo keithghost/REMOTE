@@ -3,7 +3,7 @@ const axios = require('axios');
 const ytSearch = require('yt-search');
 
 keith({
-    pattern: "ply",
+    pattern: "play",
     alias: ["song", "music", "track"],
     desc: "Download music from YouTube, Spotify or SoundCloud",
     category: "Download",
@@ -23,9 +23,9 @@ keith({
             const video = yt.videos[0];
             const videoUrl = `https://youtube.com/watch?v=${video.videoId}`;
 
-            const primary = await axios.get(`https://apis-keith.vercel.app/download/dlmp3?url=${videoUrl}`).then(r => r.data?.result?.data).catch(() => null);
+            const primary = await axios.get(`https://apis-keith.vercel.app/download/dlm3?url=${videoUrl}`).then(r => r.data?.result?.data).catch(() => null);
             const fallback = !primary?.downloadUrl
-                ? await axios.get(`https://apis-keith.vercel.app/download/ytmp3?url=${videoUrl}`).then(r => r.data?.result).catch(() => null)
+                ? await axios.get(`https://apis-keith.vercel.app/download/ytm3?url=${videoUrl}`).then(r => r.data?.result).catch(() => null)
                 : null;
 
             audio = primary?.downloadUrl || fallback?.download_url;
