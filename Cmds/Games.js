@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { keith } = require('../commandHandler');
 
-const wordListPath = path.resolve(__dirname, "../../node_modules/word-list/words.txt");
+const wordListPath = path.resolve(__dirname, "../words.txt");
 const wordPool = fs.readFileSync(wordListPath, "utf-8")
     .split("\n")
     .map(w => w.trim().toLowerCase())
