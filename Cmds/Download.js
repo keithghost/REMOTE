@@ -1,6 +1,4 @@
 const { keith } = require('../commandHandler');
-const axios = require('axios');
-const ytSearch = require('yt-search');
 
 keith({
     pattern: "play",
@@ -9,95 +7,64 @@ keith({
     category: "Download",
     react: "🎧",
     filename: __filename
-}, async (ctx) => {
-    const { client, m, text, botname, sendReply, sendMediaMessage } = ctx;
+}, async ({ client, m, text, botname, sendReply, sendMediaMessage, downloadYouTube, downloadSoundCloud, downloadSpotify,
+    searchYouTube, searchSoundCloud, searchSpotify }) => {
+    if (!text) {
+        return sendReply(client, m, "🎵 Please specify the song title.\n*Example:* play Blinding Lights");
+    }
 
-    if (!text) return sendReply(client, m, "🎵 Please provide a song name!\n_Example: play Shape of You_");
+    const sources = [
+        { search: searchYouTube, download: downloadYouTube, label: "YouTube" },
+        { search: searchSpotify, download: downloadSpotify, label: "Spotify" },
+        { search: searchSoundCloud, download: downloadSoundCloud, label: "SoundCloud" }
+    ];
 
-    let result = null, platform = null, audio = null, thumb = null;
+    let result = null;
+    let downloadResult = null;
+    let platform = null;
 
-    // Step 1: YouTube search and dual download fallback
-    try {
-        const yt = await ytSearch(text);
-        if (yt && yt.videos.length > 0) {
-            const video = yt.videos[0];
-            const videoUrl = `https://youtube.com/watch?v=${video.videoId}`;
-
-            const primary = await axios.get(`https://apis-keith.vercel.app/download/dlm3?url=${videoUrl}`).then(r => r.data?.result?.data).catch(() => null);
-            const fallback = !primary?.downloadUrl
-                ? await axios.get(`https://apis-keith.vercel.app/download/ytm3?url=${videoUrl}`).then(r => r.data?.result).catch(() => null)
-                : null;
-
-            audio = primary?.downloadUrl || fallback?.download_url;
-            thumb = primary?.thumbnail || fallback?.thumbnail;
-            result = { title: video.title, url: videoUrl, artist: video.author.name };
-            platform = "YouTube";
+    for (const source of sources) {
+        result = await source.search(text);
+        if (result) {
+            downloadResult = await source.download(result.url);
+            if (downloadResult) {
+                platform = source.label;
+                break;
+            }
         }
-    } catch {}
-
-    // Step 2: Spotify fallback if YT failed
-    if (!audio) {
-        try {
-            const { data } = await axios.get(`https://apis-keith.vercel.app/download/spotify?q=${encodeURIComponent(text)}`);
-            if (data.status && data.result?.track) {
-                const track = data.result.track;
-                audio = track.downloadLink;
-                thumb = track.thumbnail;
-                result = { title: track.title, url: track.url, artist: track.artist };
-                platform = "Spotify";
-            }
-        } catch {}
     }
 
-    // Step 3: SoundCloud fallback
-    if (!audio) {
-        try {
-            const { data } = await axios.get(`https://apis-keith.vercel.app/search/soundcloud?q=${encodeURIComponent(text)}`);
-            const item = data.result?.result?.find(entry => entry.url);
-            if (item) {
-                const download = await axios.get(`https://apis-keith.vercel.app/download/soundcloud?url=${item.url}`).then(r => r.data?.result).catch(() => null);
-                if (download?.download_url) {
-                    audio = download.download_url;
-                    thumb = item.thumb;
-                    result = { title: item.title, url: item.url, artist: item.artist };
-                    platform = "SoundCloud";
-                }
-            }
-        } catch {}
+    if (!result || !downloadResult) {
+        return sendReply(client, m, "❌ Couldn't find or download the requested song.");
     }
 
-    // Final check
-    if (!audio || !result) return sendReply(client, m, "❌ Couldn't fetch the track from any source.");
+    const caption = [
+        `🎶 *Song Info*`,
+        `╭─────────────────────`,
+        `📝 *Title:* ${result.title}`,
+        `🎧 *Source:* ${platform}`,
+        `🔗 *URL:* ${result.url}`,
+        `📦 *Format:* ${downloadResult.format}`,
+        result.artist ? `👤 *Artist:* ${result.artist}` : null,
+        `╰─────────────────────`,
+        `*Powered by ${botname}*`
+    ].filter(Boolean).join('\n');
 
-    const caption = `
-🎶 *Song Info*
-╭─────────────────────
-📝 *Title:* ${result.title}
-🎧 *Source:* ${platform}
-🔗 *URL:* ${result.url}
-${result.artist ? `👤 *Artist:* ${result.artist}` : ""}
-╰─────────────────────
-*Powered by ${botname}*`.trim();
-
-    // Thumbnail if available
-    if (thumb) {
+    if (downloadResult.thumbnail || result.thumbnail) {
         await sendMediaMessage(client, m, {
-            image: { url: thumb },
+            image: { url: downloadResult.thumbnail || result.thumbnail },
             caption
         });
-    } else {
-        await sendReply(client, m, caption);
     }
 
-    // Send audio
     await client.sendMessage(m.chat, {
-        audio: { url: audio },
+        audio: { url: downloadResult.downloadUrl },
         mimetype: "audio/mp4"
     });
 
     await client.sendMessage(m.chat, {
-        document: { url: audio },
+        document: { url: downloadResult.downloadUrl },
         mimetype: "audio/mp3",
-        fileName: `${result.title.replace(/[^\w\s]/gi, "")}.mp3`
+        fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`
     });
 });
