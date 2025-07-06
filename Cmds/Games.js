@@ -49,7 +49,7 @@ function getSessionId(context) {
 
 keith({
     pattern: "gwrd",
-    alias: ["wordguess", "gword"],
+    alias: ["wordguess", "gw"],
     desc: "Word guessing game for 2 players",
     category: "Game",
     react: "➕",
