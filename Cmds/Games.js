@@ -1,5 +1,27 @@
 const path = require('path');
 const { keith } = require('../commandHandler');
+const fs = require('fs');
+const wordListPath = require.resolve('word-list'); // Get the path to the word list
+
+// Load words from the word-list package
+const wordPool = fs.readFileSync(wordListPath, 'utf-8')
+    .split('\n')
+    .map(w => w.trim().toLowerCase())
+    .filter(w => w.length >= 3 && w.length <= 10 && /^[a-z]+$/.test(w));
+
+const sessions = {};
+
+function isValidWord(word, criteria) {
+    if (!wordPool.includes(word)) return false;
+    if (word.length !== criteria.length) return false;
+    if (criteria.end && !word.endsWith(criteria.end)) return false;
+    return true;
+}
+
+// Rest of your existing code remains exactly the same...
+
+/*const path = require('path');
+const { keith } = require('../commandHandler');
 const wordList = require('word-list'); // The npm package
 
 // Load words from the word-list package
@@ -15,7 +37,7 @@ function isValidWord(word, criteria) {
     if (word.length !== criteria.length) return false;
     if (criteria.end && !word.endsWith(criteria.end)) return false;
     return true;
-}
+}*/
 
 function pickWord(session) {
     const length = Math.floor(Math.random() * 8) + 3; 
