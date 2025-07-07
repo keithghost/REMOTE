@@ -51,8 +51,8 @@ async function saveMediaToTemp(client, quotedMedia, type) {
 }
 
 keith({
-  pattern: "urll",
-  alias: ["uploadd", "urlconvertt"],
+  pattern: "url",
+  alias: ["upload", "urlconvert"],
   desc: "Convert quoted media to Catbox URL",
   category: "Download",
   react: "📦",
