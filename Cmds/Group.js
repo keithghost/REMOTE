@@ -951,23 +951,31 @@ keith({
 }, async (context) => {
     try {
         await ownerMiddleware(context, async () => {
-            const { client, m, participants, text, reply } = context;
+            const { client, m, text, reply, groupMetadata } = context;
+            
+            if (!m.isGroup) {
+                return reply("⚠️ This command can only be used in groups.");
+            }
 
-            if (!participants || participants.length === 0) {
+            // Get participants from group metadata
+            const participants = groupMetadata.participants || [];
+            
+            if (participants.length === 0) {
                 return reply("⚠️ No participants found in this group.");
             }
 
-            let message = `📢 *Tag All*\nYou have been tagged by @${m.sender.split('@')[0]}.\n\n`;
-            message += `💬 *Message:* ${text || 'No additional message.'}\n\n`;
-
-            participants.forEach((member, index) => {
-                message += `${index + 1}. @${member.id.split('@')[0]}\n`;
-            });
+            const senderHandle = m.sender.split('@')[0];
+            const mentionMessage = `📢 *Tag All*\n` +
+                                 `You have been tagged by @${senderHandle}.\n\n` +
+                                 `💬 *Message:* ${text || 'No additional message.'}\n\n` +
+                                 participants.map((member, index) => 
+                                     `${index + 1}. @${member.id.split('@')[0]}`
+                                 ).join('\n');
 
             await client.sendMessage(
                 m.chat,
                 {
-                    text: message,
+                    text: mentionMessage,
                     mentions: participants.map(p => p.id)
                 },
                 { quoted: m }
@@ -975,9 +983,10 @@ keith({
         });
     } catch (error) {
         console.error("TagAll Error:", error);
-        context.reply("❌ Failed to tag all group members.");
+        context.reply("❌ Failed to tag all group members. Please try again later.");
     }
 });
+
 
 //========================================================================================================================
 keith({
