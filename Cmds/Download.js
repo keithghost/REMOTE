@@ -74,3 +74,58 @@ keith({
         reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to process your request'}`);
     }
 });
+
+
+keith({
+    pattern: "video",
+    alias: ["ytvideo", "mp4"],
+    desc: "Download video from YouTube",
+    category: "Download",
+    react: "🎬",
+    filename: __filename
+}, async ({ client, m, text, reply }) => {
+    if (!text) return reply("🎥 Please provide a video name\nExample: *video Alan Walker Spectre*");
+
+    try {
+        // Search YouTube
+        const searchResults = await ytSearch(text);
+        if (!searchResults.videos.length) {
+            return reply("❌ No videos found for your search");
+        }
+
+        const video = searchResults.videos[0];
+        const apiUrl = `https://apis-keith.vercel.app/download/ytmp4?url=${video.url}`;
+
+        // Get download link
+        const { data } = await axios.get(apiUrl, { 
+            timeout: 15000,
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!data?.status || !data.result?.download_url) {
+            return reply("❌ Failed to get video download link");
+        }
+
+        // Send video with metadata
+        await client.sendMessage(m.chat, {
+            video: { url: data.result.download_url },
+            caption: `*${video.title}*\n\n⏱️ Duration: ${video.timestamp || 'N/A'}\n👤 Channel: ${video.author.name}`,
+            thumbnail: video.thumbnail,
+            contextInfo: {
+                externalAdReply: {
+                    title: video.title.slice(0, 60),
+                    body: video.author.name,
+                    thumbnail: video.thumbnail,
+                    mediaType: 2,
+                    mediaUrl: video.url,
+                    sourceUrl: video.url,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error('Video Download Error:', error);
+        reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to download video'}`);
+    }
+});
