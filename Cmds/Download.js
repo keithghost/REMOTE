@@ -371,7 +371,7 @@ keith({
         // Fetch download link using Axios
         const { data } = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' },
-            timeout: 15000 // 15 seconds timeout
+            timeout: 60000 // 15 seconds timeout
         });
 
         if (!data?.status || !data.result?.download_url) {
