@@ -9,6 +9,90 @@ const axios = require('axios');
 
 //========================================================================================================================
 
+
+keith({
+    pattern: "twitter",
+    alias: ["tw", "twdl"],
+    desc: "Download Twitter videos",
+    category: "Download",
+    react: "🐦",
+    filename: __filename
+}, async ({ client, m, text, reply }) => {
+    if (!text) return reply("🐦 Please provide a Twitter URL\nExample: *twitter https://twitter.com/futurism/status/882987478541533189*");
+
+    try {
+        // Validate URL
+        if (!text.match(/twitter\.com\/\w+\/status\/\d+|x\.com\/\w+\/status\/\d+/i)) {
+            return reply("❌ Invalid Twitter URL. Please provide a valid tweet status link.");
+        }
+
+        const apiUrl = `https://apis-keith.vercel.app/download/twitter?url=${encodeURIComponent(text)}`;
+
+        // Show loading message
+        const processingMsg = await reply("⏳ Processing Twitter link...");
+
+        // Fetch Twitter video info
+        const { data } = await axios.get(apiUrl, {
+            headers: { 'Accept': 'application/json' },
+            timeout: 30000 // 30 seconds timeout
+        });
+
+        if (!data?.status || !data.result?.video_sd) {
+            await client.sendMessage(m.chat, { 
+                delete: processingMsg.key 
+            });
+            return reply("❌ Failed to get video. The tweet may not contain video or may be private.");
+        }
+
+        const tweet = data.result;
+
+        // Delete processing message
+        await client.sendMessage(m.chat, { 
+            delete: processingMsg.key 
+        });
+
+        // Try HD first, fallback to SD
+        const videoUrl = tweet.video_hd || tweet.video_sd;
+
+        // Send video message
+        await client.sendMessage(m.chat, {
+            video: { url: videoUrl },
+            caption: tweet.desc ? `*Twitter Video*\n\n${tweet.desc}` : 'Twitter Video',
+            thumbnail: tweet.thumb ? { url: tweet.thumb } : undefined,
+            contextInfo: {
+                externalAdReply: {
+                    title: "Twitter Video Download",
+                    body: tweet.desc ? tweet.desc.slice(0, 60) : 'Downloaded via Keith API',
+                    thumbnailUrl: tweet.thumb,
+                    mediaType: 2,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+        // Optional: Send audio separately if available
+        if (tweet.audio) {
+            await client.sendMessage(m.chat, {
+                audio: { url: tweet.audio },
+                mimetype: 'audio/mpeg',
+                ptt: false,
+                contextInfo: {
+                    externalAdReply: {
+                        title: "Twitter Audio",
+                        body: "Extracted from video",
+                        showAdAttribution: true
+                    }
+                }
+            }, { quoted: m });
+        }
+
+    } catch (error) {
+        console.error('Twitter Command Error:', error);
+        reply(`⚠️ Error: ${error.response?.status === 404 ? 'Tweet not found' : 
+              error.message.includes('timeout') ? 'Request timed out' : 
+              'Failed to process your request'}`);
+    }
+});
 //========================================================================================================================
 
 
@@ -147,28 +231,39 @@ keith({
             return reply("❌ Invalid TikTok URL. Please provide a valid link.");
         }
 
-        const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl?url=${encodeURIComponent(text)}`;
+        const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl2?url=${encodeURIComponent(text)}`;
+
+        // Show loading message
+        const processingMsg = await reply("⏳ Processing TikTok link...");
 
         // Fetch TikTok video info
         const { data } = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' }
         });
 
-        if (!data?.status || !data.result?.nowm) {
+        if (!data?.status || !data.result?.video) {
+            await client.sendMessage(m.chat, { 
+                delete: processingMsg.key 
+            });
             return reply("❌ Failed to download video. The link may be invalid or private.");
         }
 
         const video = data.result;
 
+        // Delete processing message
+        await client.sendMessage(m.chat, { 
+            delete: processingMsg.key 
+        });
+
         // Send video message
         await client.sendMessage(m.chat, {
-            video: { url: video.nowm },
-            caption: `*${video.title || 'TikTok Video'}*\n\n${video.caption || ''}\n\n⬇️ Downloaded via Keith API`,
+            video: { url: video.video },
+            caption: `*@${video.author}*\n\n${video.description || ''}`,
             thumbnail: video.thumbnail ? { url: video.thumbnail } : undefined,
             contextInfo: {
                 externalAdReply: {
-                    title: video.title || 'TikTok Video',
-                    body: video.caption ? video.caption.slice(0, 60) : 'Downloaded via Keith API',
+                    title: `@${video.author}`,
+                    body: video.description ? video.description.slice(0, 60) : 'TikTok Video',
                     thumbnailUrl: video.thumbnail,
                     mediaType: 2,
                     showAdAttribution: true
@@ -178,7 +273,9 @@ keith({
 
     } catch (error) {
         console.error('TikTok Command Error:', error);
-        reply(`⚠️ Error: ${error.message.includes('ECONNRESET') ? 'Connection reset - try again' : error.message}`);
+        reply(`⚠️ Error: ${error.message.includes('ECONNRESET') ? 'Connection reset - try again' : 
+              error.response?.status === 404 ? 'Video not found' : 
+              'Failed to process your request'}`);
     }
 });
 //========================================================================================================================
