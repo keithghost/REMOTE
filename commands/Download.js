@@ -1,4 +1,4 @@
-/*const { keith } = require("../keizzah/keith");
+const { keith } = require("../keizzah/keith");
 const axios = require("axios");
 const ytSearch = require("yt-search");
 const conf = require(__dirname + "/../set");
@@ -116,7 +116,7 @@ keith(
       repondre(zk, dest, ms, `Upload failed: ${error.message}`);
     }
   }
-);*/
+);
 const { keith } = require("../keizzah/keith");
 const axios = require("axios");
 const ytSearch = require("yt-search");
