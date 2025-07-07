@@ -1,5 +1,4 @@
 const { keith } = require('../commandHandler');
-
 const ytSearch = require('yt-search');
 const axios = require('axios');
 
@@ -21,12 +20,11 @@ keith({
         }
 
         const video = searchResults.videos[0];
-        const apiUrl = `https://apis-keith.vercel.app/download/ytmp3?url=${video.url}`;
+        const apiUrl = `https://apis-keith.vercel.app/download/ytmp4?url=${video.url}`;
 
         // Fetch download link using Axios
         const { data } = await axios.get(apiUrl, {
-            headers: { 'Accept': 'application/json' },
-            timeout: 15000 // 15 seconds timeout
+            headers: { 'Accept': 'application/json' }
         });
 
         if (!data?.status || !data.result?.download_url) {
@@ -71,51 +69,50 @@ keith({
 
     } catch (error) {
         console.error('Play Command Error:', error);
-        reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to process your request'}`);
+        reply(`⚠️ Error: ${error.message}`);
     }
 });
 
 
 keith({
     pattern: "video",
-    alias: ["ytvideo", "mp4"],
+    alias: ["ytvideo", "playvideo"],
     desc: "Download video from YouTube",
     category: "Download",
     react: "🎬",
     filename: __filename
 }, async ({ client, m, text, reply }) => {
-    if (!text) return reply("🎥 Please provide a video name\nExample: *video Alan Walker Spectre*");
+    if (!text) return reply("🎥 Please provide a video name\nExample: *video Baby Shark*");
 
     try {
-        // Search YouTube
+        // Search YouTube for the video
         const searchResults = await ytSearch(text);
         if (!searchResults.videos.length) {
-            return reply("❌ No videos found for your search");
+            return reply("❌ No results found for your search query.");
         }
 
         const video = searchResults.videos[0];
         const apiUrl = `https://apis-keith.vercel.app/download/ytmp4?url=${video.url}`;
 
-        // Get download link
-        const { data } = await axios.get(apiUrl, { 
-            timeout: 15000,
+        // Fetch download link using Axios
+        const { data } = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' }
         });
 
         if (!data?.status || !data.result?.download_url) {
-            return reply("❌ Failed to get video download link");
+            return reply("❌ Failed to get download link. The API might be down.");
         }
 
-        // Send video with metadata
+        // Send video message
         await client.sendMessage(m.chat, {
             video: { url: data.result.download_url },
-            caption: `*${video.title}*\n\n⏱️ Duration: ${video.timestamp || 'N/A'}\n👤 Channel: ${video.author.name}`,
+            caption: `*${video.title}*\n\n⏱️ Duration: ${video.timestamp || 'N/A'}\n👤 Author: ${video.author.name}`,
             thumbnail: video.thumbnail,
             contextInfo: {
                 externalAdReply: {
                     title: video.title.slice(0, 60),
-                    body: video.author.name,
-                    thumbnail: video.thumbnail,
+                    body: `🎥 ${video.author.name}`,
+                    thumbnailUrl: video.thumbnail,
                     mediaType: 2,
                     mediaUrl: video.url,
                     sourceUrl: video.url,
@@ -125,7 +122,7 @@ keith({
         }, { quoted: m });
 
     } catch (error) {
-        console.error('Video Download Error:', error);
-        reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to download video'}`);
+        console.error('Video Command Error:', error);
+        reply(`⚠️ Error: ${error.message}`);
     }
 });
