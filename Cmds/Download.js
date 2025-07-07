@@ -7,6 +7,68 @@ const axios = require('axios');
 
 //========================================================================================================================
 
+//========================================================================================================================
+
+//========================================================================================================================
+
+//========================================================================================================================
+
+
+keith({
+    pattern: "pinterest",
+    alias: ["pin", "pindl"],
+    desc: "Download Pinterest images",
+    category: "Download",
+    react: "📌",
+    filename: __filename
+}, async ({ client, m, text, reply }) => {
+    if (!text) return reply("📌 Please provide a Pinterest URL\nExample: *pinterest https://pin.it/5XTxGNqwe*");
+
+    try {
+        // Validate URL
+        if (!text.match(/pin\.it|pinterest\.(com|ru|fr|de|jp|it|es|pt|com\.mx)/)) {
+            return reply("❌ Invalid Pinterest URL. Please provide a valid pin.it or pinterest.com link.");
+        }
+
+        const apiUrl = `https://apis-keith.vercel.app/download/pinterest?url=${encodeURIComponent(text)}`;
+
+        // Fetch Pinterest image info
+        const { data } = await axios.get(apiUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!data?.status || !data.result?.download?.url) {
+            return reply("❌ Failed to download image. The link may be invalid or private.");
+        }
+
+        const pin = data.result;
+
+        // Determine if it's an image or video
+        const isVideo = pin.download.type === 'video';
+
+        // Send the media
+        await client.sendMessage(m.chat, {
+            [isVideo ? 'video' : 'image']: { url: pin.download.url },
+            caption: `📌 *Pinterest Download*\n\n🔗 Original URL: ${pin.url}`,
+            thumbnail: pin.thumbnail ? { url: pin.thumbnail } : undefined,
+            contextInfo: {
+                externalAdReply: {
+                    title: 'Pinterest Download',
+                    body: 'Downloaded via Keith API',
+                    thumbnailUrl: pin.thumbnail,
+                    mediaType: isVideo ? 2 : 1,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error('Pinterest Command Error:', error);
+        reply(`⚠️ Error: ${error.message.includes('ECONNRESET') ? 'Connection reset - try again' : error.message}`);
+    }
+});
+//========================================================================================================================
+
 
 keith({
     pattern: "tiktok",
