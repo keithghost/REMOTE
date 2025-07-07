@@ -7,6 +7,57 @@ const axios = require('axios');
 
 //========================================================================================================================
 
+
+keith({
+    pattern: "tiktok",
+    alias: ["tt", "ttdl"],
+    desc: "Download TikTok videos without watermark",
+    category: "Download",
+    react: "⬇️",
+    filename: __filename
+}, async ({ client, m, text, reply }) => {
+    if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://vt.tiktok.com/ZSje1Vkup/*");
+
+    try {
+        // Validate URL
+        if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) {
+            return reply("❌ Invalid TikTok URL. Please provide a valid link.");
+        }
+
+        const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl?url=${encodeURIComponent(text)}`;
+
+        // Fetch TikTok video info
+        const { data } = await axios.get(apiUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!data?.status || !data.result?.nowm) {
+            return reply("❌ Failed to download video. The link may be invalid or private.");
+        }
+
+        const video = data.result;
+
+        // Send video message
+        await client.sendMessage(m.chat, {
+            video: { url: video.nowm },
+            caption: `*${video.title || 'TikTok Video'}*\n\n${video.caption || ''}\n\n⬇️ Downloaded via Keith API`,
+            thumbnail: video.thumbnail ? { url: video.thumbnail } : undefined,
+            contextInfo: {
+                externalAdReply: {
+                    title: video.title || 'TikTok Video',
+                    body: video.caption ? video.caption.slice(0, 60) : 'Downloaded via Keith API',
+                    thumbnailUrl: video.thumbnail,
+                    mediaType: 2,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error('TikTok Command Error:', error);
+        reply(`⚠️ Error: ${error.message.includes('ECONNRESET') ? 'Connection reset - try again' : error.message}`);
+    }
+});
 //========================================================================================================================
 
 keith({
