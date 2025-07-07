@@ -186,7 +186,7 @@ keith({
     console.error("Unexpected error:", err);
   }
 });
-*/
+
 
 keith({
     pattern: "spotify",
@@ -546,4 +546,4 @@ async function sendTikTokResponse(context, tiktokData) {
         console.error("TikTok response sending error:", error);
         throw error;
     }
-}
+}*/
