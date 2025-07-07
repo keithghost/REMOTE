@@ -2,6 +2,8 @@ const { keith } = require('../commandHandler');
 const ytSearch = require('yt-search');
 const axios = require('axios');
 
+
+
 keith({
     pattern: "play",
     alias: ["song", "music", "track"],
@@ -20,11 +22,12 @@ keith({
         }
 
         const video = searchResults.videos[0];
-        const apiUrl = `https://apis-keith.vercel.app/download/ytmp4?url=${video.url}`;
+        const apiUrl = `https://apis-keith.vercel.app/download/ytmp3?url=${video.url}`;
 
         // Fetch download link using Axios
         const { data } = await axios.get(apiUrl, {
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            timeout: 15000 // 15 seconds timeout
         });
 
         if (!data?.status || !data.result?.download_url) {
@@ -69,10 +72,9 @@ keith({
 
     } catch (error) {
         console.error('Play Command Error:', error);
-        reply(`⚠️ Error: ${error.message}`);
+        reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to process your request'}`);
     }
 });
-
 
 keith({
     pattern: "video",
