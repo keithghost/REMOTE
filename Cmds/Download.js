@@ -1,7 +1,80 @@
 const { keith } = require('../commandHandler');
 const ytSearch = require('yt-search');
 const axios = require('axios');
+//========================================================================================================================
 
+//========================================================================================================================
+
+//========================================================================================================================
+
+//========================================================================================================================
+
+keith({
+    pattern: "spotify",
+    alias: ["spot", "sp"],
+    desc: "Download songs from Spotify",
+    category: "Download",
+    react: "🎵",
+    filename: __filename
+}, async ({ client, m, text, reply }) => {
+    if (!text) return reply("🎶 Please provide a song name\nExample: *spotify Spectre Radiohead*");
+
+    try {
+        const apiUrl = `https://apis-keith.vercel.app/download/spotify?q=${encodeURIComponent(text)}`;
+
+        // Fetch track info using Axios
+        const { data } = await axios.get(apiUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!data?.status || !data.result?.track?.downloadLink) {
+            return reply("❌ Failed to get download link. The track may not be available.");
+        }
+
+        const track = data.result.track;
+
+        // Send audio message
+        await client.sendMessage(m.chat, {
+            audio: { url: track.downloadLink },
+            mimetype: 'audio/mpeg',
+            ptt: false,
+            contextInfo: {
+                externalAdReply: {
+                    title: track.title.slice(0, 60),
+                    body: `🎤 ${track.artist} | ⏱️ ${track.duration}`,
+                    thumbnailUrl: track.thumbnail,
+                    mediaType: 1,
+                    mediaUrl: track.url,
+                    sourceUrl: track.url,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+        // Send as document for better quality
+        await client.sendMessage(m.chat, {
+            document: { url: track.downloadLink },
+            fileName: `${track.title}.mp3`.replace(/[^\w\s.-]/gi, ''),
+            mimetype: 'audio/mpeg',
+            caption: `*${track.title}*\n\n🎤 Artist: ${track.artist}\n⏱️ Duration: ${track.duration}\n⭐ Popularity: ${track.popularity}`,
+            contextInfo: {
+                externalAdReply: {
+                    title: `Downloaded: ${track.title.slice(0, 40)}`,
+                    body: `Click to view on Spotify`,
+                    thumbnailUrl: track.thumbnail,
+                    mediaType: 1,
+                    mediaUrl: track.url,
+                    sourceUrl: track.url,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error('Spotify Command Error:', error);
+        reply(`⚠️ Error: ${error.message}`);
+    }
+});
 //========================================================================================================================
 
 keith({
