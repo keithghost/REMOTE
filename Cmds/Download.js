@@ -2,7 +2,7 @@ const { keith } = require('../commandHandler');
 const ytSearch = require('yt-search');
 const axios = require('axios');
 
-
+//========================================================================================================================
 
 keith({
     pattern: "play",
@@ -75,7 +75,7 @@ keith({
         reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to process your request'}`);
     }
 });
-
+//========================================================================================================================
 keith({
     pattern: "video",
     alias: ["ytvideo", "playvideo"],
@@ -128,3 +128,4 @@ keith({
         reply(`⚠️ Error: ${error.message}`);
     }
 });
+//========================================================================================================================
