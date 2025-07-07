@@ -11,6 +11,67 @@ const axios = require('axios');
 
 //========================================================================================================================
 
+
+keith({
+    pattern: "rednote",
+    alias: ["xiaohongshu", "xhs"],
+    desc: "Download Xiaohongshu (Rednote) content",
+    category: "Download",
+    react: "📕",
+    filename: __filename
+}, async ({ client, m, text, reply }) => {
+    if (!text) return reply("📕 Please provide a Xiaohongshu URL\nExample: *rednote https://xhslink.com/a/OAzIdalFCoYcb*");
+
+    try {
+        // Validate URL
+        if (!text.match(/xhslink\.com|xiaohongshu\.com/)) {
+            return reply("❌ Invalid Xiaohongshu URL. Please provide a valid xhslink.com or xiaohongshu.com link.");
+        }
+
+        const apiUrl = `https://apis-keith.vercel.app/download/rednote?url=${encodeURIComponent(text)}`;
+
+        // Fetch Rednote content info
+        const { data } = await axios.get(apiUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!data?.status || !data.result?.media) {
+            return reply("❌ Failed to download content. The link may be invalid or private.");
+        }
+
+        const content = data.result;
+        const isVideo = content.metadata.isVideo;
+        const mediaUrls = isVideo ? [content.media.video] : content.media.images;
+
+        if (!mediaUrls || mediaUrls.length === 0 || mediaUrls[0] === null) {
+            return reply("❌ No media found in this post.");
+        }
+
+        // Send all media (handle multiple images)
+        for (const mediaUrl of mediaUrls) {
+            if (!mediaUrl) continue;
+
+            await client.sendMessage(m.chat, {
+                [isVideo ? 'video' : 'image']: { url: mediaUrl },
+                caption: content.metadata.title 
+                    ? `*${content.metadata.title}*\n\n${content.metadata.description || ''}\n\n📕 Original URL: ${content.metadata.url}`
+                    : `📕 Xiaohongshu Content\n\nOriginal URL: ${content.metadata.url}`,
+                contextInfo: {
+                    externalAdReply: {
+                        title: content.metadata.title ? content.metadata.title.slice(0, 30) : 'Xiaohongshu Content',
+                        body: content.metadata.description ? content.metadata.description.slice(0, 60) : 'Downloaded via Keith API',
+                        mediaType: isVideo ? 2 : 1,
+                        showAdAttribution: true
+                    }
+                }
+            }, { quoted: m });
+        }
+
+    } catch (error) {
+        console.error('Rednote Command Error:', error);
+        reply(`⚠️ Error: ${error.message.includes('ECONNRESET') ? 'Connection reset - try again' : error.message}`);
+    }
+});
 //========================================================================================================================
 
 
