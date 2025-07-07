@@ -1,49 +1,76 @@
 const { keith } = require('../commandHandler');
+
 const ytSearch = require('yt-search');
 const axios = require('axios');
 
 keith({
-  pattern: "play",
-  alias: ["song", "music", "track"],
-  desc: "Download music from YouTube",
-  category: "Download",
-  react: "🎧",
-  filename: __filename
-}, async ({ client, m, text, fetchJson, reply }) => {
-  try {
-    if (!text) return reply("🎵 Please provide a song title.\nExample: *play faded alan walker*");
+    pattern: "play",
+    alias: ["song", "music", "track"],
+    desc: "Download music from YouTube",
+    category: "Download",
+    react: "🎧",
+    filename: __filename
+}, async ({ client, m, text, reply }) => {
+    if (!text) return reply("🎵 Please provide a song name\nExample: *play Blinding Lights The Weeknd*");
 
-    const search = await ytSearch(text);
-    const first = search.videos[0];
-    if (!first) return reply("🚫 No results found.");
-
-    const ytUrl = first.url;
-    const api = `https://apis-keith.vercel.app/download/ytmp3?url=${ytUrl}`;
-    const { result } = await fetchJson(api);
-
-    const audioResponse = await axios.get(result.download_url, {
-      responseType: 'arraybuffer'
-    });
-
-    await client.sendMessage(m.chat, {
-      audio: audioResponse.data,
-      mimetype: "audio/mp3",
-      fileName: `${first.title}.mp3`,
-      contextInfo: {
-        externalAdReply: {
-          title: first.title,
-          body: first.timestamp,
-          thumbnailUrl: first.thumbnail,
-          mediaType: 1,
-          sourceUrl: first.url,
-          renderLargerThumbnail: true,
-          showAdAttribution: true
+    try {
+        // Search YouTube for the song
+        const searchResults = await ytSearch(text);
+        if (!searchResults.videos.length) {
+            return reply("❌ No results found for your search query.");
         }
-      }
-    }, { quoted: m });
-    
-  } catch (err) {
-    console.error("❌ Error:", err);
-    reply("Something went wrong while processing the song.");
-  }
+
+        const video = searchResults.videos[0];
+        const apiUrl = `https://apis-keith.vercel.app/download/ytmp3?url=${video.url}`;
+
+        // Fetch download link using Axios
+        const { data } = await axios.get(apiUrl, {
+            headers: { 'Accept': 'application/json' },
+            timeout: 15000 // 15 seconds timeout
+        });
+
+        if (!data?.status || !data.result?.download_url) {
+            return reply("❌ Failed to get download link. The API might be down.");
+        }
+
+        // Send audio message
+        await client.sendMessage(m.chat, {
+            audio: { url: data.result.download_url },
+            mimetype: 'audio/mpeg',
+            ptt: false,
+            contextInfo: {
+                externalAdReply: {
+                    title: video.title.slice(0, 60),
+                    body: `🎶 ${video.author.name} | ⏱️ ${video.timestamp}`,
+                    thumbnailUrl: video.thumbnail,
+                    mediaType: 1,
+                    mediaUrl: video.url,
+                    sourceUrl: video.url,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+        // Send as document for better quality
+        await client.sendMessage(m.chat, {
+            document: { url: data.result.download_url },
+            fileName: `${video.title}.mp3`.replace(/[^\w\s.-]/gi, ''),
+            mimetype: 'audio/mpeg',
+            contextInfo: {
+                externalAdReply: {
+                    title: `Downloaded: ${video.title.slice(0, 40)}`,
+                    body: `Click to view on YouTube`,
+                    thumbnailUrl: video.thumbnail,
+                    mediaType: 1,
+                    mediaUrl: video.url,
+                    sourceUrl: video.url,
+                    showAdAttribution: true
+                }
+            }
+        }, { quoted: m });
+
+    } catch (error) {
+        console.error('Play Command Error:', error);
+        reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to process your request'}`);
+    }
 });
