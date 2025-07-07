@@ -823,6 +823,8 @@ keith({
 
 //========================================================================================================================
 
+
+
 keith({
     pattern: "hidetag",
     alias: ["silenttag", "ghosttag"],
@@ -833,23 +835,38 @@ keith({
 }, async (context) => {
     try {
         await ownerMiddleware(context, async () => {
-            const { client, m, participants, text } = context;
+            const { client, m, text, reply } = context;
 
-            const messageContent = text || '☞︎︎︎ TAGGED ☜︎︎︎';
-            const mentions = participants.map(p => p.id);
+            if (!m.isGroup) {
+                return reply("⚠️ This command can only be used in groups.");
+            }
+
+            // Fetch fresh group metadata (critical for updated participant list)
+            const groupMetadata = await client.groupMetadata(m.chat);
+            const participants = groupMetadata.participants || [];
+
+            if (participants.length === 0) {
+                return reply("⚠️ No members found in this group.");
+            }
 
             await client.sendMessage(
                 m.chat,
-                { text: messageContent, mentions },
+                { 
+                    text: text || '☞︎︎︎ TAGGED ☜︎︎︎', 
+                    mentions: participants.map(p => p.id) 
+                },
                 { quoted: m }
             );
+            
         });
     } catch (error) {
-        console.error("Error in hidetag command:", error);
+        console.error("Hidetag Error:", error);
+        reply("❌ Failed to send hidden tag. Make sure I'm admin in this group.");
     }
 });
 
 //========================================================================================================================
+
 
 
 keith({
@@ -862,81 +879,160 @@ keith({
 }, async (context) => {
     try {
         await ownerMiddleware(context, async () => {
-            const { client, m, participants, text, reply } = context;
+            const { client, m, text, reply, groupMetadata } = context;
 
-            const admins = participants.filter(p => p.admin).map(p => p.id);
+            if (!m.isGroup) {
+                return reply("⚠️ This command can only be used in groups.");
+            }
 
-            if (!admins || admins.length === 0) {
+            // Extract admins from group metadata
+            const admins = groupMetadata.participants
+                .filter(participant => participant.admin)
+                .map(admin => admin.id);
+
+            if (admins.length === 0) {
                 return reply("⚠️ No admins found in this group.");
             }
 
-            let message = `🔔 *Admin Tag*\nYou have been tagged by @${m.sender.split('@')[0]}\n`;
-            message += `💬 *Message:* ${text || 'No message provided'}\n\n`;
-
-            admins.forEach((admin, i) => {
-                message += `${i + 1}. @${admin.split('@')[0]}\n`;
-            });
+            const senderHandle = m.sender.split('@')[0];
+            const mentionMessage = `🔔 *Admin Tag*\n` +
+                                 `You have been tagged by @${senderHandle}\n` +
+                                 `💬 *Message:* ${text || 'No message provided'}\n\n` +
+                                 admins.map((admin, index) => 
+                                     `${index + 1}. @${admin.split('@')[0]}`
+                                 ).join('\n');
 
             await client.sendMessage(
                 m.chat,
                 {
-                    text: message,
+                    text: mentionMessage,
                     mentions: admins
                 },
                 { quoted: m }
             );
         });
     } catch (error) {
-        console.error("Tagadmin Error:", error);
-        context.reply("❌ Failed to tag admins.");
+        console.error("TagAdmin Error:", error);
+        reply("❌ Failed to tag admins. Please try again later.");
     }
 });
 
+//========================================================================================================================
 
+
+keith({
+    pattern: "tagonline",
+    alias: ["onlinemembers", "listonline", "listactive"],
+    desc: "Mention all currently online/active group members",
+    category: "Group",
+    react: "🟢",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, reply, groupMetadata } = context;
+
+            if (!m.isGroup) {
+                return reply("⚠️ This command can only be used in groups.");
+            }
+
+            // Fetch active (online) members (Note: May require additional logic depending on WhatsApp API)
+            const activeMembers = groupMetadata.participants.filter(async (member) => {
+                try {
+                    const presence = await client.fetchPresence(member.id);
+                    return presence.lastKnownPresence === 'available'; // 'available' means online
+                } catch (err) {
+                    console.error("Error fetching presence:", err);
+                    return false;
+                }
+            });
+
+            if (activeMembers.length === 0) {
+                return reply("⚠️ No online members found or could not fetch presence data.");
+            }
+
+            const senderHandle = m.sender.split('@')[0];
+            const mentionMessage = `🟢 *Online Members Tag*\n` +
+                                 `Tagged by @${senderHandle}\n` +
+                                 `💬 *Message:* ${text || 'No message provided'}\n\n` +
+                                 activeMembers.map((member, index) => 
+                                     `${index + 1}. @${member.id.split('@')[0]}`
+                                 ).join('\n');
+
+            await client.sendMessage(
+                m.chat,
+                {
+                    text: mentionMessage,
+                    mentions: activeMembers.map(m => m.id)
+                },
+                { quoted: m }
+            );
+        });
+    } catch (error) {
+        console.error("TagOnline Error:", error);
+        reply("❌ Failed to tag online members. Please try again later.");
+    }
+});
 
 //========================================================================================================================
 
 keith({
     pattern: "tagcountry",
     alias: ["tagc", "tagcc"],
-    desc: "Tag members filtered by country code",
+    desc: "Tag members filtered by country code (e.g., .tagcountry 91)",
     category: "Group",
     react: "🌍",
     filename: __filename
 }, async (context) => {
     try {
         await ownerMiddleware(context, async () => {
-            const { client, m, args, participants, text, reply } = context;
+            const { client, m, text, reply, groupMetadata } = context;
 
-            const countryCode = args[0] || null;
-            let message = `You have been tagged by ${m.pushName}.\n\nMessage: ${text || 'No Message!'}\n\n`;
+            // Basic checks
+            if (!m.isGroup) return reply("⚠️ This command only works in groups!");
+            if (!text) return reply("ℹ️ Example: _.tagcountry 254_ (for Kenyan numbers)");
 
-            let filtered = participants;
+            // Extract country code (remove +/00 prefixes and non-digits)
+            const countryCode = text.trim().replace(/^\+|^00/, '').replace(/\D/g, '');
+            if (!countryCode) return reply("❌ Invalid country code format!");
 
-            if (countryCode) {
-                filtered = participants.filter(member => 
-                    member.id.split('@')[0].startsWith(countryCode)
-                );
+            // Get participants from fresh group metadata
+            const participants = groupMetadata.participants || [];
+            if (participants.length === 0) return reply("⚠️ No members found in this group!");
 
-                if (filtered.length === 0) {
-                    return reply(`_No members found with the country code ${countryCode}_`);
-                }
+            // Filter members by country code
+            const filteredMembers = participants.filter(member => 
+                member.id.split('@')[0].startsWith(countryCode)
+            );
+
+            if (filteredMembers.length === 0) {
+                return reply(`🌍 No members found with country code *${countryCode}*`);
             }
 
-            filtered.forEach((mem, index) => {
-                message += `${index + 1}. 📧 @${mem.id.split('@')[0]}\n`;
-            });
+            // Build the mention message
+            const message = [
+                `🌍 *Country Tag* (+${countryCode})`,
+                `👤 Tagged by: ${m.pushName || '@' + m.sender.split('@')[0]}`,
+                `💬 Message: ${text.replace(countryCode, '').trim() || 'No message'}`,
+                `👥 Members: ${filteredMembers.length}\n`,
+                ...filteredMembers.map((mem, i) => `${i+1}. @${mem.id.split('@')[0]}`)
+            ].join('\n');
 
             await client.sendMessage(
                 m.chat,
-                { text: message, mentions: filtered.map(m => m.id) },
+                {
+                    text: message,
+                    mentions: filteredMembers.map(m => m.id)
+                },
                 { quoted: m }
             );
         });
     } catch (error) {
-        console.error("Error in tag by country code:", error);
+        console.error("TagCountry Error:", error);
+        reply("❌ Failed to tag members. Ensure I have admin rights!");
     }
 });
+
 
 //========================================================================================================================
 
