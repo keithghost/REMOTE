@@ -1,70 +1,69 @@
 const { keith } = require('../commandHandler');
+const ytSearch = require('yt-search');
+const { exec } = require('child_process');
+const fs = require('fs');
+const axios = require('axios');
+const path = require('path');
 
 keith({
-    pattern: "play",
-    alias: ["song", "music", "track"],
-    desc: "Download music from YouTube, Spotify or SoundCloud",
-    category: "Download",
-    react: "🎧",
-    filename: __filename
-}, async ({ client, m, text, botname, sendReply, sendMediaMessage, downloadYouTube, downloadSoundCloud, downloadSpotify,
-    searchYouTube, searchSoundCloud, searchSpotify }) => {
-    if (!text) {
-        return sendReply(client, m, "🎵 Please specify the song title.\n*Example:* play Blinding Lights");
-    }
+  pattern: "play",
+  alias: ["song", "music", "track"],
+  desc: "Download & compress music from YouTube",
+  category: "Download",
+  react: "🎧",
+  filename: __filename
+}, async ({ client, m, text, fetchJson, reply }) => {
+  try {
+    if (!text) return reply("🎵 Please provide a song title.\nExample: *play faded alan walker*");
 
-    const sources = [
-        { search: searchYouTube, download: downloadYouTube, label: "YouTube" },
-        { search: searchSpotify, download: downloadSpotify, label: "Spotify" },
-        { search: searchSoundCloud, download: downloadSoundCloud, label: "SoundCloud" }
-    ];
+    const search = await ytSearch(text);
+    const first = search.videos[0];
+    if (!first) return reply("🚫 No results found.");
 
-    let result = null;
-    let downloadResult = null;
-    let platform = null;
+    const ytUrl = first.url;
+    const api = `https://apis-keith.vercel.app/download/ytmp3?url=${ytUrl}`;
+    const { result } = await fetchJson(api);
 
-    for (const source of sources) {
-        result = await source.search(text);
-        if (result) {
-            downloadResult = await source.download(result.url);
-            if (downloadResult) {
-                platform = source.label;
-                break;
-            }
+    const tempPath = path.join(__dirname, 'temp.mp3');
+    const outputPath = path.join(__dirname, 'compressed.mp3');
+
+    // Download original high-quality audio
+    const response = await axios({ url: result.download_url, responseType: 'stream' });
+    const writer = fs.createWriteStream(tempPath);
+    response.data.pipe(writer);
+    await new Promise((res, rej) => writer.on('finish', res).on('error', rej));
+
+    // Use ffmpeg to reduce audio quality to 64kbps
+    await new Promise((resolve, reject) => {
+      exec(`ffmpeg -i "${tempPath}" -b:a 64k "${outputPath}"`, (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+
+    await client.sendMessage(m.chat, {
+      audio: fs.readFileSync(outputPath),
+      mimetype: "audio/mp3",
+      fileName: `${first.title}.mp3`,
+      contextInfo: {
+        externalAdReply: {
+          title: first.title,
+          body: first.timestamp,
+          thumbnailUrl: first.thumbnail,
+          mediaType: 1,
+          sourceUrl: first.url,
+          renderLargerThumbnail: true,
+          showAdAttribution: true
         }
-    }
+      }
+    }, { quoted: m });
 
-    if (!result || !downloadResult) {
-        return sendReply(client, m, "❌ Couldn't find or download the requested song.");
-    }
-
-    const caption = [
-        `🎶 *Song Info*`,
-        `╭─────────────────────`,
-        `📝 *Title:* ${result.title}`,
-        `🎧 *Source:* ${platform}`,
-        `🔗 *URL:* ${result.url}`,
-        `📦 *Format:* ${downloadResult.format}`,
-        result.artist ? `👤 *Artist:* ${result.artist}` : null,
-        `╰─────────────────────`,
-        `*Powered by ${botname}*`
-    ].filter(Boolean).join('\n');
-
-    if (downloadResult.thumbnail || result.thumbnail) {
-        await sendMediaMessage(client, m, {
-            image: { url: downloadResult.thumbnail || result.thumbnail },
-            caption
-        });
-    }
-
-    await client.sendMessage(m.chat, {
-        audio: { url: downloadResult.downloadUrl },
-        mimetype: "audio/mp4"
-    });
-
-    await client.sendMessage(m.chat, {
-        document: { url: downloadResult.downloadUrl },
-        mimetype: "audio/mp3",
-        fileName: `${result.title.replace(/[^a-zA-Z0-9 ]/g, "")}.mp3`
-    });
+    // Cleanup
+    fs.unlinkSync(tempPath);
+    fs.unlinkSync(outputPath);
+    
+  } catch (err) {
+    console.error("❌ Error:", err);
+    reply("Something went wrong while processing the song.");
+  }
 });
