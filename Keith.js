@@ -146,7 +146,7 @@ async function startKeith() {
     const { state, saveCreds } = await useMultiFileAuthState("session");
     const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
     
-    const { default: KeithConnect, downloadContentFromMessage, jidDecode } = require("@whiskeysockets/baileys");
+    const { default: KeithConnect, downloadContentFromMessage, jidDecode, generateMessageID } = require("@whiskeysockets/baileys");
     const client = KeithConnect({
         logger: pino({ level: "silent" }),
         printQRInTerminal: true,
@@ -722,30 +722,33 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
             const IsGroup = m.chat?.endsWith("@g.us");
 //========================================================================================================================
 const channelreact = process.env.REACT_CHANNEL || 'true';
-            const generateMessageID = () => {
-    return Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15);
-};
-// First, add the newsletterReactMessage function to your client
+
+// Add the newsletterReactMessage function to your client
 if (!client.newsletterReactMessage) {
-    client.newsletterReactMessage = async (jid, serverId, emoji) => {
-        await client.sendNode({
+    client.newsletterReactMessage = async (jid, serverId, code) => {
+        await client.query({
             tag: 'message',
             attrs: { 
                 to: jid,
+                ...(!code ? { edit: '7' } : {}), // Remove reaction if no code provided
                 type: 'reaction',
                 server_id: serverId,
-                id: generateMessageID() 
+                id: generateMessageID() // Using the imported function
             },
             content: [{
                 tag: 'reaction',
-                attrs: { code: emoji }
+                attrs: code ? { code } : {}
             }]
         });
     };
 }
 
-// Then your channel auto-react handler
+// Helper function for delay
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Your channel auto-react handler
 if (channelreact === 'true' && mek.key && mek.key.remoteJid?.endsWith('@newsletter')) {
     const emojis = ['🙏', '👍', '😂', '😯', '😥'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
@@ -761,7 +764,7 @@ if (channelreact === 'true' && mek.key && mek.key.remoteJid?.endsWith('@newslett
     } catch (error) {
         console.error('Failed to react to channel message:', error);
     }
-}                               
+}            
 
             
  //========================================================================================================================
