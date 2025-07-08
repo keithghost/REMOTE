@@ -6,6 +6,78 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fs = require("fs");
 const { exec } = require("child_process");
 
+keith({
+    pattern: "resize",
+    alias: ["resize", "imgresize"],
+    desc: "Resize quoted image to specified dimensions (e.g., 300×250)",
+    category: "Editing",
+    react: "🖼️",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, getRandom, prefix } = context; // Added prefix to destructuring
+
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        // Check if message is quoted and is an image
+        if (!quoted || !/image/.test(mime)) {
+            return await client.sendMessage(m.chat, { 
+                text: `Please reply to an *image* with dimensions like *300×250* to resize it.\nExample: *${prefix}resize 300×250*` 
+            }, { quoted: m });
+        }
+
+        // Check if dimensions are provided
+        if (!text || !text.match(/^\d+×\d+$/)) {
+            return await client.sendMessage(m.chat, { 
+                text: `Please provide dimensions in format *width×height* (e.g., 300×250)` 
+            }, { quoted: m });
+        }
+
+        const [width, height] = text.split('×').map(Number);
+        
+        // Validate dimensions
+        if (width <= 0 || height <= 0 || width > 5000 || height > 5000) {
+            return await client.sendMessage(m.chat, { 
+                text: `Invalid dimensions. Please use values between 1 and 5000` 
+            }, { quoted: m });
+        }
+
+        // Download the image
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.jpg');
+
+        // Use ffmpeg to resize the image
+        await new Promise((resolve, reject) => {
+            exec(`ffmpeg -i ${mediaPath} -vf "scale=${width}:${height}" ${outputPath}`, async (error) => {
+                try {
+                    fs.unlinkSync(mediaPath); // Clean up original file
+                    
+                    if (error) {
+                        reject(new Error(`Error resizing image: ${error.message}`));
+                        return;
+                    }
+
+                    // Send the resized image
+                    const imageBuffer = fs.readFileSync(outputPath);
+                    await client.sendMessage(m.chat, { 
+                        image: imageBuffer,
+                        caption: `Resized to ${width}×${height}`
+                    }, { quoted: m });
+                    
+                    fs.unlinkSync(outputPath); // Clean up resized file
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
+
+    } catch (err) {
+        await client.sendMessage(m.chat, { text: `Error: ${err.message}` }, { quoted: m });
+    }
+});
+
 /*keith({
     pattern: "amplify",
     alias: ["replaceaudio", "mergeaudio"],
