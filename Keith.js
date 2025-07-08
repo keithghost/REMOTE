@@ -723,36 +723,7 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 //========================================================================================================================
 
                                
-const channelreact = process.env.CHANNEL_REACT || 'true';
 
-            // Auto React to Channel Messages
-if (channelreact === 'true' && mek.key && mek.key.remoteJid?.endsWith('@newsletter')) {
-    try {
-        // Get newsletter metadata
-       // const newsletterMetadata = await client.newsletterMetadata(mek.key.remoteJid).catch(() => null);
-        
-        // Only proceed if we have metadata and the bot is a subscriber
-        if (newsletterMetadata && newsletterMetadata.subscribers?.some(sub => sub.id === client.user.id)) {
-            const emojis = ['🙏', '👍', '😂', '😯', '😥', '❤️', '🔥', '👏', '🎉', '🤩'];
-            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-            const delayMessage = 3000; // 3 seconds delay
-            
-            // React to the message
-            await client.newsletterReactMessage(mek.key.remoteJid, {
-                react: {
-                    text: randomEmoji,
-                    key: mek.key
-                }
-            });
-            
-            // Add delay before next action
-            await sleep(delayMessage);
-        }
-    } catch (error) {
-        console.error('Failed to auto-react to channel message:', error);
-        // You might want to implement retry logic here if needed
-    }
-}
             
  //========================================================================================================================
 
