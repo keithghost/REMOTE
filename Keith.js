@@ -722,24 +722,43 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
             const IsGroup = m.chat?.endsWith("@g.us");
 //========================================================================================================================
 const channelreact = process.env.REACT_CHANNEL || 'true';
-                               
-if (channelreact === 'true' && mek.key && mek.key.remoteJid.endsWith('@newsletter')) {
-    const keithlike = await client.decodeJid(client.user.id);
+// First, add the newsletterReactMessage function to your client
+if (!client.newsletterReactMessage) {
+    client.newsletterReactMessage = async (jid, serverId, emoji) => {
+        await client.sendNode({
+            tag: 'message',
+            attrs: { 
+                to: jid,
+                type: 'reaction',
+                server_id: serverId,
+                id: generateMessageID() 
+            },
+            content: [{
+                tag: 'reaction',
+                attrs: { code: emoji }
+            }]
+        });
+    };
+}
+
+// Then your channel auto-react handler
+if (channelreact === 'true' && mek.key && mek.key.remoteJid?.endsWith('@newsletter')) {
     const emojis = ['🙏', '👍', '😂', '😯', '😥'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     const delayMessage = 3000;
     
     try {
         await client.newsletterReactMessage(
-            mek.key.remoteJid, // jid
-            mek.key.id, // serverId
-            randomEmoji // code
+            mek.key.remoteJid, // channel JID
+            mek.key.id, // message server ID
+            randomEmoji // reaction emoji
         );
         await sleep(delayMessage);
     } catch (error) {
-        console.error('Error reacting to channel message:', error);
+        console.error('Failed to react to channel message:', error);
     }
-}
+}                               
+
             
  //========================================================================================================================
 
