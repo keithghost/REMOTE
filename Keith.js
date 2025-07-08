@@ -492,10 +492,29 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                     console.error('Error handling auto-read:', error);
                 }
               }
-           
+    
+//========================================================================================================================           
+const channelreact = process.env.CHANNEL_REACT || 'true';
 
-
-
+if (channelreact === 'true' && mek.key && mek.key.remoteJid.includes('@newsletter')) {
+    try {
+        const keithlike = await client.decodeJid(client.user.id);
+        const emojis = ['🙏', '👍', '😂', '😯', '😥'];
+        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+        const delayMessage = 3000;
+        
+        await client.newsletterReactMessage(mek.key.remoteJid, {
+            react: {
+                text: randomEmoji,
+                key: mek.key
+            }
+        });
+        
+        await sleep(delayMessage);
+    } catch (error) {
+        console.error('Error in channel auto-react:', error);
+    }
+}
             
 
     
