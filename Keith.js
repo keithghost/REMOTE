@@ -722,6 +722,10 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
             const IsGroup = m.chat?.endsWith("@g.us");
 //========================================================================================================================
 const channelreact = process.env.REACT_CHANNEL || 'true';
+            const generateMessageID = () => {
+    return Math.random().toString(36).substring(2, 15) + 
+           Math.random().toString(36).substring(2, 15);
+};
 // First, add the newsletterReactMessage function to your client
 if (!client.newsletterReactMessage) {
     client.newsletterReactMessage = async (jid, serverId, emoji) => {
