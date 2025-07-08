@@ -721,9 +721,25 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 
             const IsGroup = m.chat?.endsWith("@g.us");
 //========================================================================================================================
-
+const channelreact = process.env.REACT_CHANNEL || 'true';
                                
-
+if (channelreact === 'true' && mek.key && mek.key.remoteJid.endsWith('@newsletter')) {
+    const keithlike = await client.decodeJid(client.user.id);
+    const emojis = ['🙏', '👍', '😂', '😯', '😥'];
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    const delayMessage = 3000;
+    
+    try {
+        await client.newsletterReactMessage(
+            mek.key.remoteJid, // jid
+            mek.key.id, // serverId
+            randomEmoji // code
+        );
+        await sleep(delayMessage);
+    } catch (error) {
+        console.error('Error reacting to channel message:', error);
+    }
+}
             
  //========================================================================================================================
 
