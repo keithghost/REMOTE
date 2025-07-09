@@ -4,6 +4,137 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 
 //========================================================================================================================
 
+keith({
+    pattern: "forwardch",
+    alias: ["fwdch", "sendtochannel"],
+    desc: "Forward messages to WhatsApp channels",
+    category: "Channel",
+    react: "📤",
+    filename: __filename
+}, async (context) => {
+    try {
+        await ownerMiddleware(context, async () => {
+            const { client, m, text, botname, reply, prefix } = context;
+            
+            // Get quoted message
+            const quoted = m.quoted ? m.quoted : null;
+            const mime = quoted?.mimetype || "";
+            
+            // Help message if no arguments
+            if (!text) {
+                return reply(
+                    `📤 *Channel Forward Usage:*\n` +
+                    `• ${prefix}forwardch <channel-url> [quoted-message]\n` +
+                    `Example: ${prefix}forwardch https://whatsapp.com/channel/xxxx (reply to a message)\n\n` +
+                    `Supported media types:\n` +
+                    `🎵 Audio | 🎥 Video | 🖼️ Image | 📄 Document | 📝 Text`
+                );
+            }
+
+            // Extract channel URL from command
+            const channelUrl = text.trim();
+            
+            if (!channelUrl.startsWith("https://whatsapp.com/channel/")) {
+                return reply("❌ Please provide a valid WhatsApp channel URL starting with https://whatsapp.com/channel/");
+            }
+
+            // Check if there's a quoted message to forward
+            if (!quoted) {
+                return reply("❌ Please quote/reply to a message you want to forward to the channel");
+            }
+
+            // Extract channel ID from URL
+            const urlParts = channelUrl.split('/');
+            const channelId = urlParts[4];
+            
+            if (!channelId) {
+                return reply("❌ Invalid channel URL format. Couldn't extract channel ID.");
+            }
+
+            try {
+                // Get channel metadata
+                const channelInfo = await client.newsletterMetadata("invite", channelId);
+                
+                // Prepare the message to forward based on media type
+                let messageToForward = {};
+                let mediaType = "text";
+
+                if (/audio/.test(mime)) {
+                    messageToForward.audio = quoted.audio;
+                    messageToForward.mimetype = mime;
+                    messageToForward.ptt = quoted.ptt || false;
+                    mediaType = "audio";
+                } else if (/video/.test(mime)) {
+                    messageToForward.video = quoted.video;
+                    messageToForward.mimetype = mime;
+                    messageToForward.caption = quoted.caption || "";
+                    mediaType = "video";
+                } else if (/image/.test(mime)) {
+                    messageToForward.image = quoted.image;
+                    messageToForward.mimetype = mime;
+                    messageToForward.caption = quoted.caption || "";
+                    mediaType = "image";
+                } else if (/document/.test(mime)) {
+                    messageToForward.document = quoted.document;
+                    messageToForward.mimetype = mime;
+                    messageToForward.fileName = quoted.fileName || "document";
+                    mediaType = "document";
+                } else if (quoted.text) {
+                    messageToForward.text = quoted.text;
+                    mediaType = "text";
+                } else {
+                    return reply("❌ Unsupported message type. Please quote audio, video, image, document, or text");
+                }
+
+                // Add context info
+                messageToForward.contextInfo = {
+                    forwardingScore: 1,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: channelInfo.id,
+                        serverMessageId: Math.floor(Math.random() * 999999),
+                        newsletterName: channelInfo.name
+                    },
+                    externalAdReply: {
+                        title: `${botname || 'Channel Forward'}`,
+                        body: `Forwarded ${mediaType} to ${channelInfo.name}`,
+                        thumbnailUrl: channelInfo.picture?.url || '',
+                        mediaType: 1,
+                        sourceUrl: channelUrl
+                    }
+                };
+
+                // Send processing message
+                await reply(`⏳ Forwarding ${mediaType} to channel *${channelInfo.name}*...`);
+
+                // Forward the message to channel
+                await client.sendMessage(channelInfo.id, messageToForward);
+
+                // Send success message
+                return reply(`✅ Successfully forwarded ${mediaType} to channel *${channelInfo.name}*`);
+
+            } catch (error) {
+                console.error("Channel forward error:", error);
+                
+                let errorMessage = "Failed to forward message to channel";
+                if (error.message.includes("not found")) {
+                    errorMessage = "Channel not found. Please check the URL.";
+                } else if (error.message.includes("permission")) {
+                    errorMessage = "You don't have permission to send to this channel.";
+                } else if (error.message.includes("media")) {
+                    errorMessage = "This media type isn't supported for channels.";
+                }
+
+                return reply(`❌ ${errorMessage}\nError: ${error.message}`);
+            }
+        });
+    } catch (error) {
+        console.error("Outer error in forwardch:", error);
+        return context.reply("❌ An unexpected error occurred while processing your request.");
+    }
+});
+//========================================================================================================================
+
 
 keith({
     pattern: "channelreact",
