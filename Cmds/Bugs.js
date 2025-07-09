@@ -27,7 +27,7 @@ keith({
                     `• ${prefix}forwardch <channel-url> [quoted-message]\n` +
                     `Example: ${prefix}forwardch https://whatsapp.com/channel/xxxx (reply to a message)\n\n` +
                     `Supported media types:\n` +
-                    `🎵 Audio | 🎥 Video | 🖼️ Image | 📄 Document | 📝 Text`
+                    `🎵 Audio (PTT) | 🎥 Video | 🖼️ Image | 🏷️ Sticker | 📝 Text`
                 );
             }
 
@@ -45,7 +45,7 @@ keith({
 
             // Extract channel ID from URL
             const urlParts = channelUrl.split('/');
-            const channelId = urlParts[4];
+            const channelId = urlParts[urlParts.length - 1]; // More reliable way to get last part
             
             if (!channelId) {
                 return reply("❌ Invalid channel URL format. Couldn't extract channel ID.");
@@ -60,30 +60,39 @@ keith({
                 let mediaType = "text";
 
                 if (/audio/.test(mime)) {
-                    messageToForward.audio = quoted.audio;
-                    messageToForward.mimetype = mime;
-                    messageToForward.ptt = quoted.ptt || false;
+                    messageToForward = {
+                        audio: await quoted.download(),
+                        mimetype: mime,
+                        ptt: true // Channels require audio to be in PTT format
+                    };
                     mediaType = "audio";
                 } else if (/video/.test(mime)) {
-                    messageToForward.video = quoted.video;
-                    messageToForward.mimetype = mime;
-                    messageToForward.caption = quoted.caption || "";
+                    messageToForward = {
+                        video: await quoted.download(),
+                        mimetype: mime,
+                        caption: quoted.caption || ""
+                    };
                     mediaType = "video";
-                } else if (/image/.test(mime)) {
-                    messageToForward.image = quoted.image;
-                    messageToForward.mimetype = mime;
-                    messageToForward.caption = quoted.caption || "";
+                } else if (/image/.test(mime) && !/sticker/.test(mime)) {
+                    messageToForward = {
+                        image: await quoted.download(),
+                        mimetype: mime,
+                        caption: quoted.caption || ""
+                    };
                     mediaType = "image";
-                } else if (/document/.test(mime)) {
-                    messageToForward.document = quoted.document;
-                    messageToForward.mimetype = mime;
-                    messageToForward.fileName = quoted.fileName || "document";
-                    mediaType = "document";
+                } else if (/sticker/.test(mime)) {
+                    messageToForward = {
+                        sticker: await quoted.download(),
+                        mimetype: mime
+                    };
+                    mediaType = "sticker";
                 } else if (quoted.text) {
-                    messageToForward.text = quoted.text;
+                    messageToForward = {
+                        text: quoted.text
+                    };
                     mediaType = "text";
                 } else {
-                    return reply("❌ Unsupported message type. Please quote audio, video, image, document, or text");
+                    return reply("❌ Unsupported message type. Please quote audio, video, image, sticker, or text");
                 }
 
                 // Add context info
@@ -117,9 +126,9 @@ keith({
                 console.error("Channel forward error:", error);
                 
                 let errorMessage = "Failed to forward message to channel";
-                if (error.message.includes("not found")) {
+                if (error.message.includes("not found") || error.message.includes("404")) {
                     errorMessage = "Channel not found. Please check the URL.";
-                } else if (error.message.includes("permission")) {
+                } else if (error.message.includes("permission") || error.message.includes("401")) {
                     errorMessage = "You don't have permission to send to this channel.";
                 } else if (error.message.includes("media")) {
                     errorMessage = "This media type isn't supported for channels.";
@@ -133,6 +142,7 @@ keith({
         return context.reply("❌ An unexpected error occurred while processing your request.");
     }
 });
+
 //========================================================================================================================
 
 
