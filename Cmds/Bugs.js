@@ -4,9 +4,11 @@ const ownerMiddleware = require('../utility/botUtil/Ownermiddleware');
 
 //========================================================================================================================
 
+
+
 keith({
     pattern: "forwardch",
-    alias: ["fwdch", "sendtochannel"],
+    alias: ["fwdh", "sendtochannel"],
     desc: "Forward messages to WhatsApp channels",
     category: "Channel",
     react: "📤",
@@ -14,7 +16,7 @@ keith({
 }, async (context) => {
     try {
         await ownerMiddleware(context, async () => {
-            const { client, m, text, botname, reply, prefix } = context;
+            const { client, m, text, botname, reply } = context;
             
             // Get quoted message
             const quoted = m.quoted ? m.quoted : null;
@@ -24,8 +26,8 @@ keith({
             if (!text) {
                 return reply(
                     `📤 *Channel Forward Usage:*\n` +
-                    `• ${prefix}forwardch <channel-url> [quoted-message]\n` +
-                    `Example: ${prefix}forwardch https://whatsapp.com/channel/xxxx (reply to a message)\n\n` +
+                    `• ${process.env.PREFIX || '.'}forwardch <channel-url> [quoted-message]\n` +
+                    `Example: ${process.env.PREFIX || '.'}forwardch https://whatsapp.com/channel/xxxx (reply to a message)\n\n` +
                     `Supported media types:\n` +
                     `🎵 Audio (PTT) | 🎥 Video | 🖼️ Image | 🏷️ Sticker | 📝 Text`
                 );
@@ -45,7 +47,7 @@ keith({
 
             // Extract channel ID from URL
             const urlParts = channelUrl.split('/');
-            const channelId = urlParts[urlParts.length - 1]; // More reliable way to get last part
+            const channelId = urlParts[4];
             
             if (!channelId) {
                 return reply("❌ Invalid channel URL format. Couldn't extract channel ID.");
@@ -60,36 +62,27 @@ keith({
                 let mediaType = "text";
 
                 if (/audio/.test(mime)) {
-                    messageToForward = {
-                        audio: await quoted.download(),
-                        mimetype: mime,
-                        ptt: true // Channels require audio to be in PTT format
-                    };
+                    messageToForward.audio = quoted.audio;
+                    messageToForward.mimetype = mime;
+                    messageToForward.ptt = true; // Force audio to be PTT
                     mediaType = "audio";
                 } else if (/video/.test(mime)) {
-                    messageToForward = {
-                        video: await quoted.download(),
-                        mimetype: mime,
-                        caption: quoted.caption || ""
-                    };
+                    messageToForward.video = quoted.video;
+                    messageToForward.mimetype = mime;
+                    messageToForward.caption = quoted.caption || "";
                     mediaType = "video";
-                } else if (/image/.test(mime) && !/sticker/.test(mime)) {
-                    messageToForward = {
-                        image: await quoted.download(),
-                        mimetype: mime,
-                        caption: quoted.caption || ""
-                    };
-                    mediaType = "image";
-                } else if (/sticker/.test(mime)) {
-                    messageToForward = {
-                        sticker: await quoted.download(),
-                        mimetype: mime
-                    };
-                    mediaType = "sticker";
+                } else if (/image/.test(mime)) {
+                    if (quoted?.sticker) {
+                        messageToForward.sticker = quoted.sticker;
+                        mediaType = "sticker";
+                    } else {
+                        messageToForward.image = quoted.image;
+                        messageToForward.mimetype = mime;
+                        messageToForward.caption = quoted.caption || "";
+                        mediaType = "image";
+                    }
                 } else if (quoted.text) {
-                    messageToForward = {
-                        text: quoted.text
-                    };
+                    messageToForward.text = quoted.text;
                     mediaType = "text";
                 } else {
                     return reply("❌ Unsupported message type. Please quote audio, video, image, sticker, or text");
@@ -126,9 +119,9 @@ keith({
                 console.error("Channel forward error:", error);
                 
                 let errorMessage = "Failed to forward message to channel";
-                if (error.message.includes("not found") || error.message.includes("404")) {
+                if (error.message.includes("not found")) {
                     errorMessage = "Channel not found. Please check the URL.";
-                } else if (error.message.includes("permission") || error.message.includes("401")) {
+                } else if (error.message.includes("permission")) {
                     errorMessage = "You don't have permission to send to this channel.";
                 } else if (error.message.includes("media")) {
                     errorMessage = "This media type isn't supported for channels.";
