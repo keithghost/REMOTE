@@ -213,8 +213,6 @@ keith({
     }
 });
 //========================================================================================================================
-
-
 keith({
     pattern: "tiktok",
     alias: ["tt", "ttdl"],
@@ -223,61 +221,70 @@ keith({
     react: "⬇️",
     filename: __filename
 }, async ({ client, m, text, reply }) => {
-    if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://vt.tiktok.com/ZSje1Vkup/*");
-
     try {
-        // Validate URL
-        if (!text.match(/tiktok\.com|vt\.tiktok\.com/)) {
+        // Validate input
+        if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://vt.tiktok.com/ZSje1Vkup/*");
+        
+        // URL validation
+        const tiktokRegex = /(?:https?:\/\/)?(?:www\.|vt\.)?tiktok\.com\/(?:.*\/)?(?:\w+|\?shareId=|\?item_id=)(\d+)?/;
+        if (!tiktokRegex.test(text)) {
             return reply("❌ Invalid TikTok URL. Please provide a valid link.");
         }
 
+        // API endpoint
         const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl2?url=${encodeURIComponent(text)}`;
 
-        // Show loading message
-        const processingMsg = await reply("⏳ Processing TikTok link...");
-
-        // Fetch TikTok video info
+        // Fetch video data
         const { data } = await axios.get(apiUrl, {
+            timeout: 30000,
             headers: { 'Accept': 'application/json' }
         });
 
+        // Validate API response
         if (!data?.status || !data.result?.video) {
-            await client.sendMessage(m.chat, { 
-                delete: processingMsg.key 
-            });
             return reply("❌ Failed to download video. The link may be invalid or private.");
         }
 
         const video = data.result;
+        const shortDescription = video.description ? 
+            video.description.length > 60 ? 
+            `${video.description.substring(0, 60)}...` : 
+            video.description : '';
 
-        // Delete processing message
-        await client.sendMessage(m.chat, { 
-            delete: processingMsg.key 
-        });
-
-        // Send video message
+        // Send video with metadata
         await client.sendMessage(m.chat, {
-            video: { url: video.video },
+            video: { 
+                url: video.video,
+                mimetype: 'video/mp4'
+            },
             caption: `*@${video.author}*\n\n${video.description || ''}`,
             thumbnail: video.thumbnail ? { url: video.thumbnail } : undefined,
             contextInfo: {
+                mentionedJid: [m.sender],
                 externalAdReply: {
                     title: `@${video.author}`,
-                    body: video.description ? video.description.slice(0, 60) : 'TikTok Video',
-                    thumbnailUrl: video.thumbnail,
+                    body: shortDescription,
+                    thumbnail: video.thumbnail ? await (await axios.get(video.thumbnail, { responseType: 'arraybuffer' })).data : null,
                     mediaType: 2,
+                    mediaUrl: text,
+                    sourceUrl: text,
                     showAdAttribution: true
                 }
             }
         }, { quoted: m });
 
     } catch (error) {
-        console.error('TikTok Command Error:', error);
-        reply(`⚠️ Error: ${error.message.includes('ECONNRESET') ? 'Connection reset - try again' : 
-              error.response?.status === 404 ? 'Video not found' : 
-              'Failed to process your request'}`);
+        console.error('TikTok Download Error:', error);
+        
+        const errorMessage = error.response?.status === 404 ? 'Video not found' :
+                           error.code === 'ECONNRESET' ? 'Connection error' :
+                           error.message.includes('timeout') ? 'Request timed out' :
+                           'Failed to process your request';
+        
+        reply(`⚠️ Error: ${errorMessage}`);
     }
 });
+
 //========================================================================================================================
 
 keith({
