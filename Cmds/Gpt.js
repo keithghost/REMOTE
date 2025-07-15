@@ -1,28 +1,87 @@
-const { keith } = require('../commandHandler');
-const fetch = require("node-fetch");
+/*const { keith } = require('../commandHandler');
+const fetch = require("node-fetch");*/
 
 
 
 // Pre-defined prompts and responses
-const PROMPTS = {
-    identity: "I am Keith AI, an advanced assistant created by Keith Research Team.",
-    capabilities: "I can answer questions, provide information, and assist with various tasks.",
-    creator: "I was developed by Keithkeizzah and his research team.",
-    error: "Sorry, I encountered an error. Please try again later."
+
+// Required imports
+const { keith } = require('../commandHandler');
+const fetch = require('node-fetch');
+const fs = require('fs');
+const path = require('path');
+
+// Constants configuration
+const CONFIG = {
+    PROMPTS: {
+        identity: "I am Keith AI, an advanced assistant created by Keith Research Team.",
+        capabilities: "I can answer questions, provide information, and assist with various tasks.",
+        creator: "I was developed by Keithkeizzah and his research team.",
+        error: "Sorry, I encountered an error. Please try again later.",
+        welcome: "Hello! I'm Keith AI. How can I assist you today?"
+    },
+    API_URL: "https://apis-keith.vercel.app/ai/mistral",
+    HISTORY_FILE: path.join(__dirname, 'keithAI_chatHistory.json'),
+    MAX_HISTORY: 20
 };
 
-// Initialize chat history
-let chatHistory = JSON.parse(localStorage.getItem('keithAI_chatHistory')) || [];
+// Chat History Management
+class ChatHistory {
+    constructor() {
+        this.history = this.loadHistory();
+        this.initializeSystemPrompt();
+    }
 
-// Add system prompt if new chat
-if (chatHistory.length === 0) {
-    chatHistory.push({
-        role: "system",
-        content: "You are Keith AI, a helpful assistant created by Keith Research Team. Be professional yet friendly."
-    });
-    localStorage.setItem('keithAI_chatHistory', JSON.stringify(chatHistory));
+    loadHistory() {
+        try {
+            if (fs.existsSync(CONFIG.HISTORY_FILE)) {
+                const data = fs.readFileSync(CONFIG.HISTORY_FILE, 'utf8');
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.error('Error loading chat history:', error);
+        }
+        return [];
+    }
+
+    initializeSystemPrompt() {
+        if (this.history.length === 0) {
+            this.addMessage({
+                role: "system",
+                content: "You are Keith AI, a helpful assistant created by Keith Research Team. Be professional yet friendly."
+            });
+        }
+    }
+
+    addMessage(message) {
+        this.history.push(message);
+        this.trimHistory();
+        this.saveHistory();
+    }
+
+    trimHistory() {
+        if (this.history.length > CONFIG.MAX_HISTORY) {
+            this.history = this.history.slice(-CONFIG.MAX_HISTORY);
+        }
+    }
+
+    saveHistory() {
+        try {
+            fs.writeFileSync(CONFIG.HISTORY_FILE, JSON.stringify(this.history, null, 2));
+        } catch (error) {
+            console.error('Error saving chat history:', error);
+        }
+    }
+
+    getHistory() {
+        return this.history;
+    }
 }
 
+// Initialize chat history
+const chatHistory = new ChatHistory();
+
+// Keith AI Command Handler
 keith({
     pattern: "keithai",
     alias: ["ai", "keith"],
@@ -36,51 +95,57 @@ keith({
 
         // Handle empty query
         if (!text) {
-            return sendReply(client, m, `${PROMPTS.identity} ${PROMPTS.capabilities} How can I help you?`);
+            return await sendReply(client, m, CONFIG.PROMPTS.welcome);
         }
 
         // Check for identity questions
         const lowerText = text.toLowerCase();
         if (lowerText.includes("who are you")) {
-            return sendReply(client, m, PROMPTS.identity);
+            return await sendReply(client, m, CONFIG.PROMPTS.identity);
         }
         if (lowerText.includes("who created you") || lowerText.includes("who made you")) {
-            return sendReply(client, m, PROMPTS.creator);
+            return await sendReply(client, m, CONFIG.PROMPTS.creator);
         }
 
+        // Process user query
         try {
             // Add user message to history
-            chatHistory.push({ role: "user", content: text });
-            
+            chatHistory.addMessage({ role: "user", content: text });
+
             // Call Keith AI API
-            const apiUrl = `https://apis-keith.vercel.app/ai/mistral?q=${encodeURIComponent(text)}`;
+            const apiUrl = `${CONFIG.API_URL}?q=${encodeURIComponent(text)}`;
             const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                throw new Error(`API request failed with status ${response.status}`);
+            }
+
             const data = await response.json();
 
             if (data.status && data.result) {
                 // Add AI response to history
-                chatHistory.push({ role: "assistant", content: data.result });
+                chatHistory.addMessage({ role: "assistant", content: data.result });
                 
-                // Save updated history (limit to last 20 messages)
-                chatHistory = chatHistory.slice(-20);
-                localStorage.setItem('keithAI_chatHistory', JSON.stringify(chatHistory));
-                
-                // Send response
+                // Send response to user
                 await sendReply(client, m, data.result);
             } else {
-                throw new Error("Invalid API response");
+                throw new Error("Invalid API response structure");
             }
-        } catch (e) {
-            console.error("API Error:", e);
-            sendReply(client, m, PROMPTS.error);
+        } catch (apiError) {
+            console.error("API Processing Error:", apiError);
+            await sendReply(client, m, CONFIG.PROMPTS.error);
         }
-    } catch (error) {
-        console.error("Command Error:", error);
-        sendReply(client, m, PROMPTS.error);
+    } catch (commandError) {
+        console.error("Command Execution Error:", commandError);
+        await sendReply(client, m, CONFIG.PROMPTS.error);
     }
 });
 
-
+// Export for testing if needed
+module.exports = {
+    chatHistory,
+    CONFIG
+};
 
 
 keith({
