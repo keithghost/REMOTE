@@ -1,6 +1,88 @@
 const { keith } = require('../commandHandler');
 const fetch = require("node-fetch");
 
+
+
+// Pre-defined prompts and responses
+const PROMPTS = {
+    identity: "I am Keith AI, an advanced assistant created by Keith Research Team.",
+    capabilities: "I can answer questions, provide information, and assist with various tasks.",
+    creator: "I was developed by Keithkeizzah and his research team.",
+    error: "Sorry, I encountered an error. Please try again later."
+};
+
+// Initialize chat history
+let chatHistory = JSON.parse(localStorage.getItem('keithAI_chatHistory')) || [];
+
+// Add system prompt if new chat
+if (chatHistory.length === 0) {
+    chatHistory.push({
+        role: "system",
+        content: "You are Keith AI, a helpful assistant created by Keith Research Team. Be professional yet friendly."
+    });
+    localStorage.setItem('keithAI_chatHistory', JSON.stringify(chatHistory));
+}
+
+keith({
+    pattern: "keithai",
+    alias: ["ai", "keith"],
+    desc: "Chat with Keith AI",
+    category: "AI",
+    react: "🤖",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, sendReply } = context;
+
+        // Handle empty query
+        if (!text) {
+            return sendReply(client, m, `${PROMPTS.identity} ${PROMPTS.capabilities} How can I help you?`);
+        }
+
+        // Check for identity questions
+        const lowerText = text.toLowerCase();
+        if (lowerText.includes("who are you")) {
+            return sendReply(client, m, PROMPTS.identity);
+        }
+        if (lowerText.includes("who created you") || lowerText.includes("who made you")) {
+            return sendReply(client, m, PROMPTS.creator);
+        }
+
+        try {
+            // Add user message to history
+            chatHistory.push({ role: "user", content: text });
+            
+            // Call Keith AI API
+            const apiUrl = `https://apis-keith.vercel.app/ai/mistral?q=${encodeURIComponent(text)}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (data.status && data.result) {
+                // Add AI response to history
+                chatHistory.push({ role: "assistant", content: data.result });
+                
+                // Save updated history (limit to last 20 messages)
+                chatHistory = chatHistory.slice(-20);
+                localStorage.setItem('keithAI_chatHistory', JSON.stringify(chatHistory));
+                
+                // Send response
+                await sendReply(client, m, data.result);
+            } else {
+                throw new Error("Invalid API response");
+            }
+        } catch (e) {
+            console.error("API Error:", e);
+            sendReply(client, m, PROMPTS.error);
+        }
+    } catch (error) {
+        console.error("Command Error:", error);
+        sendReply(client, m, PROMPTS.error);
+    }
+});
+
+
+
+
 keith({
     pattern: "bard",
     alias: ["bardai", "aibard"],
