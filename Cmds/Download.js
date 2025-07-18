@@ -221,28 +221,28 @@ keith({
     react: "⬇️",
     filename: __filename
 }, async ({ client, m, text, reply }) => {
-    if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://vt.tiktok.com/ZSje1Vkup/*");
+    if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://www.tiktok.com/@user/video/123456789*");
     
-    const tiktokRegex = /(?:https?:\/\/)?(?:www\.|vt\.)?tiktok\.com\/(?:.*\/)?(?:\w+|\?shareId=|\?item_id=)(\d+)?/;
+    const tiktokRegex = /(?:https?:\/\/)?(?:www\.|vt\.)?tiktok\.com\/.+\/video\/\d+/;
     if (!tiktokRegex.test(text)) return reply("❌ Invalid TikTok URL");
 
     try {
-        const { data } = await axios.get(`https://apis-keith.vercel.app/download/tiktokdl2?url=${encodeURIComponent(text)}`);
+        const { data } = await axios.get(`https://api.bk9.dev/download/tiktok?url=${encodeURIComponent(text)}`);
         
-        if (!data?.status || !data.result?.video) {
+        if (!data?.status || !data.BK9?.BK9) {
             return reply("❌ Failed to download video");
         }
 
         await client.sendMessage(m.chat, {
             video: { 
-                url: data.result.video,
+                url: data.BK9.BK9,
                 mimetype: 'video/mp4'
             }
         }, { quoted: m });
 
     } catch (error) {
         console.error('Error:', error);
-        reply("⚠️ Failed to process your request");
+        reply("Failed to process your request");
     }
 });
 //========================================================================================================================
