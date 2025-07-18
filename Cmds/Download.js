@@ -216,21 +216,23 @@ keith({
 keith({
     pattern: "tiktok",
     alias: ["tt", "ttdl"],
-    desc: "Download TikTok videos without watermark",
+    desc: "Download TikTok videos - Send only tiktok.com links",
     category: "Download",
     react: "⬇️",
     filename: __filename
 }, async ({ client, m, text, reply }) => {
-    if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://www.tiktok.com/@user/video/123456789*");
+    if (!text) return reply("❌ *Example:*\n.tiktok https://www.tiktok.com/@user/video/123456789");
     
-    const tiktokRegex = /(?:https?:\/\/)?(?:www\.|vt\.)?tiktok\.com\/.+\/video\/\d+/;
-    if (!tiktokRegex.test(text)) return reply("❌ Invalid TikTok URL");
+    // Strict validation - only accepts www.tiktok.com links
+    if (!text.includes("tiktok.com/")) {
+        return reply("⚠️ *Only tiktok.com links!*\nExample:\n.tiktok https://www.tiktok.com/@user/video/123456789");
+    }
 
     try {
         const { data } = await axios.get(`https://api.bk9.dev/download/tiktok?url=${encodeURIComponent(text)}`);
         
         if (!data?.status || !data.BK9?.BK9) {
-            return reply("❌ Failed to download video");
+            return reply("❌ Invalid TikTok link or video is private");
         }
 
         await client.sendMessage(m.chat, {
@@ -241,8 +243,8 @@ keith({
         }, { quoted: m });
 
     } catch (error) {
-        console.error('Error:', error);
-        reply("Failed to process your request");
+        console.error('TikTok Error:', error);
+        reply("❌ Failed to download. Send only public tiktok.com links!");
     }
 });
 //========================================================================================================================
