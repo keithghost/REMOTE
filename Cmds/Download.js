@@ -221,70 +221,30 @@ keith({
     react: "⬇️",
     filename: __filename
 }, async ({ client, m, text, reply }) => {
+    if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://vt.tiktok.com/ZSje1Vkup/*");
+    
+    const tiktokRegex = /(?:https?:\/\/)?(?:www\.|vt\.)?tiktok\.com\/(?:.*\/)?(?:\w+|\?shareId=|\?item_id=)(\d+)?/;
+    if (!tiktokRegex.test(text)) return reply("❌ Invalid TikTok URL");
+
     try {
-        // Validate input
-        if (!text) return reply("🎬 Please provide a TikTok URL\nExample: *tiktok https://vt.tiktok.com/ZSje1Vkup/*");
+        const { data } = await axios.get(`https://apis-keith.vercel.app/download/tiktokdl2?url=${encodeURIComponent(text)}`);
         
-        // URL validation
-        const tiktokRegex = /(?:https?:\/\/)?(?:www\.|vt\.)?tiktok\.com\/(?:.*\/)?(?:\w+|\?shareId=|\?item_id=)(\d+)?/;
-        if (!tiktokRegex.test(text)) {
-            return reply("❌ Invalid TikTok URL. Please provide a valid link.");
-        }
-
-        // API endpoint
-        const apiUrl = `https://apis-keith.vercel.app/download/tiktokdl2?url=${encodeURIComponent(text)}`;
-
-        // Fetch video data
-        const { data } = await axios.get(apiUrl, {
-            timeout: 30000,
-            headers: { 'Accept': 'application/json' }
-        });
-
-        // Validate API response
         if (!data?.status || !data.result?.video) {
-            return reply("❌ Failed to download video. The link may be invalid or private.");
+            return reply("❌ Failed to download video");
         }
 
-        const video = data.result;
-        const shortDescription = video.description ? 
-            video.description.length > 60 ? 
-            `${video.description.substring(0, 60)}...` : 
-            video.description : '';
-
-        // Send video with metadata
         await client.sendMessage(m.chat, {
             video: { 
-                url: video.video,
+                url: data.result.video,
                 mimetype: 'video/mp4'
-            },
-            caption: `*@${video.author}*\n\n${video.description || ''}`,
-            thumbnail: video.thumbnail ? { url: video.thumbnail } : undefined,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                externalAdReply: {
-                    title: `@${video.author}`,
-                    body: shortDescription,
-                    thumbnail: video.thumbnail ? await (await axios.get(video.thumbnail, { responseType: 'arraybuffer' })).data : null,
-                    mediaType: 2,
-                    mediaUrl: text,
-                    sourceUrl: text,
-                    showAdAttribution: true
-                }
             }
         }, { quoted: m });
 
     } catch (error) {
-        console.error('TikTok Download Error:', error);
-        
-        const errorMessage = error.response?.status === 404 ? 'Video not found' :
-                           error.code === 'ECONNRESET' ? 'Connection error' :
-                           error.message.includes('timeout') ? 'Request timed out' :
-                           'Failed to process your request';
-        
-        reply(`⚠️ Error: ${errorMessage}`);
+        console.error('Error:', error);
+        reply("⚠️ Failed to process your request");
     }
 });
-
 //========================================================================================================================
 
 keith({
