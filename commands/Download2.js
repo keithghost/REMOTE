@@ -530,8 +530,41 @@ keith({
   }
 }); 
 
-
 keith({
+  nomCom: "tiktok",
+  aliases: ["ttdl", "tiktokdl", "tt"],
+  categorie: "Download",
+  reaction: "🎵"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+
+  if (!arg || !arg[0]) {
+    return zk.sendMessage(dest, { text: '❌ Please send a TikTok URL\nExample: .tt https://tiktok.com/@user/video/123' });
+  }
+
+  const url = arg[0].trim();
+  if (!url.includes('tiktok.com')) {
+    return zk.sendMessage(dest, { text: '⚠️ Only tiktok.com links accepted!' });
+  }
+
+  try {
+    const apiUrl = `https://api.bk9.dev/download/tiktok?url=${encodeURIComponent(url)}`;
+    const { data } = await axios.get(apiUrl);
+
+    if (!data?.status || !data.BK9?.BK9) {
+      return zk.sendMessage(dest, { text: '❌ Failed to download. Link may be invalid.' });
+    }
+
+    await zk.sendMessage(dest, {
+      video: { url: data.BK9.BK9 }
+    });
+
+  } catch (e) {
+    console.error(e);
+    zk.sendMessage(dest, { text: '❌ Error downloading video' });
+  }
+});
+/*keith({
   nomCom: "tiktok",
   aliases: ["ttdl", "tiktokdl", "tt"],
   categorie: "Download",
@@ -693,7 +726,7 @@ keith({
     console.error("TikTok download error:", error);
     repondre(zk, dest, ms, `Failed to download TikTok. Error: ${error.message}\nYou can try with another link or check if the video is public.`);
   }
-});
+});*/
 
 keith({
   nomCom: "mediafire",
