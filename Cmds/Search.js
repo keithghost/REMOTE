@@ -15,7 +15,7 @@ const { generateWAMessageContent, generateWAMessageFromContent } = require('@whi
 
 keith({
     pattern: "image",
-    alias: ["image2", "image3"],
+    alias: ["image2", "img"],
     desc: "Search and download images",
     category: "Download",
     react: "🐦",
