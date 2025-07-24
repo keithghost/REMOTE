@@ -724,6 +724,7 @@ setTimeout(() => {
                 verifZokouAdmin,
                 prefixe,
                 arg,
+                baseJid,
                 repondre,
                 mtype,
                 groupeAdmin,
