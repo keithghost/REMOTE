@@ -15,61 +15,27 @@ keith({
   categorie: 'Group', 
   reaction: "📣" 
 }, async (dest, zk, commandeOptions) => {
-  const { ms, arg, nomGroupe, repondre, infosGroupe, nomAuteurMessage } = commandeOptions;
+  const { ms, arg, nomGroupe, repondre, infosGroupe, nomAuteurMessage, superUser, servBot } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
     return repondre("✋🏿 This command is reserved for groups ❌");
   }
 
-  const mess = arg?.join(' ') || 'No message provided';
+  const mess = arg && arg.length > 0 ? arg.join(' ') : 'No message provided';
   const membresGroupe = metadata.participants;
 
   let tag = `========================\n🌟 *ALPHA-MD* 🌟\n========================\n👥 Group: ${nomGroupe} 🚀\n👤 Author: *${nomAuteurMessage}* 👋\n📜 Message: *${mess}* 📝\n========================\n\n`;
 
   const emoji = ['🦴', '👀', '😮‍💨', '❌', '✔️', '😇', '⚙️', '🔧', '🎊', '😡', '🙏🏿', '⛔️', '$', '😟', '🥵', '🐅'];
-  const random = Math.floor(Math.random() * emoji.length);
+  const random = Math.floor(Math.random() * (emoji.length - 1));
 
-  // Standardize all JIDs and collect mentions
-  const mentions = [];
   membresGroupe.forEach(membre => {
-    const standardizedJid = standardizeJid(membre.id);
-    if (standardizedJid) {
-      const baseId = standardizedJid.split('@')[0];
-      tag += `${emoji[random]} @${baseId}\n`;
-      mentions.push(standardizedJid);
-    }
+    tag += `${emoji[random]} @${membre.id.split('@')[0]}\n`;
   });
 
   await repondre({
     text: tag,
-    mentions: mentions
+    mentions: membresGroupe.map((i) => i.id)
   });
 });
-
-function standardizeJid(jid) {
-  if (!jid) return '';
-  try {
-    jid = typeof jid === 'string' ? jid : 
-         (jid.decodeJid ? jid.decodeJid() : String(jid));
-    jid = jid.split(':')[0].split('/')[0];
-    if (!jid.includes('@')) {
-      jid += '@s.whatsapp.net';
-    } else if (jid.endsWith('@lid')) {
-      return jid.toLowerCase();
-    }
-    return jid.toLowerCase();
-  } catch (e) {
-    console.error("JID standardization error:", e);
-    return '';
-  }
-}
-
-function decodeJid(jid) {
-  if (!jid) return jid;
-  if (/:\d+@/gi.test(jid)) {
-    let decode = (0, baileys_1.jidDecode)(jid) || {};
-    return decode.user && decode.server ? decode.user + '@' + decode.server : jid;
-  }
-  return jid;
-}
