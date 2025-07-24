@@ -12,6 +12,7 @@ const conf = require(__dirname + "/../set");
 //========================================================================================================================
 keith({ 
   nomCom: "tagall", 
+  aliases: ["tagll", "tagyote"],
   categorie: 'Group', 
   reaction: "📣" 
 }, async (dest, zk, commandeOptions) => {
