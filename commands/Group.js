@@ -24,9 +24,9 @@ keith({
   }
 
   // Only allow admins or super users
-  const isUserAdmin = await isAdmin(zk, dest, commandeOptions.auteurMessage);
-  if (!isUserAdmin && !superUser) {
-    return repondre('Command reserved for admins');
+ // const isUserAdmin = await isAdmin(zk, dest, commandeOptions.auteurMessage);
+  if (!superUser) {
+    return repondre('Command reserved for admins or owner');
   }
 
   const mess = arg && arg.length > 0 ? arg.join(' ') : 'No message provided';
