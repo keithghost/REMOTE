@@ -10,14 +10,13 @@ const { repondre, sendMessage } = require('../keizzah/context');
 const conf = require(__dirname + "/../set");
 //========================================================================================================================
 //========================================================================================================================
-const baseJid = jid => jid.split('@')[0];
 
 keith({ 
   nomCom: "tagall", 
   categorie: 'Group', 
   reaction: "📣" 
 }, async (dest, zk, commandeOptions) => {
-  const { ms, arg, nomGroupe, repondre, infosGroupe, nomAuteurMessage, superUser } = commandeOptions;
+  const { ms, arg, nomGroupe, repondre, servBot, infosGroupe, nomAuteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
@@ -39,7 +38,7 @@ keith({
   const random = Math.floor(Math.random() * (emoji.length - 1));
 
   membresGroupe.forEach(membre => {
-    tag += `${emoji[random]} @${baseJid(membre.id)}\n`;
+    tag += `${emoji[random]} @${servBot(membre.id)}\n`;
   });
 
   // Using repondre instead of sendMessage
