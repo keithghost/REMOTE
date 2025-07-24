@@ -212,6 +212,7 @@ keith({
         const categoryGroups = {
             "AI": ["AI"],
             "AUDIO EDIT": ["AUDIO-EDIT"],
+            "GROUP": ["GROUP"],
             "BUG-CMDS": ["BUG-CMDS"],
             "CODING": ["CODING"],
             "CONVERT CMDS": ["CONVERSATION"],
