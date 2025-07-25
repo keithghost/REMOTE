@@ -6,17 +6,13 @@ const fs = require('fs-extra');
 const moment = require("moment-timezone");
 const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 const { default: axios } = require('axios');
-const { repondre, sendMessage } = require('../keizzah/context');
+
 const conf = require(__dirname + "/../set");
 //========================================================================================================================
 //========================================================================================================================
-keith({ 
-  nomCom: "tagall", 
-  aliases: ["tagll", "tagyote"],
-  categorie: 'Group', 
-  reaction: "📣" 
-}, async (dest, zk, commandeOptions) => {
-  const { ms, arg, nomGroupe, repondre, infosGroupe, nomAuteurMessage, superUser, servBot } = commandeOptions;
+// Tagall Command
+keith({ nomCom: "tagall", categorie: 'Group', reaction: "📣" }, async (dest, zk, commandeOptions) => {
+  const { ms, arg, nomGroupe, infosGroupe, repondre, nomAuteurMessage, superUser } = commandeOptions;
 
   const metadata = await zk.groupMetadata(dest);
   if (!metadata) {
@@ -32,11 +28,15 @@ keith({
   const random = Math.floor(Math.random() * (emoji.length - 1));
 
   membresGroupe.forEach(membre => {
-    tag += `${emoji[random]} @${membre.id.split('@')[0]}\n`;
+    // Get just the display name without @lid
+    const displayName = membre.id.split('@')[0];
+    tag += `${emoji[random]} @${displayName}\n`;
   });
 
-  await repondre({
+  await zk.sendMessage(dest, {
     text: tag,
-    mentions: membresGroupe.map((i) => i.id)
+    mentions: membresGroupe.map((i) => i.id) // Still using full JID for mentions
   });
 });
+//========================================================================================================================
+//========================================================================================================================
