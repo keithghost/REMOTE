@@ -114,50 +114,177 @@ keith({
   }
 });
 //========================================================================================================================
-keith({
-  nomCom: "define",
-  aliases: ["dictionary", "dict", "def"],
-  reaction: '😁',
-  categorie: "Search"
-}, async (dest, zk, commandeOptions) => {
-  const { arg, ms } = commandeOptions;
-  const term = arg.join(" ");
 
-  if (!term) {
-    return repondre(zk, dest, ms, "Please provide a term to define.");
+
+keith({
+  nomCom: "dictionary",
+  aliases: ["dict", "define", "meaning", "word"],
+  categorie: "Search",
+  reaction: "📚"
+}, async (dest, zk, commandeOptions) => {
+  const { ms, arg } = commandeOptions;
+
+  // Validate input
+  if (!arg || !arg[0]) {
+    return repondre(zk, dest, ms, 'Please provide a word to define!\nExample: .dictionary hello');
   }
 
+  const word = arg.join(' ').trim();
+  
   try {
-    const { data } = await axios.get(`http://api.urbandictionary.com/v0/define?term=${term}`);
-    const definition = data.list[0];
+    // Fetch dictionary data and image in parallel
+    const [dictResponse, imageResponse] = await Promise.all([
+      axios.get(`https://apis-keith.vercel.app/education/dictionary?q=${encodeURIComponent(word)}`),
+      axios.get(`https://apis-keith.vercel.app/search/images?query=${encodeURIComponent(word)}`)
+    ]);
 
-    if (definition) {
-      const definitionMessage = `
-        Word: ${term}
-        Definition: ${definition.definition.replace(/\[|\]/g, '')}
-        Example: ${definition.example.replace(/\[|\]/g, '')}
-      `;
+    const dictData = dictResponse.data;
+    const imageData = imageResponse.data;
 
-      await sendMessage(zk, dest, ms, {
-        text: definitionMessage,
-        contextInfo: {
-          externalAdReply: {
-            title: "ALPHA-MD DICTIONARY",
-            body: `Definition of ${term}`,
-            mediaType: 1,
-            thumbnailUrl: "https://files.catbox.moe/28j7yx.jpg", 
-            sourceUrl: conf.GURL,
-            showAdAttribution: true, 
-          },
-        },
-      });
-
-    } else {
-      return repondre(zk, dest, ms, `No result found for "${term}".`);
+    if (!dictData.status || !dictData.result) {
+      return repondre(zk, dest, ms, `No definitions found for "${word}"`);
     }
+
+    const result = dictData.result;
+    const phonetics = result.phonetics || [];
+    const meanings = result.meanings || [];
+    let imageUrl = 'https://i.imgur.com/DYJWpgI.jpeg'; // Default dictionary image
+
+    // Use first image from search if available
+    if (imageData.status && imageData.result && imageData.result.length > 0) {
+      imageUrl = imageData.result[0].url;
+    }
+
+    // Prepare common contextInfo
+    const commonContextInfo = {
+      externalAdReply: {
+        showAdAttribution: true,
+        title: `${conf.BOT || 'Dictionary Bot'}`,
+        body: `Definition of ${result.word}`,
+        thumbnailUrl: imageUrl,
+        sourceUrl: conf.GURL || '',
+        mediaType: 1,
+        renderLargerThumbnail: false
+      }
+    };
+
+    // Build pronunciation section
+    let pronunciationText = '';
+    if (phonetics.length > 0) {
+      pronunciationText += `*Pronunciations:*\n`;
+      phonetics.forEach((ph, index) => {
+        pronunciationText += `${index + 1}. ${ph.text || 'No phonetic'}\n`;
+      });
+      pronunciationText += `\n`;
+    }
+
+    // Build meanings section
+    let meaningsText = '';
+    meanings.forEach(meaning => {
+      meaningsText += `*${meaning.partOfSpeech}*\n`;
+      
+      // Add definitions (limit to 5)
+      const defs = meaning.definitions.slice(0, 5);
+      defs.forEach((def, i) => {
+        meaningsText += `  ${i + 1}. ${def.definition}\n`;
+      });
+      
+      // Add synonyms if available
+      if (meaning.synonyms.length > 0) {
+        meaningsText += `  *Synonyms:* ${meaning.synonyms.slice(0, 5).join(', ')}\n`;
+      }
+      
+      // Add antonyms if available
+      if (meaning.antonyms.length > 0) {
+        meaningsText += `  *Antonyms:* ${meaning.antonyms.slice(0, 5).join(', ')}\n`;
+      }
+      
+      meaningsText += `\n`;
+    });
+
+    // Build source section
+    let sourceText = '';
+    if (result.sourceUrls && result.sourceUrls.length > 0) {
+      sourceText += `*Source:* ${result.sourceUrls[0]}\n\n`;
+    }
+
+    // Prepare main caption
+    const mainCaption = `
+*📖 ${result.word.toUpperCase()} Dictionary 📖*
+${pronunciationText}
+${meaningsText}
+${sourceText}
+*Reply with:*
+1️⃣ - For first pronunciation audio
+2️⃣ - For second pronunciation audio
+`.trim();
+
+    // Send the initial message with image
+    const message = await zk.sendMessage(dest, {
+      image: { url: imageUrl },
+      caption: mainCaption,
+      contextInfo: commonContextInfo
+    }, { quoted: ms });
+
+    const messageId = message.key.id;
+
+    // Set up reply handler for audio requests
+    const replyHandler = async (update) => {
+      try {
+        const messageContent = update.messages[0];
+        if (!messageContent.message) return;
+
+        // Check if this is a reply to our initial message
+        const isReply = messageContent.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+        if (!isReply) return;
+
+        const responseText = messageContent.message.conversation || 
+                           messageContent.message.extendedTextMessage?.text;
+
+        // Validate response
+        if (!['1', '2', '1️⃣', '2️⃣'].includes(responseText)) {
+          return await zk.sendMessage(dest, {
+            text: "Invalid option. Please reply with 1 or 2 for pronunciation audio.",
+            quoted: messageContent
+          });
+        }
+
+        // Determine which audio to send
+        const audioIndex = ['1', '1️⃣'].includes(responseText) ? 0 : 1;
+        
+        if (phonetics[audioIndex]?.audio) {
+          await zk.sendMessage(dest, {
+            audio: { url: phonetics[audioIndex].audio },
+            mimetype: "audio/mpeg",
+            contextInfo: commonContextInfo
+          }, { quoted: messageContent });
+        } else {
+          await zk.sendMessage(dest, {
+            text: "Sorry, the requested pronunciation audio is not available.",
+            quoted: messageContent
+          });
+        }
+
+      } catch (error) {
+        console.error("Error handling reply:", error);
+        await zk.sendMessage(dest, {
+          text: "An error occurred while processing your request. Please try again.",
+          quoted: messageContent
+        });
+      }
+    };
+
+    // Add event listener for replies
+    zk.ev.on("messages.upsert", replyHandler);
+
+    // Remove listener after 5 minutes to prevent memory leaks
+    setTimeout(() => {
+      zk.ev.off("messages.upsert", replyHandler);
+    }, 300000);
+
   } catch (error) {
-    console.error(error);
-    return repondre(zk, dest, ms, "An error occurred while fetching the definition.");
+    console.error("Dictionary error:", error);
+    repondre(zk, dest, ms, `Failed to fetch definition. Error: ${error.message}\nPlease try again later.`);
   }
 });
 //========================================================================================================================
