@@ -303,50 +303,7 @@ keith({
   });
 });
 
-// Update command
-keith({
-  nomCom: 'update',
-  aliases: ['redeploy', 'sync'],
-  categorie: "system",
-  reaction: '🔄'
-}, async (dest, zk, commandeOptions) => {
-  const { ms, superUser } = commandeOptions;
 
-  if (!superUser) {
-    return repondre(zk, dest, ms, "*This command is restricted to the bot owner or Alpha owner 💀*");
-  }
-
-  const herokuAppName = s.HEROKU_APP_NAME;
-  const herokuApiKey = s.HEROKU_API_KEY;
-
-  if (!herokuAppName || !herokuApiKey) {
-    await repondre(zk, dest, ms, "It looks like the Heroku app name or API key is not set. Please make sure you have set the `HEROKU_APP_NAME` and `HEROKU_API_KEY` environment variables.");
-    return;
-  }
-
-  try {
-    const response = await axios.post(
-      `https://api.heroku.com/apps/${herokuAppName}/builds`,
-      {
-        source_blob: {
-          url: "https://github.com/Keithkeizzah/ALPHA-MD/tarball/main",
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${herokuApiKey}`,
-          Accept: "application/vnd.heroku+json; version=3",
-        },
-      }
-    );
-
-    await repondre(zk, dest, ms, "*Your bot is getting updated, wait 2 minutes for the redeploy to finish! This will install the latest version of ALPHA-MD.*");
-  } catch (error) {
-    const errorMessage = error.response?.data?.message || error.message;
-    await repondre(zk, dest, ms, `*Failed to update and redeploy. ${errorMessage} Please check if you have set the Heroku API key and Heroku app name correctly.*`);
-    console.error("Error triggering redeploy:", error);
-  }
-});
 
 // Fetch command
 keith({
