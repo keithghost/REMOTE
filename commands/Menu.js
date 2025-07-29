@@ -180,8 +180,9 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
         category: selectedCategory
     };
 }
-
+//========================================================================================================================
 // Main Command
+//========================================================================================================================
 keith({ 
     nomCom: "menu", 
     categorie: "General" 
@@ -392,7 +393,8 @@ process.on('exit', () => {
     });
     activeMenus.clear();
 });
-
+//========================================================================================================================
+//========================================================================================================================
 
 keith({ 
     nomCom: "help", 
@@ -484,4 +486,53 @@ keith({
         respond("🥵🥵 Menu error: " + error);
     }
 });
-                        
+//========================================================================================================================
+//========================================================================================================================
+
+keith({
+    nomCom: "list",
+    reaction: "⚔️",
+    desc: "Get bot command list.",
+    categorie: "general"
+}, async (dest, zk, context) => {
+    const { respond, prefix, nomAuteurMessage } = context;
+    const commands = require(__dirname + "/../keizzah/keith").cm;
+
+    let menu = 'ᴀʟᴘʜᴀ ᴍᴅ ᴄᴏᴍᴍᴀɴᴅ ʟɪsᴛ\n\n';
+    let commandList = [];
+
+    // Loop through all commands
+    commands.forEach((command) => {
+        const { nomCom, desc = 'No description', aliases = 'No aliases', categorie, reaction } = command;
+        if (nomCom) {
+            commandList.push({ nomCom, desc, aliases, categorie, reaction });
+        }
+    });
+
+    // Sort alphabetically
+    commandList.sort((a, b) => a.nomCom.localeCompare(b.nomCom));
+
+    // Format each command
+    commandList.forEach(({ nomCom, desc, aliases, categorie, reaction }, index) => {
+        menu += `➤ ${index + 1}. ${toFancyUppercaseFont(nomCom.trim())}\n`;
+        menu += `   ▸ Description: ${desc}\n`;
+        menu += `   ▸ Aliases: ${aliases}\n`;
+        menu += `   ▸ Category: ${categorie}\n`;
+        menu += `   ▸ Reaction: ${reaction || 'None'}\n\n`;
+    });
+
+    // Send the formatted list
+    await zk.sendMessage(dest, {
+        text: menu,
+        contextInfo: {
+            externalAdReply: {
+                title: "Alpha MD Command List",
+                body: "Complete list of available commands",
+                thumbnailUrl: "https://telegra.ph/file/967c663a5978c545f78d6.jpg",
+                sourceUrl: "https://whatsapp.com/channel/0029Vaan9TF9Bb62l8wpoD47",
+                mediaType: 1,
+                renderLargerThumbnail: true
+            }
+        }
+    });
+});
