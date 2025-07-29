@@ -4,7 +4,7 @@ const { repondre, sendMessage } = require('../keizzah/context');
 const axios = require('axios');
 const wiki = require('wikipedia');
 const conf = require(__dirname + "/../set");
-
+//========================================================================================================================
 keith({
   nomCom: "technews",
   reaction: '📰',
@@ -37,7 +37,7 @@ keith({
     await repondre(zk, dest, ms, "Sorry, there was an error retrieving the news. Please try again later.\n" + error.message);
   }
 });
-
+//========================================================================================================================
 keith({
   nomCom: "bible",
   reaction: '🎎',
@@ -113,6 +113,7 @@ keith({
     await repondre(zk, dest, ms, "An error occurred while fetching the Bible passage. Please try again later.\n" + error.message);
   }
 });
+//========================================================================================================================
 keith({
   nomCom: "define",
   aliases: ["dictionary", "dict", "def"],
@@ -159,7 +160,7 @@ keith({
     return repondre(zk, dest, ms, "An error occurred while fetching the definition.");
   }
 });
-
+//========================================================================================================================
 keith({
   nomCom: "code",
   aliases: ["session", "pair", "paircode", "qrcode"],
@@ -213,7 +214,7 @@ keith({
     repondre(zk, dest, ms, replyText);
   }
 });
-
+//========================================================================================================================
 keith({
   nomCom: "element",
   reaction: '📓',
@@ -268,7 +269,7 @@ Regards ${conf.BOT} `;
     repondre(zk, dest, ms, "An error occurred while fetching the element data. Please try again later.");
   }
 });
-
+//========================================================================================================================
 keith({
   nomCom: "github",
   aliases: ["git"],
@@ -327,6 +328,7 @@ keith({
     await repondre(zk, dest, ms, "An error occurred while fetching GitHub user data.");
   }
 });
+//========================================================================================================================
 keith({
   nomCom: "tempmail",
   aliases: ['mail', 'temp'],
@@ -424,6 +426,8 @@ You can use this email for temporary purposes. I will notify you if you receive 
     });
   }
 });
+//========================================================================================================================
+  
 keith({
   nomCom: "wiki",
   aliases: ["wikipedia", "wikipeda"],
@@ -475,6 +479,8 @@ keith({
     await repondre(zk, dest, ms, "Got 404. I did not find anything!");
   }
 });
+//========================================================================================================================
+
 keith({
   nomCom: "lyrics",
   aliases: ["mistari", "lyric"],
@@ -549,3 +555,4 @@ keith({
     await repondre(zk, dest, ms, caption);
   }
 });
+//========================================================================================================================
