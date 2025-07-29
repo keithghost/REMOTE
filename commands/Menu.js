@@ -536,3 +536,60 @@ keith({
         }
     });
 });
+//========================================================================================================================
+//========================================================================================================================
+
+
+keith({
+    nomCom: "repo",
+    aliases: ["script", "sc"],
+    reaction: '⚪',
+    nomFichier: __filename
+}, async (dest, zk, commandeOptions) => {
+    const { ms, auteurMessage, nomAuteurMessage } = commandeOptions;
+
+    try {
+        const response = await axios.get("https://api.github.com/repos/Keithkeizzah/ALPHA-MD");
+        const repoData = response.data;
+
+        if (repoData) {
+            const releaseDate = new Date(repoData.created_at).toLocaleDateString('en-GB');
+            const message = `
+*Hello 👋 ${nomAuteurMessage}*
+
+*This is ${settings.BOT}*
+the best bot in the universe developed by ${settings.OWNER_NAME}. Fork and give a star 🌟 to my repo!
+╭────────────────
+│✞  *Stars:* - *${repoData.stargazers_count}*
+│✞  *Forks:* - *${repoData.forks_count}*
+│✞  *Release date:* - *${releaseDate}*
+│✞  *Repo:* - *${repoData.html_url}*
+│✞  *Owner:*   *${settings.OWNER_NAME}*
+│✞  *session:*  *alphapair2.onrender.com*
+╰───────────────────`;
+
+            await zk.sendMessage(dest, {
+                text: message,
+                contextInfo: {
+                    mentionedJid: [auteurMessage],
+                    externalAdReply: {
+                        title: settings.BOT,
+                        body: settings.OWNER_NAME,
+                        thumbnailUrl: settings.URL,
+                        sourceUrl: settings.GURL,
+                        mediaType: 1,
+                        renderLargerThumbnail: true
+                    }
+                }
+            }, { quoted: ms });
+        } else {
+            await repondre("An error occurred while fetching the repository data.");
+        }
+    } catch (error) {
+        console.error("Error fetching repository data:", error);
+        await repondre("An error occurred while fetching the repository data.");
+    }
+});
+//========================================================================================================================
+//========================================================================================================================
+
