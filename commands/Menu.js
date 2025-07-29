@@ -184,7 +184,6 @@ function getCategoryCommands(categoryGroups, selectedNumber) {
 // Main Command
 keith({ 
     nomCom: "menu", 
-    aliases: ["commands", "listcmds"], 
     categorie: "General" 
 }, async (dest, zk, commandeOptions) => {
     const { nomAuteurMessage, ms, repondre, auteurMessage } = commandeOptions;
@@ -393,3 +392,96 @@ process.on('exit', () => {
     });
     activeMenus.clear();
 });
+
+
+keith({ 
+    nomCom: "help", 
+    aliases: ["plugins", "helplist", "commands"], 
+    categorie: "general" 
+}, async (message, client, config) => {
+    const { ms, respond, prefix, nomAuteurMessage } = config;
+    const commands = require(__dirname + "/../keizzah/keith").cm;
+    const categorizedCommands = {};
+    const mode = settings.MODE.toLowerCase() !== "public" ? "Private" : "Public";
+
+    // Organize commands into categories
+    commands.forEach(command => {
+        const category = command.categorie.toUpperCase();
+        if (!categorizedCommands[category]) {
+            categorizedCommands[category] = [];
+        }
+        categorizedCommands[category].push(command.nomCom);
+    });
+
+    moment.tz.setDefault("Africa/Nairobi");
+    const currentTime = moment();
+    const formattedTime = currentTime.format("HH:mm:ss");
+    const formattedDate = currentTime.format("DD/MM/YYYY");
+    const currentHour = currentTime.hour();
+
+    const greetings = ["Good Morning 🌄", "Good Afternoon 🌃", "Good Evening ⛅", "Good Night 🌙"];
+    const greeting = currentHour < 12 ? greetings[0] : currentHour < 17 ? greetings[1] : currentHour < 21 ? greetings[2] : greetings[3];
+
+    const randomQuote = getRandomQuote();
+
+    let responseMessage = `
+ ${greeting}, *${nomAuteurMessage || "User"}*
+
+
+*${randomQuote}*
+
+╭━━━ 〔 *${settings.BOT}* 〕━━━┈⊷𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭
+┃✵╭──────────────
+┃✵│▸ *ʙᴏᴛ ᴏᴡɴᴇʀ:* ${settings.OWNER_NAME}
+┃✵│▸ *ᴘʀᴇғɪx:* *[ ${settings.PREFIXE} ]*
+┃✵│▸ *ᴛɪᴍᴇ:* ${formattedTime}
+┃✵│▸ *ᴄᴏᴍᴍᴀɴᴅꜱ:* ${commands.length} 
+┃✵│▸ *ᴅᴀᴛᴇ:* ${formattedDate}
+┃✵│▸ *ᴍᴏᴅᴇ:* ${mode}
+┃✵│▸ *ᴛɪᴍᴇ ᴢᴏɴᴇ:* Africa/Nairobi
+┃✵│▸ *ʀᴀᴍ:* ${formatMemory(os.totalmem() - os.freemem())}/${formatMemory(os.totalmem())}
+┃✵│▸ *ᴜᴘᴛɪᴍᴇ:* ${formatUptime(process.uptime())}
+┃✵╰──────────────
+╰━━━━━━━━━━━━━━━┈⊷
+
+*${randomQuote}*
+
+`;
+
+    let commandsList = "*𝐀𝐕𝐀𝐈𝐋𝐀𝐁𝐋𝐄 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐒*\n";
+    const sortedCategories = Object.keys(categorizedCommands).sort();
+    let commandIndex = 1;
+
+    for (const category of sortedCategories) {
+        commandsList += `\n*╭────「 ${toFancyUppercaseFont(category)} 」──┈⊷𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭*\n│◦➛╭───────────────`;
+        const sortedCommands = categorizedCommands[category].sort();
+        for (const command of sortedCommands) {
+            commandsList += `\n│◦➛ ${commandIndex++}. ${toFancyLowercaseFont(command)}`;
+        }
+        commandsList += "\n│◦➛╰─────────────\n╰──────────────┈⊷\n";
+    }
+
+    commandsList += String.fromCharCode(8206).repeat(4001) + "\nin honor of Alpha\n";
+
+    try {
+        const senderName = message.sender || message.from;
+        await client.sendMessage(message, {
+            text: responseMessage + commandsList,
+            contextInfo: {
+                mentionedJid: [senderName],
+                externalAdReply: {
+                    title: settings.BOT,
+                    body: settings.OWNER_NAME,
+                    thumbnailUrl: settings.URL,
+                    sourceUrl: settings.GURL,
+                    mediaType: 1,
+                    renderLargerThumbnail: true
+                }
+            }
+        });
+    } catch (error) {
+        console.error("Menu error: ", error);
+        respond("🥵🥵 Menu error: " + error);
+    }
+});
+                        
