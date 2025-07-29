@@ -273,7 +273,7 @@ keith({
 // Shell command
 keith({
   nomCom: "shell",
-  aliases: ["getcmd", "cmd"],
+  
   reaction: '💻',
   categorie: "coding"
 }, async (dest, zk, commandeOptions) => {
