@@ -3,47 +3,9 @@ const {keith} = require("../keizzah/keith");
 //const traduire = require("../keizzah/traduction");
 const { repondre, sendMessage } = require('../keizzah/context');
 const {Sticker ,StickerTypes}= require('wa-sticker-formatter');
-/*keith({
-  nomCom: "google",
-  categorie: "Search"
-}, async (dest, zk, commandeOptions) => {
-  const { arg, ms } = commandeOptions;
+//========================================================================================================================
 
-  if (!arg[0] || arg === "") {
-    return repondre(zk, dest, ms, "Give me a query.\n*Example: .google What is a bot.*");
-  }
-
-  const google = require('google-it');
-  try {
-    const results = await google({ query: arg.join(" ") });
-    let msg = `*Google search for*: ${arg}\n\n`;
-
-    for (let result of results) {
-      msg += `➣ *Title*: ${result.title}\n`;
-      msg += `➣ *Description*: ${result.snippet}\n`;
-      msg += `➣ *Link*: ${result.link}\n\n────────────────────────\n\n`;
-    }
-
-    await sendMessage(zk, dest, ms, {
-      text: msg,
-      contextInfo: {
-        externalAdReply: {
-          title: "Google Search",
-          body: `Results for: ${arg.join(" ")}`,
-          thumbnailUrl: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
-          sourceUrl: conf.GURL,
-          mediaType: 1,
-          showAdAttribution: true
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error("Error during Google search:", error);
-    await repondre(zk, dest, ms, "An error occurred during Google search.");
-  }
-});*/
-
+//========================================================================================================================
 keith({
   nomCom: "movie",
   categorie: "Search"
@@ -99,6 +61,7 @@ keith({
     await repondre(zk, dest, ms, "An error occurred while searching IMDb.");
   }
 });
+//========================================================================================================================
 keith({
   nomCom: "emomix",
   categorie: "Convert"
