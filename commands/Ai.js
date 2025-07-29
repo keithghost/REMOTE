@@ -608,6 +608,7 @@ keith({
 });
 //========================================================================================================================
 
+
 keith({
   nomCom: "lyrics",
   aliases: ["mistari", "lyric"],
@@ -621,65 +622,52 @@ keith({
     return repondre(zk, dest, ms, "Please provide a song name.");
   }
 
-  // Function to get lyrics data from APIs
-  const getLyricsData = async (url) => {
-    try {
-      const response = await axios.get(url);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching data from API:', error);
-      return null;
-    }
-  };
-
-  // List of APIs to try
-  const apis = [
-    `https://api.dreaded.site/api/lyrics?title=${encodeURIComponent(text)}`,
-    `https://some-random-api.com/others/lyrics?title=${encodeURIComponent(text)}`,
-    `https://api.davidcyriltech.my.id/lyrics?title=${encodeURIComponent(text)}`
-  ];
-
-  let lyricsData;
-  for (const api of apis) {
-    lyricsData = await getLyricsData(api);
-    if (lyricsData && lyricsData.result && lyricsData.result.lyrics) break;
-  }
-
-  // Check if lyrics data was found
-  if (!lyricsData || !lyricsData.result || !lyricsData.result.lyrics) {
-    return repondre(zk, dest, ms, `Failed to retrieve lyrics. Please try again.`);
-  }
-
-  const { title, artist, thumb, lyrics } = lyricsData.result;
-  const imageUrl = thumb || "https://i.imgur.com/Cgte666.jpeg";
-
-  const caption = `**Title**: ${title}\n**Artist**: ${artist}\n\n${lyrics}`;
-
   try {
-    // Fetch the image
-    const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+    // Fetch lyrics from the new API
+    const response = await axios.get(`https://apis-keith.vercel.app/search/lyrics?query=${encodeURIComponent(text)}`);
+    const data = response.data;
 
-    // Send the message with the image and lyrics
-    await sendMessage(zk, dest, ms, {
-      image: imageBuffer,
-      caption: caption,
-      contextInfo: {
-        externalAdReply: {
-          title: "Lyrics Search",
-          body: `Lyrics for: ${title}`,
-          thumbnailUrl: imageUrl,
-          sourceUrl: conf.GURL,
-          mediaType: 1,
-          showAdAttribution: true
+    if (!data.status || !data.result || data.result.length === 0) {
+      return repondre(zk, dest, ms, "No lyrics found for this song.");
+    }
+
+    // Get the first result (most relevant)
+    const song = data.result[0];
+    const { song: title, artist, lyrics, thumbnail } = song;
+
+    const caption = `🎵 *Title*: ${title}\n🎤 *Artist*: ${artist}\n\n📜 *Lyrics*:\n${lyrics}`;
+
+    try {
+      // Fetch the thumbnail image
+      const imageResponse = await axios.get(thumbnail, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(imageResponse.data, 'binary');
+
+      // Send message with image and lyrics
+      await zk.sendMessage(dest, {
+        image: imageBuffer,
+        caption: caption,
+        contextInfo: {
+          externalAdReply: {
+            title: "🎶 Lyrics Search",
+            body: `${title} - ${artist}`,
+            thumbnailUrl: thumbnail,
+            sourceUrl: conf.GURL,
+            mediaType: 1,
+            showAdAttribution: true
+          }
         }
-      }
-    });
+      }, { quoted: ms });
+
+    } catch (imageError) {
+      console.error('Error fetching image:', imageError);
+      // Fallback to text-only if image fails
+      await repondre(zk, dest, ms, caption);
+    }
 
   } catch (error) {
-    console.error('Error fetching or sending image:', error);
-    // Fallback to sending just the text if image fetch fails
-    await repondre(zk, dest, ms, caption);
+    console.error('Error fetching lyrics:', error);
+    return repondre(zk, dest, ms, "Failed to retrieve lyrics. Please try again later.");
   }
 });
+
 //========================================================================================================================
