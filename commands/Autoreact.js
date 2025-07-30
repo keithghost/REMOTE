@@ -27,98 +27,13 @@ initNotesDB().catch(err => {
     console.error('Failed to initialize notes database:', err);
 });
 
-
-
-keith({
-    nomCom: 'update2',
-    aliases: ['upgrade', 'sync'],
-    categorie: "system",
-    reaction: '🔄'
-}, async (dest, zk, commandeOptions) => {
-    const { repondre, superUser } = commandeOptions;
-
-    if (!superUser) {
-        return repondre("❌ Owner-only command");
-    }
-
-    try {
-        await repondre("🔍 Checking for updates...");
+//========================================================================================================================
         
-        const { data: commit } = await axios.get(
-            "https://api.github.com/repos/keithkeizzah/ALPHA-MD7/commits/main",
-            { timeout: 8000 }
-        );
-        
-        const currentHash = await getHash();
-        if (commit.sha === currentHash) {
-            return repondre("✅ Already running the latest version!");
-        }
-
-        await repondre("⬇️ Downloading update...");
-        const zipUrl = `https://github.com/keithkeizzah/ALPHA-MD7/archive/${commit.sha}.zip`;
-        const zipPath = path.join(__dirname, '..', 'temp_update.zip');
-        const writer = fs.createWriteStream(zipPath);
-        
-        const response = await axios({
-            url: zipUrl,
-            method: 'GET',
-            responseType: 'stream',
-            timeout: 30000
-        });
-        
-        response.data.pipe(writer);
-        
-        await new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        });
-
-        await repondre("📦 Extracting files...");
-        const extractPath = path.join(__dirname, '..', 'temp_extract');
-        const zip = new AdmZip(zipPath);
-        zip.extractAllTo(extractPath, true);
-
-        await repondre("🔄 Applying update...");
-        const updateSrc = path.join(extractPath, `ALPHA-MD7-${commit.sha.substr(0, 7)}`);
-        await syncFiles(updateSrc, path.join(__dirname, '..'));
-
-        await setHash(commit.sha);
-        await repondre("✅ Update complete! Restarting...");
-
-        // Cleanup
-        fs.unlinkSync(zipPath);
-        fs.removeSync(extractPath);
-        
-        process.exit(0);
-    } catch (error) {
-        console.error('Update failed:', error);
-        return repondre(`❌ Update failed: ${error.message}`);
-    }
-});
-
-async function syncFiles(source, target) {
-    const preserve = ['set.js', 'app.json', 'database.sqlite', 'assets'];
-    
-    const items = await fs.readdir(source);
-    for (const item of items) {
-        if (preserve.includes(item)) continue;
-        
-        const srcPath = path.join(source, item);
-        const destPath = path.join(target, item);
-        const stat = await fs.lstat(srcPath);
-
-        if (stat.isDirectory()) {
-            await fs.ensureDir(destPath);
-            await syncFiles(srcPath, destPath);
-        } else {
-            await fs.copy(srcPath, destPath);
-        }
-    }
-}
 
 
 keith({
     nomCom: 'note',
+    aliases: ["notes"],
     categorie: 'owner',
 }, async (dest, zk, commandeOptions) => {
     const { arg, repondre, prefixe, superUser } = commandeOptions;
@@ -201,6 +116,7 @@ keith({
         return repondre(`❌ Error: ${error.message || 'Failed to process command'}`);
     }
 });
+//========================================================================================================================
 keith({
     nomCom: 'sudo',
     categorie: 'owner',
@@ -256,7 +172,7 @@ keith({
 });
 //const { keith } = require('../keizzah/keith');
 //const { getAllSudoNumbers } = require('../database/sudo');
-
+//========================================================================================================================
 keith({
     nomCom: 'getsudo',
     categorie: 'owner',
@@ -308,7 +224,7 @@ keith({
         return repondre('❌ Failed to check sudo status');
     }
 });
-
+//========================================================================================================================
 keith({
     nomCom: 'typing',
     categorie: 'setting',
@@ -324,7 +240,7 @@ keith({
     });
     repondre('✅ Bot is now showing typing indicator');
 });
-
+//========================================================================================================================
 keith({
     nomCom: 'offline',
     categorie: 'setting',
@@ -339,6 +255,7 @@ keith({
     });
     repondre('✅ Bot is now offline');
 });
+//========================================================================================================================
 keith({
     nomCom: 'online',
     categorie: 'setting',
@@ -354,6 +271,7 @@ keith({
     });
     repondre('✅ Bot is now online (available)');
 });
+//========================================================================================================================
 keith({
     nomCom: 'recording',
     categorie: 'setting',
@@ -369,6 +287,7 @@ keith({
     });
     repondre('✅ Bot is now showing recording indicator');
 });
+//========================================================================================================================
 keith({
     nomCom: 'antibadword',
     categorie: 'setting',
@@ -443,7 +362,7 @@ keith({
     }
 });
 //const { keith } = require('../keizzah/keith');
-
+//========================================================================================================================
 keith({
     nomCom: 'antilink',
     categorie: 'setting',
@@ -509,6 +428,9 @@ keith({
         return repondre('❌ Failed to process command');
     }
 });
+
+//========================================================================================================================
+
 keith({
     nomCom: 'antibot',
     categorie: 'setting',
@@ -607,7 +529,7 @@ keith({
     }
 });
 //const { keith } = require('../keizzah/keith');
-
+//========================================================================================================================
 keith({
     nomCom: 'chatbot',
     categorie: 'setting',
@@ -657,6 +579,8 @@ keith({
         return repondre('❌ Failed to update settings');
     }
 });
+//========================================================================================================================
+
 keith({
     nomCom: 'autoreact',
     aliases: ['areact', 'autoreaction'],
@@ -707,6 +631,7 @@ keith({
 });
 //const { keith } = require('../keizzah/keith');
 //const { getAutoLikeSettings, updateAutoLikeSettings } = require('../database/autolike');
+//========================================================================================================================
 
 keith({
     nomCom: 'autolike',
@@ -775,7 +700,7 @@ keith({
     }
 });
 //const { keith } = require('../keizzah/keith');
-
+//========================================================================================================================
 keith({
     nomCom: 'autobio',
     aliases: ['setbio', 'updatebio'],
@@ -830,7 +755,7 @@ keith({
         return repondre('❌ Failed to update AutoBio settings!');
     }
 });
-
+//========================================================================================================================
 
 keith({
     nomCom: 'anticall',
@@ -893,7 +818,7 @@ keith({
     }
 });
 //const { keith } = require('../keizzah/keith');
-
+//========================================================================================================================
 keith({
     nomCom: 'autoread',
     aliases: ['autoblue', 'autoreadmessages', 'autoreadmessage'],
@@ -928,7 +853,7 @@ keith({
     }
 });
 //const { keith } = require('../keizzah/keith');
-
+//========================================================================================================================
 keith({
     nomCom: 'autoviewstatus',
     aliases: ['autoseeststus', 'autoview'],
@@ -964,3 +889,4 @@ keith({
         return repondre('❌ Failed to update settings');
     }
 });
+//========================================================================================================================
