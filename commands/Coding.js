@@ -7,6 +7,156 @@ const { dBinary, eBinary } = require("../keizzah/binary");
 const { default: axios } = require("axios");
 const { writeFile } = require("fs/promises");
 const { mediafireDl } = require("../keizzah/dl/Function");
+//const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+//const { keith } = require('../keizzah/keith');
+//========================================================================================================================
+keith({
+  nomCom: "enc2",
+  aliases: ["encryptjs", "jsobfuscate"],
+  reaction: '🔒',
+  categorie: "Utility"
+}, async (dest, zk, commandeOptions) => {
+  const { repondre, arg, ms } = commandeOptions;
+
+  // Helper function to format file size
+  const formatBytes = (bytes, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  try {
+    // Check if message contains a document
+    const isDocument = ms.message?.documentMessage;
+    let jsCode = arg.join(" ");
+    let originalFilename = 'input.js';
+
+    if (isDocument) {
+      try {
+        const fileBuffer = await zk.downloadMediaMessage(ms.message.documentMessage);
+        jsCode = fileBuffer.toString('utf-8');
+        originalFilename = ms.message.documentMessage.fileName || 'input.js';
+        // Ensure original filename has .js extension
+        if (!originalFilename.toLowerCase().endsWith('.js')) {
+          originalFilename += '.js';
+        }
+      } catch (e) {
+        return repondre("❌ Failed to read document. Please send a valid JavaScript file.");
+      }
+    }
+
+    if (!jsCode.trim()) {
+      return repondre(
+        "🔒 *JavaScript Obfuscator*\n\n" +
+        "Please provide JavaScript code to obfuscate.\n\n" +
+        "*Examples:*\n" +
+        "• `.enc2 console.log('Hello')`\n" +
+        "• Reply to a .js file with `.enc2`\n" +
+        "• Send code as message with `.enc2`"
+      );
+    }
+
+    await repondre("⏳ Obfuscating JavaScript code...");
+
+    const payload = {
+      sourceFile: {
+        name: originalFilename,
+        source: jsCode
+      },
+      protectionConfiguration: {
+        settings: {
+          booleanLiterals: { randomize: true },
+          integerLiterals: { radix: "none", randomize: true, lower: null, upper: null },
+          debuggerRemoval: true,
+          stringLiterals: true,
+          propertyIndirection: true,
+          localDeclarations: { nameMangling: "base52" },
+          controlFlow: { randomize: true },
+          constantArgument: true,
+          domainLock: false,
+          functionReorder: { randomize: true },
+          propertySparsing: true,
+          variableGrouping: true
+        }
+      }
+    };
+
+    const response = await axios.post(
+      'https://jsd-online-demo.preemptive.com/api/protect',
+      payload,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'https://jsd-online-demo.preemptive.com',
+          'Referer': 'https://jsd-online-demo.preemptive.com/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*'
+        },
+        timeout: 30000
+      }
+    );
+
+    if (!response.data?.protectedCode) {
+      throw new Error('API returned no obfuscated code');
+    }
+
+    const obfuscatedCode = response.data.protectedCode;
+    const outputFilename = 'obfuscated.js'; // Fixed filename as requested
+    const tempPath = path.join(__dirname, 'temp', outputFilename);
+
+    // Ensure temp directory exists
+    if (!fs.existsSync(path.join(__dirname, 'temp'))) {
+      fs.mkdirSync(path.join(__dirname, 'temp'));
+    }
+
+    // Save to temporary file
+    fs.writeFileSync(tempPath, obfuscatedCode);
+
+    await zk.sendMessage(dest, {
+      document: {
+        url: tempPath,
+        mimetype: 'application/javascript',
+        fileName: outputFilename
+      },
+      caption: `🔒 *Obfuscated JavaScript File*\n\n` +
+               `📛 *Original Name:* ${originalFilename}\n` +
+               `📄 *Obfuscated Name:* ${outputFilename}\n` +
+               `📦 *File Size:* ${formatBytes(obfuscatedCode.length)}\n\n` +
+               `⚠️ *Note:* This code has been processed through advanced obfuscation techniques.`,
+      mimetype: 'application/javascript'
+    }, { quoted: ms });
+
+    // Clean up temp file after sending
+    setTimeout(() => {
+      try {
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+      } catch (cleanupError) {
+        console.error('Error cleaning up temp file:', cleanupError);
+      }
+    }, 5000);
+
+  } catch (error) {
+    console.error('Obfuscation error:', error);
+    await repondre(
+      "❌ *Obfuscation Failed*\n\n" +
+      `*Error:* ${error.response?.data?.message || error.message}\n\n` +
+      "Please ensure:\n" +
+      "1. You provided valid JavaScript code\n" +
+      "2. The code isn't too large\n" +
+      "3. The service is available"
+    );
+  }
+});
+
+//========================================================================================================================
+
 keith({
   'nomCom': "run-c++",
   'aliases': ["c++", "runc++"],
@@ -89,6 +239,9 @@ keith({
     reply("An error occurred while trying to run the code.");
   }
 });
+
+//========================================================================================================================
+
 keith({
   'nomCom': "run-java",
   'aliases': ["java", "runjava"],
@@ -130,6 +283,9 @@ keith({
     reply("An error occurred while trying to run the code.");
   }
 });
+
+//========================================================================================================================
+
 keith({
   'nomCom': "run-js",
   'aliases': ["node", "javascript"],
@@ -171,6 +327,9 @@ keith({
     reply("An error occurred while trying to run the code.");
   }
 });
+
+//========================================================================================================================
+
 keith({
   'nomCom': "run-py",
   'aliases': ["python", "runpy"],
@@ -256,6 +415,8 @@ keith({
     repondre('Invalid decoding request.');
   }
 });
+//========================================================================================================================
+
 keith({
   'nomCom': "ebinary",
   // Command name
@@ -331,7 +492,7 @@ keith({
     reply("Something went wrong. Please check if your code is logical and has the correct syntax.");
   }
 });
-
+//========================================================================================================================
 keith({
   'nomCom': "carbon",
   'aliases': ["C", "run-carbon"],
@@ -379,7 +540,7 @@ keith({
 });
 
 
-
+//========================================================================================================================
 keith({
   nomCom: "scrap",
   aliases: ["get", "find"],
@@ -452,6 +613,8 @@ keith({
     sendResponse(`Error fetching data: ${error.message}`);
   }
 });
+//========================================================================================================================
+
 keith({
   nomCom: "web",
   aliases: ["inspectweb", "webinspect", "webscrap"],
