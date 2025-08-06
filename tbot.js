@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const config = require('./config.json');
+const config = require('./set');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -251,7 +251,7 @@ async function executeCommand(bot, command, msg, match) {
         }
 
         const isAdmin = await isUserAdmin(bot, chatId, userId);
-        const isBotAdmin = userId === config.owner_id;
+        const isBotAdmin = userId.toString() === config.owner_id.toString();
         if (adminOnlyMode && !isBotAdmin) {
             return bot.sendMessage(chatId, "Sorry, only the bot admin can use commands right now.");
         }
@@ -320,7 +320,7 @@ async function handleAntiLink(msg) {
         if (linkRegex.test(text)) {
             const isAdmin = await isUserAdmin(bot, chatId, userId);
             
-            if (!isAdmin && userId !== config.owner_id) {
+            if (!isAdmin && userId.toString() !== config.owner_id.toString()) {
                 const warningMsg = await bot.sendMessage(chatId, "❗ Anti-link message detected ‼️", {
                     reply_to_message_id: msg.message_id
                 });
