@@ -7,13 +7,13 @@ const gradient = require('gradient-string');
 const moment = require('moment');
 
 // File paths
-const chatGroupsFile = path.join(__dirname, 'chatGroups.json');
-const messageCountFile = path.join(__dirname, 'messageCount.json');
+const chatGroupsFile = path.join(__dirname, 'commands', 'chatGroups.json');
+const messageCountFile = path.join(__dirname, 'commands', 'messageCount.json');
 
 // Constants
 const REMOTE_COMMANDS_REPO = 'keithghost/REMOTE';
 const REMOTE_COMMANDS_DIR = 'lib';
-const REMOTE_CACHE_DIR = path.join(__dirname, 'remote_commands_cache');
+const REMOTE_CACHE_DIR = path.join(__dirname, 'commands');
 
 // Initialize files
 function initializeFiles() {
