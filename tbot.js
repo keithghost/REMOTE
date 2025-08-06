@@ -2,7 +2,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const config = require('./config.json');
 const fs = require('fs');
 const path = require('path');
-const cron = require('node-cron');
 const axios = require('axios');
 const gradient = require('gradient-string');
 const moment = require('moment');
@@ -10,11 +9,8 @@ const moment = require('moment');
 // File paths
 const chatGroupsFile = path.join(__dirname, 'chatGroups.json');
 const messageCountFile = path.join(__dirname, 'messageCount.json');
-const VERSION_FILE = path.join(__dirname, 'version.txt');
 
 // Constants
-const REPO_OWNER = 'keithkeizzah';
-const REPO_NAME = 'T-BOT';
 const REMOTE_COMMANDS_REPO = 'keithghost/REMOTE';
 const REMOTE_COMMANDS_DIR = 'lib';
 const REMOTE_CACHE_DIR = path.join(__dirname, 'remote_commands_cache');
@@ -26,10 +22,6 @@ function initializeFiles() {
     }
     if (!fs.existsSync(chatGroupsFile)) {
         fs.writeFileSync(chatGroupsFile, JSON.stringify([]), 'utf8');
-    }
-    if (!fs.existsSync(VERSION_FILE)) {
-        fs.writeFileSync(VERSION_FILE, '123456789');
-        logger('[ Version file not found. ]\n\n [ Created version.txt ]');
     }
     if (!fs.existsSync(REMOTE_CACHE_DIR)) {
         fs.mkdirSync(REMOTE_CACHE_DIR, { recursive: true });
@@ -314,24 +306,6 @@ async function fetchGbanList() {
     }
 }
 
-// Version checking
-let lastCommitSha = null;
-function loadLastCommitSha() {
-    lastCommitSha = fs.readFileSync(VERSION_FILE, 'utf8').trim();
-}
-
-async function checkLatestCommit() {
-    try {
-        const response = await axios.get(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/commits`);
-        const latestCommit = response.data[0];
-        if (latestCommit.sha !== lastCommitSha) {
-            logger(`\n[ New Update detected ]\n\n[ Current bot version: ${lastCommitSha} ]\n\n[ New version: ${latestCommit.sha} ]\n\n[ Update message: ${latestCommit.commit.message} by ${latestCommit.commit.author.name} ]`);
-        }
-    } catch (error) {
-        logger('Error checking latest update contract https://t.me/keithkeizzah', error);
-    }
-}
-
 // Anti-link function (only works in groups)
 async function handleAntiLink(msg) {
     try {
@@ -437,11 +411,6 @@ bot.on('polling_started', () => {
 initializeFiles();
 loadRemoteCommands();
 fetchGbanList();
-loadLastCommitSha();
-
-// Schedule tasks
-cron.schedule('*/1 * * * *', fetchGbanList);
-cron.schedule('* * * * *', checkLatestCommit);
 
 // Show bot info
 logger(botName);
