@@ -1,4 +1,75 @@
+
 const { keith } = require('../commandHandler');
+const { Catbox } = require("node-catbox");
+const fs = require('fs-extra');
+const axios = require('axios');
+
+const catbox = new Catbox();
+
+async function uploadToCatbox(filePath) {
+    if (!fs.existsSync(filePath)) {
+        throw new Error("File does not exist");
+    }
+    try {
+        return await catbox.uploadFile({ path: filePath });
+    } catch (error) {
+        throw new Error(`Upload failed: ${error.message}`);
+    }
+}
+
+keith({
+    pattern: "report",
+    alias: ["rpt"],
+    desc: "Send report with optional media",
+    category: "Owner",
+    react: "⚠️",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, sendReply, text } = context;
+        const quotedMessage = m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+        if (!text) {
+            return sendReply(client, m, "Please provide report text\nExample: /report This user is spamming");
+        }
+
+        try {
+            let mediaUrl = '';
+            const mediaTypes = ['imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'];
+            const mediaType = quotedMessage && mediaTypes.find(type => quotedMessage[type]);
+
+            if (mediaType) {
+                const filePath = await client.downloadAndSaveMediaMessage(quotedMessage[mediaType]);
+                mediaUrl = await uploadToCatbox(filePath);
+                await fs.unlink(filePath);
+            }
+
+            const params = new URLSearchParams();
+            params.append('q', text);
+            params.append('contact', m.sender.split('@')[0]);
+            params.append('name', m.pushName || 'Unknown');
+            if (mediaUrl) params.append('url', mediaUrl);
+
+            const apiUrl = `https://apis-keith.vercel.app/tools/report?${params.toString()}`;
+            const response = await axios.get(apiUrl);
+            
+            await sendReply(client, m, 
+                response.data.success 
+                    ? `✅ Report sent successfully!${mediaUrl ? `\nkeith will reach you shortly` : ''}`
+                    : "❌ Failed to send report"
+            );
+
+        } catch (error) {
+            console.error("Report error:", error);
+            await sendReply(client, m, `❌ Error: ${error.message}`);
+        }
+    } catch (error) {
+        console.error("Handler error:", error);
+        await sendReply(client, m, "❌ An error occurred");
+    }
+});
+
+/*const { keith } = require('../commandHandler');
 const fs = require('fs-extra');
 const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
 const path = require('path');
@@ -81,4 +152,4 @@ keith({
   } catch (err) {
     console.error("Unexpected error in URL upload:", err);
   }
-});
+});*/
