@@ -7,6 +7,115 @@ const fs = require("fs");
 const { exec } = require("child_process");
 
 keith({
+    pattern: "watermark",
+    alias: ["wm", "addwatermark"],
+    desc: "Add watermark to quoted image (text or image watermark)",
+    category: "Utility",
+    react: "💧",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, getRandom, prefix } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        // Check if message is quoted and is an image
+        if (!quoted || !/image/.test(mime)) {
+            return await client.sendMessage(m.chat, { 
+                text: `Please reply to an *image* to add watermark.\nExample: *${prefix}watermark MyBrand* (for text)\nOr reply with an image and caption *${prefix}watermark* to use that image as watermark` 
+            }, { quoted: m });
+        }
+
+        // Download the base image
+        const baseImagePath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.jpg');
+
+        // Check if we're using text watermark or image watermark
+        if (text) {
+            // Text watermark
+            const watermarkText = text.length > 20 ? text.substring(0, 20) + "..." : text;
+            
+            await new Promise((resolve, reject) => {
+                exec(`ffmpeg -i ${baseImagePath} -vf "drawtext=text='${watermarkText}':fontcolor=white:fontsize=40:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2" ${outputPath}`, 
+                async (error) => {
+                    try {
+                        fs.unlinkSync(baseImagePath);
+                        if (error) return reject(new Error(`Error adding text watermark: ${error.message}`));
+                        
+                        const imageBuffer = fs.readFileSync(outputPath);
+                        await client.sendMessage(m.chat, { 
+                            image: imageBuffer,
+                            caption: `Added text watermark: "${watermarkText}"`
+                        }, { quoted: m });
+                        
+                        fs.unlinkSync(outputPath);
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            });
+        } else {
+            // Image watermark (check if there's a quoted image for watermark)
+            const watermarkQuoted = m.quoted?.quoted || null;
+            const watermarkMime = watermarkQuoted?.mimetype || "";
+            
+            if (!watermarkQuoted || !/image/.test(watermarkMime)) {
+                return await client.sendMessage(m.chat, { 
+                    text: `For image watermark, please reply to an image with another image as watermark.\nExample: Reply to main image with caption *${prefix}watermark* and quote the watermark image` 
+                }, { quoted: m });
+            }
+
+            // Download watermark image
+            const watermarkPath = await client.downloadAndSaveMediaMessage(watermarkQuoted);
+            const tempWatermarkPath = getRandom('.png');
+            
+            // First resize watermark to be 1/4 of base image dimensions
+            await new Promise((resolve, reject) => {
+                exec(`ffmpeg -i ${baseImagePath} -f null - 2>&1 | grep -oP 'Stream.*Video:.*\\s\\K\\d+x\\d+'`, (err, stdout) => {
+                    if (err) return reject(new Error("Couldn't get base image dimensions"));
+                    
+                    const [width, height] = stdout.trim().split('x').map(Number);
+                    const wmWidth = Math.floor(width/4);
+                    const wmHeight = Math.floor(height/4);
+                    
+                    exec(`ffmpeg -i ${watermarkPath} -vf "scale=${wmWidth}:${wmHeight}" ${tempWatermarkPath}`, (err) => {
+                        if (err) return reject(new Error("Couldn't resize watermark image"));
+                        resolve();
+                    });
+                });
+            });
+
+            // Now apply the watermark
+            await new Promise((resolve, reject) => {
+                exec(`ffmpeg -i ${baseImagePath} -i ${tempWatermarkPath} -filter_complex "overlay=W-w-10:H-h-10" ${outputPath}`, 
+                async (error) => {
+                    try {
+                        fs.unlinkSync(baseImagePath);
+                        fs.unlinkSync(watermarkPath);
+                        fs.unlinkSync(tempWatermarkPath);
+                        
+                        if (error) return reject(new Error(`Error adding image watermark: ${error.message}`));
+                        
+                        const imageBuffer = fs.readFileSync(outputPath);
+                        await client.sendMessage(m.chat, { 
+                            image: imageBuffer,
+                            caption: `Added image watermark (bottom-right corner)`
+                        }, { quoted: m });
+                        
+                        fs.unlinkSync(outputPath);
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            });
+        }
+    } catch (err) {
+        await client.sendMessage(m.chat, { text: `Error: ${err.message}` }, { quoted: m });
+    }
+});
+keith({
     pattern: "resize",
     alias: ["resize", "imgresize"],
     desc: "Resize quoted image to specified dimensions (e.g., 300×250)",
