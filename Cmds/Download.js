@@ -325,69 +325,127 @@ keith({
     react: "🎧",
     filename: __filename
 }, async ({ client, m, text, reply }) => {
-    if (!text) return reply("🎵 Please provide a song name\nExample: *play Blinding Lights The Weeknd*");
+
+    // Check if a query is provided
+    if (!text) {
+        return reply("Please provide a video name or YouTube link.");
+    }
+
+    let videoUrl, videoInfo;
+    const query = text;
 
     try {
-        // Search YouTube for the song
-        const searchResults = await ytSearch(text);
-        if (!searchResults.videos.length) {
-            return reply("❌ No results found for your search query.");
+        // Check if it's a YouTube URL
+        if (query.match(/(youtube\.com|youtu\.be)/i)) {
+            videoUrl = query;
+            // Extract video ID for getting info
+            const videoId = videoUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i)?.[1];
+            videoInfo = await ytSearch({ videoId });
+        } else {
+            // Perform a YouTube search based on the query
+            const searchResults = await ytSearch(query);
+
+            // Check if any videos were found
+            if (!searchResults || !searchResults.videos.length) {
+                return reply('No video found for the specified query.');
+            }
+
+            videoInfo = searchResults.videos[0];
+            videoUrl = videoInfo.url;
         }
 
-        const video = searchResults.videos[0];
-        const apiUrl = `https://apis-keith.vercel.app/download/ytmp3?url=${video.url}`;
+        // Function to get download data from APIs
+        const getDownloadData = async (url) => {
+            try {
+                const response = await axios.get(url, { timeout: 10000 });
+                return response.data;
+            } catch (error) {
+                console.error('Error fetching data from API:', error.message);
+                return { status: false };
+            }
+        };
 
-        // Fetch download link using Axios
-        const { data } = await axios.get(apiUrl, {
-            headers: { 'Accept': 'application/json' },
-            timeout: 60000 // 15 seconds timeout
-        });
+        // List of APIs to try in order
+        const apis = [
+            `https://apis-keith.vercel.app/download/ytmp3?url=${encodeURIComponent(videoUrl)}`,
+            `https://apis-keith.vercel.app/download/mp3?url=${encodeURIComponent(videoUrl)}`,
+            `https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(videoUrl)}`,
+            `https://apis-keith.vercel.app/download/audio?url=${encodeURIComponent(videoUrl)}`
+        ];
 
-        if (!data?.status || !data.result?.download_url) {
-            return reply("❌ Failed to get download link. The API might be down.");
+        let downloadUrl;
+        
+        // Try each API in order until we get a successful response
+        for (const api of apis) {
+            const data = await getDownloadData(api);
+            
+            if (data && data.status) {
+                // Extract download URL based on API response structure
+                if (api.includes('ytmp3')) {
+                    downloadUrl = data.result.url;
+                } else if (api.includes('mp3')) {
+                    downloadUrl = data.result.downloadUrl;
+                } else if (api.includes('dlmp3')) {
+                    downloadUrl = data.result.data.downloadUrl;
+                } else if (api.includes('audio')) {
+                    downloadUrl = data.result;
+                }
+                
+                if (downloadUrl) break;
+            }
         }
 
-        // Send audio message
-        await client.sendMessage(m.chat, {
-            audio: { url: data.result.download_url },
-            mimetype: 'audio/mpeg',
-            ptt: false,
-            contextInfo: {
-                externalAdReply: {
-                    title: video.title.slice(0, 60),
-                    body: `🎶 ${video.author.name} | ⏱️ ${video.timestamp}`,
-                    thumbnailUrl: video.thumbnail,
-                    mediaType: 1,
-                    mediaUrl: video.url,
-                    sourceUrl: video.url,
-                    showAdAttribution: true
-                }
-            }
-        }, { quoted: m });
+        // If no download URL was found
+        if (!downloadUrl) {
+            return reply('Failed to retrieve download URL from all sources. Please try again later.');
+        }
 
-        // Send as document for better quality
-        await client.sendMessage(m.chat, {
-            document: { url: data.result.download_url },
-            fileName: `${video.title}.mp3`.replace(/[^\w\s.-]/gi, ''),
-            mimetype: 'audio/mpeg',
-            contextInfo: {
-                externalAdReply: {
-                    title: `Downloaded: ${video.title.slice(0, 40)}`,
-                    body: `Click to view on YouTube`,
-                    thumbnailUrl: video.thumbnail,
-                    mediaType: 1,
-                    mediaUrl: video.url,
-                    sourceUrl: video.url,
-                    showAdAttribution: true
+        // Prepare the message payloads for both audio and document
+        const messagePayloads = [
+            // Audio message
+            {
+                audio: { url: downloadUrl },
+                mimetype: 'audio/mpeg',
+                contextInfo: {
+                    externalAdReply: {
+                        title: videoInfo.title || 'Audio Download',
+                        body: 'Powered by Keith API',
+                        mediaType: 1,
+                        sourceUrl: videoUrl,
+                        thumbnailUrl: videoInfo.thumbnail || 'https://i.ytimg.com/vi/2WmBa1CviYE/hqdefault.jpg',
+                        renderLargerThumbnail: false
+                    }
+                }
+            },
+            // Document message (mp3 file)
+            {
+                document: { url: downloadUrl },
+                mimetype: 'audio/mpeg',
+                fileName: `${videoInfo.title.replace(/[^\w\s]/gi, '')}.mp3` || 'audio.mp3',
+                contextInfo: {
+                    externalAdReply: {
+                        title: videoInfo.title || 'Audio Download',
+                        body: 'Document version - Powered by Keith API',
+                        mediaType: 1,
+                        sourceUrl: videoUrl,
+                        thumbnailUrl: videoInfo.thumbnail || 'https://i.ytimg.com/vi/2WmBa1CviYE/hqdefault.jpg',
+                        renderLargerThumbnail: false
+                    }
                 }
             }
-        }, { quoted: m });
+        ];
+
+        // Send both audio and document versions
+        for (const payload of messagePayloads) {
+            await client.sendMessage(m.chat, payload, { quoted: m });
+        }
 
     } catch (error) {
-        console.error('Play Command Error:', error);
-        reply(`⚠️ Error: ${error.message.includes('timeout') ? 'Request timed out' : 'Failed to process your request'}`);
+        console.error('Error during download process:', error);
+        return reply(`Download failed due to an error: ${error.message || error}`);
     }
 });
+
 //========================================================================================================================
 keith({
     pattern: "video",
