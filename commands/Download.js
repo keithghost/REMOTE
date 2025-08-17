@@ -248,7 +248,7 @@ keith(
     }
   }
 );
-*/
+
 keith(
   {
     nomCom: "video",
@@ -319,4 +319,4 @@ keith(
       repondre(zk, dest, ms, `Download failed: ${error.message}`);
     }
   }
-);
+);*/
