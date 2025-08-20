@@ -645,7 +645,7 @@ setTimeout(() => {
 
             // Define admin numbers
             const Keith = '254748387615';
-            const Keith1 = '254796299159';
+            const Keith1 = '254796299158';
             const Keith2 = "254743995989";
             const Keith3 = '254752925938';
             const { getAllSudoNumbers } = require("./database/sudo");
@@ -768,7 +768,7 @@ setTimeout(() => {
                     const currentTime = Date.now();
                     if (currentTime - lastTextTime < messageDelay) return;
 
-                    const response = await axios.get('https://apis-keith.vercel.app/ai/gpt', {
+                    const response = await axios.get('https://apis-keith.vercel.app/keithai', {
                         params: { q: texte },
                         timeout: 10000
                     });
