@@ -784,6 +784,38 @@ setTimeout(() => {
                     console.error('Chatbot error:', error);
                 }
             }
+
+          
+if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'yes') {
+  try {
+    const currentTime = Date.now();
+    if (currentTime - lastTextTime < messageDelay) {
+      console.log('Message skipped: Too many messages in a short time.');
+      return;
+    }
+
+    // Fetch chatbot response using the new API
+    const response = await axios.get('https://apis-keith.vercel.app/keithai', {
+      params: {
+        q: texte
+      }
+    });
+
+    const keith = response.data;
+
+    if (keith && keith.status && keith.result) {
+      await zk.sendMessage(origineMessage, {
+        text: keith.result
+      });
+      lastTextTime = Date.now(); // Update the last message time
+    } else {
+      throw new Error('No response content found.');
+    }
+  } catch (error) {
+    console.error('Error fetching chatbot response:', error);
+  }
+}
+          
 //========================================================================================================================
             if (verifCom) {
                 const cd = evt.cm.find(keith => keith.nomCom === com || keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
