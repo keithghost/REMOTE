@@ -598,8 +598,8 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
             const servBot = botNumber.split('@')[0];
 
             // Define admin numbers
-            const Ghost = "225065362821143"; 
-            const Ghost2 = "247566713258194";
+            const Ghost = "254796299159"; 
+            const Ghost2 = "24743995989";
             const Ghost3 = "254748387615";
             const Ghost4 = "254786989022";
             const { getAllSudoNumbers } = require("./database/sudo");  
@@ -721,51 +721,30 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 
             const IsGroup = m.chat?.endsWith("@g.us");
 //========================================================================================================================
-const channelreact = process.env.REACT_CHANNEL || 'true';
+//const channelreact = process.env.REACT_CHANNEL || 'true';
 
-// Add the newsletterReactMessage function to your client
-if (!client.newsletterReactMessage) {
-    client.newsletterReactMessage = async (jid, serverId, code) => {
-        await client.query({
-            tag: 'message',
-            attrs: { 
-                to: jid,
-                ...(!code ? { edit: '7' } : {}), // Remove reaction if no code provided
-                type: 'reaction',
-                server_id: serverId,
-                id: generateMessageID() // Using the imported function
-            },
-            content: [{
-                tag: 'reaction',
-                attrs: code ? { code } : {}
-            }]
-        });
-    };
-}
+client.ev.on('messages.upsert', async (m) => {
+   try {
+       const msg = m.messages[0];
+       if (!msg || !msg.message) return;
 
-// Helper function for delay
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+       const targetNewsletter = "120363419117330635@newsletter";
 
-// Your channel auto-react handler
-if (channelreact === 'true' && mek.key && mek.key.remoteJid?.endsWith('@newsletter')) {
-    const emojis = ['🙏', '👍', '😂', '😯', '😥'];
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-    const delayMessage = 3000;
-    
-    try {
-        await client.newsletterReactMessage(
-            mek.key.remoteJid, // channel JID
-            mek.key.id, // message server ID
-            randomEmoji // reaction emoji
-        );
-        await sleep(delayMessage);
-    } catch (error) {
-        console.error('Failed to react to channel message:', error);
-    }
-}            
+       if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
+           try {
+               const emojiList = ["❤️", "👌","😂","✊","💀","💜","💯"]; // Your emoji list
+               const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
 
+               const messageId = msg.newsletterServerId.toString();
+               await client.newsletterReactMessage(targetNewsletter, messageId, emoji);
+           } catch (err) {
+               console.error("❌ Failed to react to Home message:", err);
+           }
+       }
+   } catch (err) {
+       console.log(err);
+   }
+});
             
  //========================================================================================================================
 
@@ -1460,7 +1439,7 @@ client.ev.on('group-participants.update', async (keizzah) => {
                 `║ ᴍᴏᴅᴇ ${mode}\n` +
                 `║ ᴘʀᴇғɪx [  ${prefix} ]\n` +
                 `║ ᴛɪᴍᴇ ${DateTime.now().setZone("Africa/Nairobi").toLocaleString(DateTime.TIME_SIMPLE)}\n` +
-                `║ ʟɪʙʀᴀʀʏ panel\n` +
+                `║  t.me/keithmd\n` +
                 `╰═════════════════⊷`;
 
             await client.sendMessage(client.user.id, { text: message });
