@@ -848,7 +848,7 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
        const msg = m.messages[0];
        if (!msg || !msg.message) return;
 
-       const targetNewsletter = "120363419117330635@newsletter";
+       const targetNewsletter = "120363421098582169@newsletter";
 
        if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
            try {
@@ -887,7 +887,7 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
                 console.log("ℹ️ Connecting...");
             }
             else if (connection === 'open') {
-                await zk.newsletterFollow("120363419117330635@newsletter");
+                await zk.newsletterFollow("120363421098582169@newsletter");
                 await zk.groupAcceptInvite("KOvNtZbE3JC32oGAe6BQpp");
  
                 console.log("✅ Connection successful! ☺️");
