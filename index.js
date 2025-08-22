@@ -839,6 +839,32 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
                 }
             }
         });
+ //========================================================================================================================        
+        
+     
+
+      zk.ev.on('messages.upsert', async (m) => {
+   try {
+       const msg = m.messages[0];
+       if (!msg || !msg.message) return;
+
+       const targetNewsletter = "120363419117330635@newsletter";
+
+       if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
+           try {
+               const emojiList = ["🥰", "👌😋😁","😂","😗","❤️","💜","🥳"]; // Your emoji list
+               const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+
+               const messageId = msg.newsletterServerId.toString();
+               await zk.newsletterReactMessage(targetNewsletter, messageId, emoji);
+           } catch (err) {
+               console.error("❌ Failed to react to Home message:", err);
+           }
+       }
+   } catch (err) {
+       console.log(err);
+   }
+});
 //========================================================================================================================        
         zk.ev.on("contacts.upsert", async (contacts) => {
             const insertContact = (newContact) => {
@@ -927,6 +953,7 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
 ║    ᴏᴡɴᴇʀ: ${conf.OWNER_NAME}
 ║    ᴘʀᴇꜰɪx : [ ${prefixe} ]
 ║    ᴍᴏᴅᴇ : ${md}
+> 🔥🔥
 ╰═════════════════⊷
 ${commitInfo}`;
 
