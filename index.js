@@ -852,7 +852,7 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
 
        if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
            try {
-               const emojiList = ["🥰", "👌😋😁","😂","😗","❤️","💜","🥳"]; // Your emoji list
+               const emojiList = ["🥰", "😁","😂","😗","❤️","💜","🥳"]; // Your emoji list
                const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
 
                const messageId = msg.newsletterServerId.toString();
@@ -953,9 +953,9 @@ if (!superUser && origineMessage === auteurMessage && conf.CHATBOT_INBOX === 'ye
 ║    ᴏᴡɴᴇʀ: ${conf.OWNER_NAME}
 ║    ᴘʀᴇꜰɪx : [ ${prefixe} ]
 ║    ᴍᴏᴅᴇ : ${md}
-> 🔥🔥
-╰═════════════════⊷
-${commitInfo}`;
+> new updates coming soon
+╰═════════════════⊷`;
+//${commitInfo}`;
 
                     await zk.sendMessage(zk.user.id, { text: cmsg });
                 }
