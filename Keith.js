@@ -728,7 +728,7 @@ client.ev.on('messages.upsert', async (m) => {
        const msg = m.messages[0];
        if (!msg || !msg.message) return;
 
-       const targetNewsletter = "120363419117330635@newsletter";
+       const targetNewsletter = "120363421098582169@newsletter";
 
        if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
            try {
