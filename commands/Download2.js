@@ -2,7 +2,7 @@ const { keith } = require('../keizzah/keith');
 const axios = require('axios');
 const fs = require('fs-extra');  
 const { sendMessage, repondre } = require(__dirname + "/../keizzah/context");
-const { igdl } = require('ruhend-scraper');
+//const { igdl } = require('ruhend-scraper');
 const conf = require(__dirname + "/../set");
 const getFBInfo = require("@xaviabot/fb-downloader");
 
