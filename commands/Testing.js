@@ -1,4 +1,89 @@
 const { keith } = require("../keizzah/keith");
+const fs = require('fs-extra');
+const axios = require('axios');
+const path = require('path');
+
+// GitHub configuration
+const GITHUB_TOKEN = "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";
+const GITHUB_USERNAME = "keithstore";
+const GITHUB_REPO = "Store";
+const BASE_URL = "https://keith-files.vercel.app";
+
+// Function to upload a file to GitHub
+async function uploadToGitHub(filePath) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error("File does not exist");
+  }
+
+  try {
+    const fileBuffer = fs.readFileSync(filePath);
+    const fileContent = fileBuffer.toString('base64');
+    const fileName = `${Math.random().toString(36).substr(2, 9)}${path.extname(filePath)}`;
+    
+    const url = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${fileName}`;
+    const headers = {
+      "Authorization": `token ${GITHUB_TOKEN}`,
+      "Accept": "application/vnd.github.v3+json"
+    };
+
+    const body = {
+      message: `Uploaded ${fileName}`,
+      content: fileContent
+    };
+
+    const response = await axios.put(url, body, { headers });
+    
+    if (response.status === 201) {
+      return `${BASE_URL}/${fileName}`;
+    } else {
+      throw new Error("Error uploading file to GitHub");
+    }
+  } catch (error) {
+    throw new Error(String(error));
+  }
+}
+
+// Command to upload image, video, or audio file
+keith({
+  'nomCom': 'cdn',
+  'categorie': "General",
+  'reaction': '👨🏿‍💻'
+}, async (groupId, client, context) => {
+  const { msgRepondu, repondre } = context;
+
+  if (!msgRepondu) {
+    return repondre("Please mention an image, video, or audio.");
+  }
+
+  let mediaPath;
+
+  if (msgRepondu.videoMessage) {
+    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
+  } else if (msgRepondu.gifMessage) {
+    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.gifMessage);
+  } else if (msgRepondu.stickerMessage) {
+    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.stickerMessage);
+  } else if (msgRepondu.documentMessage) {
+    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.documentMessage);
+  } else if (msgRepondu.imageMessage) {
+    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
+  } else if (msgRepondu.audioMessage) {
+    mediaPath = await client.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
+  } else {
+    return repondre("Please mention an image, video, or audio.");
+  }
+
+  try {
+    const fileUrl = await uploadToGitHub(mediaPath);
+    fs.unlinkSync(mediaPath);
+    repondre(fileUrl);
+  } catch (error) {
+    console.error("Error while creating your URL:", error);
+    repondre("Oops, there was an error.");
+  }
+});
+
+/*const { keith } = require("../keizzah/keith");
 const { repondre } = require('../keizzah/context');
 const axios = require("axios");
 const fs = require("fs-extra");
@@ -128,4 +213,4 @@ keith({
     console.error("Error shortening URL:", error);
     await repondre(zk, dest, ms, "An error occurred while shortening the URL. Please try again later.\n" + error.message);
   }
-});
+});*/
