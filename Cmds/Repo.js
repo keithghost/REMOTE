@@ -15,7 +15,7 @@ keith({
         
         if (!text) return reply("Please provide a TikTok username (e.g., .tiktokposts username)");
 
-        // Fetch TikTok user posts from API
+        // Fetch TikTok user posts from AP
         const apiUrl = `https://apis-keith.vercel.app/search/tiktokuserposts?user=${encodeURIComponent(text)}`;
         const response = await fetch(apiUrl);
         
