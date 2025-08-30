@@ -408,7 +408,7 @@ keith({
             return reply("❌ Invalid format! Provide a Telegram sticker set URL.");
         }
 
-        let api = `https://api.telegram.org/bot7121894062:AAF2a_7dMgD2Wk_SRua6mnL_a-f_mWESA6s/getStickerSet?name=${encodeURIComponent(name)}`;
+        let api = `https://api.telegram.org/bot8169926804:AAEjatqNQHnZCEfooxrEBlIvt3s4iowX_1g/getStickerSet?name=${encodeURIComponent(name)}`;
 
         try {
             let stickers = await axios.get(api);
@@ -419,10 +419,10 @@ keith({
             reply(msg);
 
             for (let i = 0; i < stickers.data.result.stickers.length; i++) {
-                let file = await axios.get(`https://api.telegram.org/bot7121894062:AAF2a_7dMgD2Wk_SRua6mnL_a-f_mWESA6s/getFile?file_id=${stickers.data.result.stickers[i].file_id}`);
+                let file = await axios.get(`https://api.telegram.org/bot8169926804:AAEjatqNQHnZCEfooxrEBlIvt3s4iowX_1g/getFile?file_id=${stickers.data.result.stickers[i].file_id}`);
                 let buffer = await axios({
                     method: "get",
-                    url: `https://api.telegram.org/file/bot7121894062:AAF2a_7dMgD2Wk_SRua6mnL_a-f_mWESA6s/${file.data.result.file_path}`,
+                    url: `https://api.telegram.org/file/bot8169926804:AAEjatqNQHnZCEfooxrEBlIvt3s4iowX_1g/${file.data.result.file_path}`,
                     responseType: "arraybuffer",
                 });
 
