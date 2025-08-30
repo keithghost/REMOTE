@@ -3,10 +3,10 @@ const { generateWAMessageContent, generateWAMessageFromContent } = require('@whi
 const fetch = require('node-fetch');
 
 keith({
-    pattern: "rep",
+    pattern: "repo",
     alias: ["sc", "script"],
-    desc: "Show repository information",
-    category: "General",
+    desc: "Display repository information",
+    category: "Utility",
     react: "📦",
     filename: __filename
 }, async (context) => {
@@ -14,7 +14,8 @@ keith({
         const { client, m, reply } = context;
 
         // Fetch repository data from GitHub API
-        const response = await fetch('https://api.github.com/repos/Keithkeizzah/KEITH-MD');
+        const apiUrl = 'https://api.github.com/repos/Keithkeizzah/KEITH-MD';
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
             return await reply(`Failed to fetch repository data: ${response.status}`);
@@ -29,38 +30,38 @@ keith({
         const carouselCards = [
             {
                 header: {
-                    title: "📦 Repository Info",
-                    hasMediaAttachment: false
-                },
-                body: {
-                    text: `🌟 ${repoData.name}\n${repoData.description || "No description"}`
-                },
-                footer: {
-                    text: "🔹 Scroll for more details"
-                }
-            },
-            {
-                header: {
-                    title: "📊 Statistics",
+                    title: "📊 Repository Stats",
                     hasMediaAttachment: false
                 },
                 body: {
                     text: `⭐ Stars: ${formatNumber(repoData.stargazers_count)}\n🍴 Forks: ${formatNumber(repoData.forks_count)}\n👀 Watchers: ${formatNumber(repoData.watchers_count)}\n📝 Issues: ${formatNumber(repoData.open_issues_count)}`
                 },
                 footer: {
-                    text: "Updated: " + new Date(repoData.updated_at).toLocaleDateString()
+                    text: "KEITH-MD Repository Statistics"
                 }
             },
             {
                 header: {
-                    title: "🔧 Repository Details",
+                    title: "📋 Repository Details",
                     hasMediaAttachment: false
                 },
                 body: {
-                    text: `📁 Size: ${formatNumber(repoData.size)} KB\n📄 License: ${repoData.license?.name || "None"}\n🌐 Language: ${repoData.language || "Not specified"}\n📅 Created: ${new Date(repoData.created_at).toLocaleDateString()}`
+                    text: `📛 Name: ${repoData.name}\n📖 Description: ${repoData.description || "No description"}\n🌐 Language: ${repoData.language}\n📄 License: ${repoData.license?.name || "None"}`
                 },
                 footer: {
-                    text: "Default branch: " + repoData.default_branch
+                    text: "Repository Information"
+                }
+            },
+            {
+                header: {
+                    title: "👤 Owner Information",
+                    hasMediaAttachment: false
+                },
+                body: {
+                    text: `👨‍💻 Owner: ${repoData.owner.login}\n🔗 Profile: ${repoData.owner.html_url}\n🏆 Type: ${repoData.owner.type}`
+                },
+                footer: {
+                    text: "Repository Owner Details"
                 }
             }
         ];
@@ -75,10 +76,10 @@ keith({
                     },
                     interactiveMessage: {
                         body: {
-                            text: `📦 ${repoData.full_name}`
+                            text: `📦 Repository: ${repoData.full_name}`
                         },
                         footer: {
-                            text: "🔹 Scroll to see repository information"
+                            text: `🔄 Last updated: ${new Date(repoData.updated_at).toLocaleDateString()}`
                         },
                         carouselMessage: {
                             cards: carouselCards
