@@ -3,68 +3,101 @@ const { generateWAMessageContent, generateWAMessageFromContent } = require('@whi
 const fetch = require('node-fetch');
 
 keith({
-    pattern: "repo",
-    alias: ["sc", "script"],
-    desc: "Display repository information",
-    category: "Utility",
-    react: "📦",
+    pattern: "tiktokposts",
+    alias: ["ttposts", "tiktokuser"],
+    desc: "Get TikTok user posts",
+    category: "Download",
+    react: "📱",
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, reply } = context;
+        const { client, m, text, reply } = context;
+        
+        if (!text) return reply("Please provide a TikTok username (e.g., .tiktokposts username)");
 
-        // Fetch repository data from GitHub API
-        const apiUrl = 'https://api.github.com/repos/Keithkeizzah/KEITH-MD';
+        // Fetch TikTok user posts from API
+        const apiUrl = `https://apis-keith.vercel.app/search/tiktokuserposts?user=${encodeURIComponent(text)}`;
         const response = await fetch(apiUrl);
         
         if (!response.ok) {
-            return await reply(`Failed to fetch repository data: ${response.status}`);
+            return await reply(`API request failed with status ${response.status}`);
         }
 
-        const repoData = await response.json();
+        const data = await response.json();
         
-        // Format numbers with commas
-        const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        
-        // Create carousel cards with repository information
-        const carouselCards = [
-            {
-                header: {
-                    title: "📊 Repository Stats",
-                    hasMediaAttachment: false
-                },
-                body: {
-                    text: `⭐ Stars: ${formatNumber(repoData.stargazers_count)}\n🍴 Forks: ${formatNumber(repoData.forks_count)}\n👀 Watchers: ${formatNumber(repoData.watchers_count)}\n📝 Issues: ${formatNumber(repoData.open_issues_count)}`
-                },
-                footer: {
-                    text: "KEITH-MD Repository Statistics"
-                }
-            },
-            {
-                header: {
-                    title: "📋 Repository Details",
-                    hasMediaAttachment: false
-                },
-                body: {
-                    text: `📛 Name: ${repoData.name}\n📖 Description: ${repoData.description || "No description"}\n🌐 Language: ${repoData.language}\n📄 License: ${repoData.license?.name || "None"}`
-                },
-                footer: {
-                    text: "Repository Information"
-                }
-            },
-            {
-                header: {
-                    title: "👤 Owner Information",
-                    hasMediaAttachment: false
-                },
-                body: {
-                    text: `👨‍💻 Owner: ${repoData.owner.login}\n🔗 Profile: ${repoData.owner.html_url}\n🏆 Type: ${repoData.owner.type}`
-                },
-                footer: {
-                    text: "Repository Owner Details"
-                }
+        if (!data.status || !data.result || data.result.length === 0) {
+            return await reply("No posts found for this TikTok user");
+        }
+
+        // Limit to 5 posts
+        const posts = data.result.slice(0, 5);
+        let processedPosts = [];
+
+        // Process each post
+        for (const post of posts) {
+            try {
+                // Download video thumbnail
+                const coverRes = await fetch(post.cover);
+                if (!coverRes.ok) continue;
+                
+                const coverBuffer = await coverRes.buffer();
+                
+                processedPosts.push({
+                    id: post.id,
+                    coverBuffer,
+                    title: post.title || "No title",
+                    duration: post.duration,
+                    stats: post.stats,
+                    created: post.created,
+                    author: post.author,
+                    media: post.media,
+                    directLink: `https://www.tiktok.com/@${post.author.username}/video/${post.id}`
+                });
+            } catch (e) {
+                console.error(`Failed to process post: ${post.id}`, e);
             }
-        ];
+        }
+
+        if (processedPosts.length === 0) {
+            return await reply("Failed to process any posts. Please try again.");
+        }
+
+        // Generate carousel cards
+        const carouselCards = await Promise.all(processedPosts.map(async (post, index) => ({
+            header: {
+                title: `📱 TikTok Post ${index + 1}`,
+                hasMediaAttachment: true,
+                imageMessage: (await generateWAMessageContent({
+                    image: post.coverBuffer
+                }, {
+                    upload: client.waUploadToServer
+                })).imageMessage
+            },
+            body: {
+                text: `👤 ${post.author.nickname}\n⏱ ${post.duration}s\n❤️ ${post.stats.likes} likes\n📥 ${post.stats.downloads} downloads`
+            },
+            footer: {
+                text: `🕒 ${new Date(post.created * 1000).toLocaleDateString()}`
+            },
+            nativeFlowMessage: {
+                buttons: [
+                    {
+                        name: "cta_url",
+                        buttonParamsJson: JSON.stringify({
+                            display_text: "🎬 Watch Video",
+                            url: post.directLink
+                        })
+                    },
+                    {
+                        name: "cta_url",
+                        buttonParamsJson: JSON.stringify({
+                            display_text: "📥 Download Video",
+                            url: post.media.video
+                        })
+                    }
+                ]
+            }
+        })));
 
         // Generate the carousel message
         const carouselMessage = generateWAMessageFromContent(m.chat, {
@@ -76,10 +109,10 @@ keith({
                     },
                     interactiveMessage: {
                         body: {
-                            text: `📦 Repository: ${repoData.full_name}`
+                            text: `📱 TikTok Posts by: ${processedPosts[0].author.nickname} (@${text})`
                         },
                         footer: {
-                            text: `🔄 Last updated: ${new Date(repoData.updated_at).toLocaleDateString()}`
+                            text: `📂 Found ${processedPosts.length} posts`
                         },
                         carouselMessage: {
                             cards: carouselCards
@@ -98,6 +131,6 @@ keith({
 
     } catch (error) {
         console.error('Command error:', error);
-        await context.reply('❌ An error occurred while fetching repository information!');
+        await context.reply('❌ An error occurred while fetching TikTok posts!');
     }
 });
