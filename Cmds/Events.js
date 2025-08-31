@@ -1,36 +1,41 @@
-
-
 const { keith } = require('../commandHandler');
 const fs = require('fs-extra');
-const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
 const path = require('path');
 const axios = require('axios');
 const FormData = require('form-data');
 
-async function uploadToUguu(filePath) {
+/**
+ * Upload file to your Heroku/Express uploader
+ * @param {string} filePath
+ * @returns {Promise<string>} Uploaded file URL
+ */
+async function uploadToCDN(filePath) {
   if (!fs.existsSync(filePath)) throw new Error("File does not exist");
-  
+
   try {
     const form = new FormData();
-    form.append('files[]', fs.createReadStream(filePath)); // Correct field name: 'files[]'
+    form.append("file", fs.createReadStream(filePath)); // <-- matches Express multer.single("file")
 
-    const response = await axios.post('https://uploaderjs-eb8b48b9d3fa.herokuapp.com/upload', form, {
-      headers: {
-        ...form.getHeaders(),
-        'User-Agent': 'Mozilla/5.0 (Node.js)'
-      }
-    });
+    const response = await axios.post(
+      "https://uploaderjs-eb8b48b9d3fa.herokuapp.com/upload",
+      form,
+      { headers: { ...form.getHeaders() } }
+    );
 
-    if (response.data && response.data.files && response.data.files[0]?.url) {
-      return response.data.files[0].url;
+    // Our Express backend returns { url: "https://keith-files.vercel.app/file.png" }
+    if (response.data && response.data.url) {
+      return response.data.url;
     } else {
-      throw new Error("Uguu.se API did not return a valid URL.");
+      throw new Error("CDN did not return a valid URL.");
     }
   } catch (error) {
-    throw new Error(`Uguu.se upload error: ${error.message}`);
+    throw new Error(`CDN upload error: ${error.message}`);
   }
 }
 
+/**
+ * Detect media type
+ */
 function getMediaType(quoted) {
   if (quoted.imageMessage) return "image";
   if (quoted.videoMessage) return "video";
@@ -40,6 +45,9 @@ function getMediaType(quoted) {
   return "unknown";
 }
 
+/**
+ * Save quoted media to tmp directory
+ */
 async function saveMediaToTemp(client, quotedMedia, type) {
   const tmpDir = path.join(__dirname, "..", "tmp");
   await fs.ensureDir(tmpDir);
@@ -52,7 +60,7 @@ async function saveMediaToTemp(client, quotedMedia, type) {
 keith({
   pattern: "cdnn",
   alias: ["keithcdn", "urlconvert"],
-  desc: "Convert quoted media to Uguu.se URL",
+  desc: "Convert quoted media to CDN URL",
   category: "Download",
   react: "📦",
   filename: __filename
@@ -72,8 +80,8 @@ keith({
     const filePath = await saveMediaToTemp(client, mediaNode, type);
 
     try {
-      const link = await uploadToUguu(filePath);
-      await sendReply(client, m, `✅ Uploaded to keith-files.vercel.app:\n\n${link}`);
+      const link = await uploadToCDN(filePath);
+      await sendReply(client, m, `✅ Uploaded to CDN:\n\n${link}`);
     } catch (err) {
       await sendReply(client, m, "❌ Failed to upload. Error:\n" + err.message);
     } finally {
@@ -81,6 +89,6 @@ keith({
     }
 
   } catch (err) {
-    console.error("Unexpected error in URL upload:", err);
+    console.error("Unexpected error in cdnn command:", err);
   }
 });
