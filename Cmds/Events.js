@@ -51,7 +51,7 @@ async function saveMediaToTemp(client, quotedMedia, type) {
 
 keith({
   pattern: "cdnn",
-  alias: ["keithcdn", "urlconvertt"],
+  alias: ["keithcdn", "urlconvert"],
   desc: "Convert quoted media to Uguu.se URL",
   category: "Download",
   react: "📦",
