@@ -2,16 +2,17 @@ const { keith } = require('../commandHandler');
 const { generateWAMessageContent, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
 const fetch = require('node-fetch');
 
+
 keith({
     pattern: "repo",
-    alias: ["scr", "script"],
+    alias: ["sc", "script"],
     desc: "Display KEITH-MD repository information",
     category: "Utility",
     react: "📦",
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, reply } = context;
+        const { client, m, reply, botname, author } = context;
 
         // Fetch repository data from GitHub API
         const apiUrl = 'https://api.github.com/repos/Keithkeizzah/KEITH-MD';
@@ -23,12 +24,30 @@ keith({
 
         const repoData = await response.json();
         
-        // Format numbers with commas
-        const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        // Format dates
+        const createdDate = new Date(repoData.created_at).toLocaleDateString();
+        const lastUpdateDate = new Date(repoData.updated_at).toLocaleDateString();
         
+        // Format the text as requested
+        const formattedText = 
+`Hello ,,,👋 This is ${botname} 
+The best bot in the universe developed by ${author}. Fork and give a star 🌟 to my repo
+╭───────────────────
+│✞ *Stars:* ${repoData.stargazers_count}
+│✞ *Forks:* ${repoData.forks_count}
+│✞ *Release Date:* ${createdDate}
+│✞ *Last Update:* ${lastUpdateDate}
+│✞ *Owner:* ${repoData.owner.login}
+╰───────────────────`;
+
         // Download the repository image
         const imageUrl = "https://files.catbox.moe/mikdi0.jpg";
         const imageResponse = await fetch(imageUrl);
+        
+        if (!imageResponse.ok) {
+            return await reply("❌ Failed to download repository image");
+        }
+        
         const imageBuffer = await imageResponse.buffer();
         
         // Generate image message content
@@ -38,7 +57,7 @@ keith({
             upload: client.waUploadToServer
         });
 
-        // Create interactive message with copy button
+        // Create interactive message with URL buttons
         const interactiveMessage = generateWAMessageFromContent(m.chat, {
             viewOnceMessage: {
                 message: {
@@ -48,16 +67,7 @@ keith({
                     },
                     interactiveMessage: {
                         body: {
-                            text: `📦 *${repoData.full_name}*\n\n` +
-                                  `📖 ${repoData.description || "No description"}\n\n` +
-                                  `⭐ Stars: ${formatNumber(repoData.stargazers_count)}\n` +
-                                  `🍴 Forks: ${formatNumber(repoData.forks_count)}\n` +
-                                  `👀 Watchers: ${formatNumber(repoData.watchers_count)}\n` +
-                                  `📝 Issues: ${formatNumber(repoData.open_issues_count)}\n` +
-                                  `🌐 Language: ${repoData.language}\n` +
-                                  `📄 License: ${repoData.license?.name || "None"}\n\n` +
-                                  `👨‍💻 Owner: ${repoData.owner.login}\n` +
-                                  `🔄 Updated: ${new Date(repoData.updated_at).toLocaleDateString()}`
+                            text: formattedText
                         },
                         footer: {
                             text: "KEITH-MD Repository Information"
@@ -69,11 +79,17 @@ keith({
                         nativeFlowMessage: {
                             buttons: [
                                 {
-                                    name: "cta_copy",
+                                    name: "cta_url",
                                     buttonParamsJson: JSON.stringify({
-                                        display_text: "📋 Copy Repository Link",
-                                        copy_text: repoData.html_url,
-                                        url: ""
+                                        display_text: " View Repository",
+                                        url: repoData.html_url
+                                    })
+                                },
+                                {
+                                    name: "cta_url",
+                                    buttonParamsJson: JSON.stringify({
+                                        display_text: "🔗 Session Scanner",
+                                        url: "https://keith-site.vercel.app/keithpair"
                                     })
                                 }
                             ]
