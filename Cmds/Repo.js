@@ -8,71 +8,42 @@ keith({
     alias: ["randvid", "rvideo"],
     desc: "Get a random video",
     category: "Download",
-    react: "🎬",
+    react: "🆗",
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, reply } = context;
+        const { client, m } = context;
 
-        // Show waiting message
-        await reply("⏳ Fetching random video...");
-
-        // Fetch random video from API
         const apiUrl = 'https://apis-keith.vercel.app/random/video';
         const response = await fetch(apiUrl);
         
         if (!response.ok) {
-            return await reply(`❌ API request failed with status ${response.status}`);
+            return;
         }
 
         const data = await response.json();
         
         if (!data.status || !data.result || !data.result.video) {
-            return await reply("❌ No video found or API error");
+            return;
         }
 
         const videoUrl = data.result.video;
-
-        // Download the video
         const videoResponse = await fetch(videoUrl);
         
         if (!videoResponse.ok) {
-            return await reply("❌ Failed to download video");
+            return;
         }
         
         const videoBuffer = await videoResponse.buffer();
 
-        // Generate video message content in ptvMessage format
-        const videoMessageContent = await generateWAMessageContent({
-            video: videoBuffer,
-            caption: `🎬 *Random Video*\n\n✨ Created by: ${data.creator || "Keithkeizzah"}`
-        }, {
-            upload: client.waUploadToServer
-        });
-
-        // Create the message with ptvMessage format
-        const videoMessage = generateWAMessageFromContent(m.chat, {
-            viewOnceMessage: {
-                message: {
-                    messageContextInfo: {
-                        deviceListMetadata: {},
-                        deviceListMetadataVersion: 2
-                    },
-                    videoMessage: videoMessageContent.videoMessage
-                }
-            }
+        await client.ptvMessage(m.chat, {
+            video: videoBuffer
         }, {
             quoted: m
         });
 
-        // Send the message
-        await client.relayMessage(m.chat, videoMessage.message, {
-            messageId: videoMessage.key.id
-        });
-
     } catch (error) {
         console.error('Random video command error:', error);
-        await context.reply('❌ An error occurred while fetching the random video!');
     }
 });
 keith({
