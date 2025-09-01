@@ -8,7 +8,7 @@ keith({
     alias: ["sc", "script"],
     desc: "Display KEITH-MD repository information",
     category: "Utility",
-    react: "📦",
+    react: "💥",
     filename: __filename
 }, async (context) => {
     try {
