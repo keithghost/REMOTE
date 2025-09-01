@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 
 keith({
     pattern: "randomvid",
-    alias: ["randvid", "rvideo"],
+    alias: ["randvid", "rvid"],
     desc: "Get a random video",
     category: "Download",
     react: "🆗",
