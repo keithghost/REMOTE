@@ -1,5 +1,5 @@
 const { keith } = require('../commandHandler');
-const { generateWAMessageContent, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
+const { generateWAMessageContent, generateWAMessageFromContent, ptvMessage } = require('@whiskeysockets/baileys');
 const fetch = require('node-fetch');
 
 
@@ -8,7 +8,7 @@ keith({
     alias: ["randvid", "rvid"],
     desc: "Get a random video",
     category: "Download",
-    react: "🆗",
+    react: "✅",
     filename: __filename
 }, async (context) => {
     try {
@@ -36,7 +36,7 @@ keith({
         
         const videoBuffer = await videoResponse.buffer();
 
-        await client.ptvMessage(m.chat, {
+        await ptvMessage(m.chat, {
             video: videoBuffer
         }, {
             quoted: m
