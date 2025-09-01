@@ -8,7 +8,7 @@ keith({
     alias: ["randvid", "rvid"],
     desc: "Get a random video",
     category: "Download",
-    react: "✅",
+    react: "❤️",
     filename: __filename
 }, async (context) => {
     try {
