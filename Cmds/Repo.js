@@ -3,130 +3,122 @@ const { generateWAMessageContent, generateWAMessageFromContent, prepareWAMessage
 const fetch = require('node-fetch');
 
 
+// Main math command
 keith({
     pattern: "math",
     alias: ["calculate", "calc"],
-    desc: "Perform mathematical calculations",
+    desc: "Perform mathematical calculations easily",
     category: "Utility",
     react: "🧮",
     filename: __filename
 }, async (context) => {
     try {
-        const { client, m, reply, args } = context;
+        const { reply, args } = context;
 
         if (!args || args.length === 0) {
-            return await reply(`🧮 *Math Operations Available:*\n\n` +
-                `• simplify - Simplify expressions\n` +
-                `• factor - Factor polynomials\n` +
-                `• derive - Calculate derivatives\n` +
-                `• integrate - Calculate integrals\n` +
-                `• zeroes - Find polynomial roots\n` +
-                `• tangent - Find tangent lines\n` +
-                `• area - Calculate area under curve\n` +
-                `• cos/sin/tan - Trigonometric functions\n` +
-                `• arccos/arcsin/arctan - Inverse trigonometric\n` +
-                `• abs - Absolute value\n` +
-                `• log - Logarithms\n\n` +
-                `📝 *Usage:* .math [operation] [expression]\n` +
-                `📋 *Example:* .math simplify 2^2+2(2)`);
+            return await reply(
+                `🧮 *Math Command Help*\n\n` +
+                `👉 Just type: .math 1+1\n` +
+                `👉 Or use: .math cos pi\n\n` +
+                `📋 Default operation is *simplify*`
+            );
         }
 
-        // Parse operation and expression
+        // Clean input
         const input = args.trim();
-        const firstSpace = input.indexOf(' ');
-        
-        if (firstSpace === -1) {
-            return await reply(`❌ Invalid format! Please provide both operation and expression.\n` +
-                `📋 Example: .math simplify 2^2+2(2)`);
-        }
+        const parts = input.split(" ");
+        let operation, expression;
 
-        const operation = input.substring(0, firstSpace).toLowerCase();
-        const expression = input.substring(firstSpace + 1).trim();
+        // If first word matches known operations, use it
+        const validOps = [
+            "simplify", "factor", "derive", "integrate", "zeroes",
+            "tangent", "area", "cos", "sin", "tan",
+            "arccos", "arcsin", "arctan", "abs", "log"
+        ];
+
+        if (validOps.includes(parts[0].toLowerCase())) {
+            operation = parts[0].toLowerCase();
+            expression = parts.slice(1).join(" ");
+        } else {
+            // Default to simplify
+            operation = "simplify";
+            expression = input;
+        }
 
         if (!expression) {
-            return await reply(`❌ Please provide a mathematical expression.\n` +
-                `📋 Example: .math ${operation} x^2+2x`);
+            return await reply(`❌ Please provide a mathematical expression.\n📋 Example: .math ${operation} x^2+2x`);
         }
 
-        // Show processing message
-        await reply(`⏳ Calculating ${operation} for: ${expression}`);
+        // Show processing
+        await reply(`⏳ Calculating *${operation}* for: ${expression}`);
 
-        // Build API URL
+        // API URL
         const apiUrl = `https://apis-keith.vercel.app/math/${operation}?expr=${encodeURIComponent(expression)}`;
-        
-        // Fetch result from API
         const response = await fetch(apiUrl);
-        
+
         if (!response.ok) {
-            return await reply(`❌ API request failed with status ${response.status}\n` +
-                `⚠️ Check if the operation '${operation}' is valid.`);
+            return await reply(`❌ API request failed with status ${response.status}`);
         }
 
         const data = await response.json();
-        
+
         if (!data.status) {
-            return await reply(`❌ Calculation failed!\n` +
-                `📝 Operation: ${operation}\n` +
-                `🔤 Expression: ${expression}\n` +
-                `❌ Error: ${data.message || 'Unknown error'}`);
+            return await reply(
+                `❌ Calculation failed!\n📝 Operation: ${operation}\n🔤 Expression: ${expression}\n❌ Error: ${data.message || 'Unknown error'}`
+            );
         }
 
-        // Format and send the result
-        const resultMessage = 
+        // Result message
+        const resultMessage =
 `🧮 *Math Calculation Result*
 
 📝 *Operation:* ${data.operation || operation}
 🔤 *Expression:* ${data.expression || expression}
 ✅ *Result:* ${data.result}
 
-✨ *creator* ${data.creator || 'Keithkeizzah'}`;
+✨ *API by:* ${data.creator || 'Keithkeizzah'}`;
 
         await reply(resultMessage);
 
     } catch (error) {
         console.error('Math command error:', error);
-        await context.reply('❌ An error occurred during calculation!\n' +
-            '📋 Make sure your expression is valid and properly formatted.');
+        await context.reply('❌ An error occurred during calculation!\n📋 Make sure your expression is valid and properly formatted.');
     }
 });
 
-// Additional command to show available operations in detail
+// Math operations list command
 keith({
     pattern: "mathlist",
     alias: ["mathops", "calculations"],
-    desc: "Show detailed list of available math operations",
+    desc: "Show available math operations",
     category: "Utility",
     react: "📋",
     filename: __filename
 }, async (context) => {
     try {
         const { reply } = context;
-
-        // Fetch math operations list
         const apiUrl = 'https://apis-keith.vercel.app/mathlist';
         const response = await fetch(apiUrl);
-        
+
         if (!response.ok) {
             return await reply('❌ Failed to fetch math operations list');
         }
 
         const data = await response.json();
-        
+
         if (!data.status || !data.result) {
             return await reply('❌ Invalid response from math operations API');
         }
 
-        // Build detailed list message
-        let listMessage = `📋 *Available Math Operations*\n\n`;
-        listMessage += `✨ *Creator:* ${data.creator || 'Keithkeizzah'}\n\n`;
+        // Build list
+        let listMessage = `📋 *Available Math Operations*\n\n✨ *Creator:* ${data.creator || 'Keithkeizzah'}\n\n`;
 
         Object.entries(data.result).forEach(([operation, info]) => {
             listMessage += `• *${operation}* - ${info.description}\n`;
             listMessage += `  📍 Example: ${info.example}\n\n`;
         });
 
-        listMessage += `🧮 *Usage:* .math [operation] [expression]\n`;
-        listMessage += `📋 *Example:* .math simplify 2^2+2(2)`;
+        listMessage += `🧮 *Usage:* .math [operation] [expression]\n📋 *Example:* .math 2^2+2(2)`;
 
         await reply(listMessage);
 
@@ -135,6 +127,8 @@ keith({
         await context.reply('❌ Failed to fetch math operations list');
     }
 });
+
+
 keith({
     pattern: "randomvid",
     alias: ["randvid", "rvid"],
