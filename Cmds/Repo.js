@@ -1,13 +1,10 @@
 const { keith } = require('../commandHandler');
 const { generateWAMessageContent, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
 const fetch = require('node-fetch');
-/*const { keith } = require('../commandHandler');
-const { generateWAMessageContent, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
-const fetch = require('node-fetch');*/
 
 keith({
     pattern: "repo",
-    alias: ["sc", "script"],
+    alias: ["scr", "script"],
     desc: "Display KEITH-MD repository information",
     category: "Utility",
     react: "📦",
@@ -41,73 +38,8 @@ keith({
             upload: client.waUploadToServer
         });
 
-        // Create carousel cards with repository information
-        const carouselCards = [
-            {
-                header: {
-                    title: "📊 KEITH-MD Stats",
-                    hasMediaAttachment: true,
-                    imageMessage: imageMessageContent.imageMessage
-                },
-                body: {
-                    text: `⭐ Stars: ${formatNumber(repoData.stargazers_count)}\n🍴 Forks: ${formatNumber(repoData.forks_count)}\n👀 Watchers: ${formatNumber(repoData.watchers_count)}\n📝 Issues: ${formatNumber(repoData.open_issues_count)}`
-                },
-                nativeFlowMessage: {
-                    buttons: [
-                        {
-                            name: "quick_reply",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: "⭐ Star Repository",
-                                id: "star_repo"
-                            })
-                        }
-                    ]
-                }
-            },
-            {
-                header: {
-                    title: "📋 Repository Details",
-                    hasMediaAttachment: false
-                },
-                body: {
-                    text: `📛 Name: ${repoData.name}\n📖 Description: ${repoData.description || "No description"}\n🌐 Language: ${repoData.language}\n📄 License: ${repoData.license?.name || "None"}\n📁 Size: ${formatNumber(repoData.size)} KB`
-                },
-                nativeFlowMessage: {
-                    buttons: [
-                        {
-                            name: "quick_reply",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: "📂 View Code",
-                                id: "view_code"
-                            })
-                        }
-                    ]
-                }
-            },
-            {
-                header: {
-                    title: "👤 Owner Information",
-                    hasMediaAttachment: false
-                },
-                body: {
-                    text: `👨‍💻 Owner: ${repoData.owner.login}\n🔗 Profile: ${repoData.owner.html_url}\n🏆 Type: ${repoData.owner.type}`
-                },
-                nativeFlowMessage: {
-                    buttons: [
-                        {
-                            name: "cta_url",
-                            buttonParamsJson: JSON.stringify({
-                                display_text: "🌐 Visit GitHub",
-                                url: repoData.html_url
-                            })
-                        }
-                    ]
-                }
-            }
-        ];
-
-        // Generate the carousel message
-        const carouselMessage = generateWAMessageFromContent(m.chat, {
+        // Create interactive message with copy button
+        const interactiveMessage = generateWAMessageFromContent(m.chat, {
             viewOnceMessage: {
                 message: {
                     messageContextInfo: {
@@ -116,13 +48,35 @@ keith({
                     },
                     interactiveMessage: {
                         body: {
-                            text: `📦 ${repoData.full_name}`
+                            text: `📦 *${repoData.full_name}*\n\n` +
+                                  `📖 ${repoData.description || "No description"}\n\n` +
+                                  `⭐ Stars: ${formatNumber(repoData.stargazers_count)}\n` +
+                                  `🍴 Forks: ${formatNumber(repoData.forks_count)}\n` +
+                                  `👀 Watchers: ${formatNumber(repoData.watchers_count)}\n` +
+                                  `📝 Issues: ${formatNumber(repoData.open_issues_count)}\n` +
+                                  `🌐 Language: ${repoData.language}\n` +
+                                  `📄 License: ${repoData.license?.name || "None"}\n\n` +
+                                  `👨‍💻 Owner: ${repoData.owner.login}\n` +
+                                  `🔄 Updated: ${new Date(repoData.updated_at).toLocaleDateString()}`
                         },
                         footer: {
-                            text: `🔄 Updated: ${new Date(repoData.updated_at).toLocaleDateString()} | 📅 Created: ${new Date(repoData.created_at).toLocaleDateString()}`
+                            text: "KEITH-MD Repository Information"
                         },
-                        carouselMessage: {
-                            cards: carouselCards
+                        header: {
+                            hasMediaAttachment: true,
+                            imageMessage: imageMessageContent.imageMessage
+                        },
+                        nativeFlowMessage: {
+                            buttons: [
+                                {
+                                    name: "cta_copy",
+                                    buttonParamsJson: JSON.stringify({
+                                        display_text: "📋 Copy Repository Link",
+                                        copy_text: repoData.html_url,
+                                        url: ""
+                                    })
+                                }
+                            ]
                         }
                     }
                 }
@@ -132,8 +86,8 @@ keith({
         });
 
         // Send the message
-        await client.relayMessage(m.chat, carouselMessage.message, {
-            messageId: carouselMessage.key.id
+        await client.relayMessage(m.chat, interactiveMessage.message, {
+            messageId: interactiveMessage.key.id
         });
 
     } catch (error) {
@@ -141,6 +95,8 @@ keith({
         await context.reply('❌ An error occurred while fetching repository information!');
     }
 });
+
+
 keith({
     pattern: "tiktokposts",
     alias: ["ttposts", "tiktokuser"],
