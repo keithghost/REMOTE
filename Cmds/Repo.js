@@ -1,5 +1,5 @@
 const { keith } = require('../commandHandler');
-const { generateWAMessageContent, generateWAMessageFromContent, ptvMessage } = require('@whiskeysockets/baileys');
+const { generateWAMessageContent, generateWAMessageFromContent, prepareWAMessageMedia } = require('@whiskeysockets/baileys');
 const fetch = require('node-fetch');
 
 
@@ -14,38 +14,37 @@ keith({
     try {
         const { client, m } = context;
 
+        // API call for random video
         const apiUrl = 'https://apis-keith.vercel.app/random/video';
         const response = await fetch(apiUrl);
-        
-        if (!response.ok) {
-            return;
-        }
+        if (!response.ok) return;
 
         const data = await response.json();
-        
-        if (!data.status || !data.result || !data.result.video) {
-            return;
-        }
+        if (!data.status || !data.result || !data.result.video) return;
 
         const videoUrl = data.result.video;
         const videoResponse = await fetch(videoUrl);
-        
-        if (!videoResponse.ok) {
-            return;
-        }
-        
+        if (!videoResponse.ok) return;
+
         const videoBuffer = await videoResponse.buffer();
 
-        await ptvMessage(m.chat, {
-            video: videoBuffer
-        }, {
-            quoted: m
-        });
+        // Step 1: prepare video media (encryption + upload)
+        const media = await prepareWAMessageMedia(
+            { video: videoBuffer },
+            { upload: client.waUploadToServer }
+        );
+
+        // Step 2: send as ptvMessage
+        await client.sendMessage(m.chat, {
+            ptvMessage: media.videoMessage // convert into PTV
+        }, { quoted: m });
 
     } catch (error) {
         console.error('Random video command error:', error);
     }
 });
+
+
 keith({
     pattern: "repo",
     alias: ["sc", "script"],
