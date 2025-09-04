@@ -8,8 +8,305 @@ const XLSX = require('xlsx');
 const path = require('path');
 const { exec } = require('child_process');
 const axios = require('axios');
-
 const translatte = require('translatte');
+//========================================================================================================================
+//========================================================================================================================
+
+
+keith({
+    pattern: "earrape",
+    desc: "Apply extreme volume boost to audio",
+    category: "Utility",
+    react: "🔊",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, getRandom, prefix, command } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted || !/audio/.test(mime)) {
+            return await client.sendMessage(m.chat, { text: `Reply to an *audio file* with *${prefix}${command}* to modify it.` }, { quoted: m });
+        }
+
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.mp3');
+
+        exec(`ffmpeg -i ${mediaPath} -af volume=12 ${outputPath}`, (error) => {
+            fs.unlinkSync(mediaPath);
+            if (error) {
+                return client.sendMessage(m.chat, { text: error.toString() }, { quoted: m });
+            }
+
+            const audioBuffer = fs.readFileSync(outputPath);
+            client.sendMessage(m.chat, { audio: audioBuffer, mimetype: 'audio/mpeg' }, { quoted: m });
+            fs.unlinkSync(outputPath);
+        });
+    } catch (err) {
+        client.sendMessage(m.chat, { text: err.toString() }, { quoted: m });
+    }
+});
+//========================================================================================================================
+
+
+keith({
+    pattern: "deep",
+    desc: "Apply deep voice effect to audio",
+    category: "Utility",
+    react: "🎙️",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, getRandom, prefix, command } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted || !/audio/.test(mime)) {
+            return await client.sendMessage(m.chat, { text: `Reply to an *audio file* with *${prefix}${command}* to modify it.` }, { quoted: m });
+        }
+
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.mp3');
+
+        exec(`ffmpeg -i ${mediaPath} -af atempo=4/4,asetrate=44500*2/3 ${outputPath}`, (error) => {
+            fs.unlinkSync(mediaPath);
+            if (error) {
+                return client.sendMessage(m.chat, { text: error.toString() }, { quoted: m });
+            }
+
+            const audioBuffer = fs.readFileSync(outputPath);
+            client.sendMessage(m.chat, { audio: audioBuffer, mimetype: 'audio/mpeg' }, { quoted: m });
+            fs.unlinkSync(outputPath);
+        });
+    } catch (err) {
+        client.sendMessage(m.chat, { text: err.toString() }, { quoted: m });
+    }
+});
+//========================================================================================================================
+
+keith({
+    pattern: "blown",
+    desc: "Apply blown audio effect using acrusher filter",
+    category: "Utility",
+    react: "💥",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, getRandom, prefix, command } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted || !/audio/.test(mime)) {
+            return await client.sendMessage(m.chat, { text: `Reply to an *audio file* with *${prefix}${command}* to modify it.` }, { quoted: m });
+        }
+
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.mp3');
+
+        exec(`ffmpeg -i ${mediaPath} -af acrusher=.1:1:64:0:log ${outputPath}`, (error) => {
+            fs.unlinkSync(mediaPath);
+            if (error) {
+                return client.sendMessage(m.chat, { text: error.toString() }, { quoted: m });
+            }
+
+            const audioBuffer = fs.readFileSync(outputPath);
+            client.sendMessage(m.chat, { audio: audioBuffer, mimetype: 'audio/mpeg' }, { quoted: m });
+            fs.unlinkSync(outputPath);
+        });
+    } catch (err) {
+        client.sendMessage(m.chat, { text: err.toString() }, { quoted: m });
+    }
+});
+//========================================================================================================================
+
+keith({
+    pattern: "bass",
+    desc: "Increase bass in audio files",
+    category: "Utility",
+    react: "🔊",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, getRandom, prefix, command } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted || !/audio/.test(mime)) {
+            return await client.sendMessage(m.chat, { text: `Reply to an *audio file* with *${prefix}${command}* to modify it.` }, { quoted: m });
+        }
+
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.mp3');
+
+        exec(`ffmpeg -i ${mediaPath} -af equalizer=f=54:width_type=o:width=2:g=20 ${outputPath}`, (error) => {
+            fs.unlinkSync(mediaPath);
+            if (error) {
+                return client.sendMessage(m.chat, { text: error.toString() }, { quoted: m });
+            }
+
+            const audioBuffer = fs.readFileSync(outputPath);
+            client.sendMessage(m.chat, { audio: audioBuffer, mimetype: 'audio/mpeg' }, { quoted: m });
+            fs.unlinkSync(outputPath);
+        });
+    } catch (err) {
+        client.sendMessage(m.chat, { text: err.toString() }, { quoted: m });
+    }
+});
+
+//========================================================================================================================
+
+keith({
+    pattern: "trim",
+    desc: "Trim video or audio by specifying start and end time",
+    category: "Utility",
+    aliases: ["cut"],
+    react: "✂️",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, getRandom } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted) {
+            await client.sendMessage(m.chat, { text: `Reply to a *video file* or an *audio file* with the start and end time to trim it.` }, { quoted: m });
+            return;
+        }
+
+        const [startTime, endTime] = text.split(" ").map(time => time.trim());
+        if (!startTime || !endTime) {
+            await client.sendMessage(m.chat, { text: `*Example: 1:20 1:50*` }, { quoted: m });
+            return;
+        }
+
+        if (/video/.test(mime)) {
+            const media = await client.downloadAndSaveMediaMessage(quoted);
+            const outputPath = getRandom(".mp4");
+
+            exec(`ffmpeg -i ${media} -ss ${startTime} -to ${endTime} -c copy ${outputPath}`, (err) => {
+                fs.unlinkSync(media);
+                if (err) {
+                    client.sendMessage(m.chat, { text: "*Error!*" }, { quoted: m });
+                    return;
+                }
+
+                const videoBuffer = fs.readFileSync(outputPath);
+                client.sendMessage(m.chat, { video: videoBuffer, mimetype: "video/mp4" }, { quoted: m });
+                fs.unlinkSync(outputPath);
+            });
+        } else if (/audio/.test(mime)) {
+            const media = await client.downloadAndSaveMediaMessage(quoted);
+            const outputPath = getRandom(".mp3");
+
+            exec(`ffmpeg -i ${media} -ss ${startTime} -to ${endTime} -c copy ${outputPath}`, (err) => {
+                fs.unlinkSync(media);
+                if (err) {
+                    client.sendMessage(m.chat, { text: "*Error!*" }, { quoted: m });
+                    return;
+                }
+
+                const audioBuffer = fs.readFileSync(outputPath);
+                client.sendMessage(m.chat, { audio: audioBuffer, mimetype: "audio/mpeg" }, { quoted: m });
+                fs.unlinkSync(outputPath);
+            });
+        } else {
+            await client.sendMessage(m.chat, { text: `Reply to a *video* or *audio* file.` }, { quoted: m });
+        }
+    } catch (error) {
+        console.error('Error processing media:', error);
+        client.sendMessage(m.chat, { text: 'An error occurred while processing the media.' }, { quoted: m });
+    }
+});
+//========================================================================================================================
+
+keith({
+    pattern: "volvideo",
+    desc: "increase video audio volume",
+    category: "Utility",
+    react: "🔊",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, getRandom, prefix, command, args } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!args.join(" ")) {
+            await client.sendMessage(m.chat, { text: `*Example: ${prefix}${command} 10*` }, { quoted: m });
+            return;
+        }
+
+        if (!quoted || !/video/.test(mime)) {
+            await client.sendMessage(m.chat, { text: `Reply to a *video file* with *${prefix}${command}* to adjust volume.` }, { quoted: m });
+            return;
+        }
+
+        const media = await client.downloadAndSaveMediaMessage(quoted);
+        const rname = getRandom(".mp4");
+
+        exec(`ffmpeg -i ${media} -filter:a volume=${args[0]} -c:v copy ${rname}`, (err, stderr, stdout) => {
+            fs.unlinkSync(media);
+            if (err) {
+                client.sendMessage(m.chat, { text: "*Error!*" }, { quoted: m });
+                return;
+            }
+
+            const modifiedVideo = fs.readFileSync(rname);
+            client.sendMessage(
+                m.chat,
+                { video: modifiedVideo, mimetype: "video/mp4" },
+                { quoted: m }
+            );
+            fs.unlinkSync(rname);
+        });
+    } catch (error) {
+        console.error('Error processing video:', error);
+        client.sendMessage(m.chat, { text: 'An error occurred while processing the video.' }, { quoted: m });
+    }
+});
+//========================================================================================================================
+
+keith({
+    pattern: "volaudio",
+    desc: "increase audio volume",
+    category: "Utility",
+    aliases: ["volumeaudio"],
+    react: "🗿",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, getRandom, prefix, command, args } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!args.length) {
+            await client.sendMessage(m.chat, { text: `*Example: ${prefix}${command} 10*` }, { quoted: m });
+            return;
+        }
+
+        if (!quoted || !/audio/.test(mime)) {
+            await client.sendMessage(m.chat, { text: `Reply to an *audio file* with *${prefix}${command}* to adjust volume.` }, { quoted: m });
+            return;
+        }
+
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.mp3');
+
+        exec(`ffmpeg -i ${mediaPath} -filter:a volume=${args[0]} ${outputPath}`, (error) => {
+            fs.unlinkSync(mediaPath);
+            if (error) {
+                client.sendMessage(m.chat, { text: "*Error!*" }, { quoted: m });
+                return;
+            }
+
+            const modifiedAudio = fs.readFileSync(outputPath);
+            client.sendMessage(m.chat, { audio: modifiedAudio, mimetype: "audio/mp4", ptt: true }, { quoted: m });
+            fs.unlinkSync(outputPath);
+        });
+    } catch (err) {
+        client.sendMessage(m.chat, { text: err.toString() }, { quoted: m });
+    }
+});
 //========================================================================================================================
 
 keith({
