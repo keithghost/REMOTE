@@ -55,7 +55,7 @@ keith({
     pattern: "img2vid",
     desc: "Create video from images with audio",
     category: "Utility",
-    aliases: ["imagetovideo", "imgtovid", "slideshow", "photovideo"],
+    alias: ["imagetovideo", "imgtovid", "slideshow", "photovideo"],
     react: "🎬",
     filename: __filename
 }, async (context) => {
@@ -324,7 +324,7 @@ keith({
     pattern: "trim",
     desc: "Trim video or audio by specifying start and end time",
     category: "Utility",
-    aliases: ["cut"],
+    alias: ["cut"],
     react: "✂️",
     filename: __filename
 }, async (context) => {
@@ -435,7 +435,7 @@ keith({
     pattern: "volaudio",
     desc: "increase audio volume",
     category: "Utility",
-    aliases: ["volumeaudio"],
+    alias: ["volumeaudio"],
     react: "🗿",
     filename: __filename
 }, async (context) => {
