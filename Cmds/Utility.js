@@ -11,6 +11,171 @@ const axios = require('axios');
 const translatte = require('translatte');
 //========================================================================================================================
 //========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+
+//========================================================================================================================
+
+keith({
+    pattern: "reverse",
+    desc: "Reverse audio playback",
+    category: "Utility",
+    react: "⏪",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, getRandom, prefix, command } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted || !/audio/.test(mime)) {
+            return await client.sendMessage(m.chat, { text: `Reply to an *audio file* with *${prefix}${command}* to reverse it.` }, { quoted: m });
+        }
+
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.mp3');
+
+        exec(`ffmpeg -i ${mediaPath} -filter_complex "areverse" ${outputPath}`, (error) => {
+            fs.unlinkSync(mediaPath);
+            if (error) {
+                return client.sendMessage(m.chat, { text: error.toString() }, { quoted: m });
+            }
+
+            const audioBuffer = fs.readFileSync(outputPath);
+            client.sendMessage(m.chat, { audio: audioBuffer, mimetype: 'audio/mpeg' }, { quoted: m });
+            fs.unlinkSync(outputPath);
+        });
+    } catch (err) {
+        client.sendMessage(m.chat, { text: err.toString() }, { quoted: m });
+    }
+});
+//========================================================================================================================
+
+keith({
+    pattern: "img2vid",
+    desc: "Create video from images with audio",
+    category: "Utility",
+    aliases: ["imagetovideo", "imgtovid", "slideshow", "photovideo"],
+    react: "🎬",
+    filename: __filename
+}, async (context) => {
+    const { client, m, text, getRandom } = context;
+
+    if (!text) {
+        await client.sendMessage(m.chat, { text: "Provide the audio and image URLs in the format: audioURL | imageURL1, imageURL2, ..." }, { quoted: m });
+        return;
+    }
+
+    const [audioUrl, imageUrls] = text.split(" | ");
+    const imageUrlList = imageUrls.split(",").map((url) => url.trim());
+
+    if (!audioUrl || !imageUrlList.length) {
+        await client.sendMessage(m.chat, { text: "Please provide both audio and image URLs." }, { quoted: m });
+        return;
+    }
+
+    const audioPath = getRandom("_audio.mp3");
+    const outputPath = getRandom("_output.mp4");
+
+    try {
+        // Download the audio from the URL
+        const response = await axios({
+            method: "get",
+            url: audioUrl,
+            responseType: "arraybuffer",
+        });
+        fs.writeFileSync(audioPath, response.data);
+
+        // Download all images from the URLs
+        const imagePaths = [];
+        for (const [index, imageUrl] of imageUrlList.entries()) {
+            const imageResponse = await axios({
+                method: "get",
+                url: imageUrl,
+                responseType: "arraybuffer",
+            });
+            const imagePath = getRandom(`_image${index}.jpg`);
+            fs.writeFileSync(imagePath, imageResponse.data);
+            imagePaths.push(imagePath);
+        }
+
+        // Get the duration of the audio
+        exec(`ffprobe -i ${audioPath} -show_entries format=duration -v quiet -of csv="p=0"`, (err, stdout, stderr) => {
+            if (err) {
+                console.error("FFprobe error:", stderr);
+                client.sendMessage(m.chat, { text: "Error getting audio duration!" }, { quoted: m });
+                return;
+            }
+
+            const audioDuration = parseFloat(stdout.trim());
+            const frameRate = imagePaths.length / audioDuration;
+
+            // Create input file list for FFmpeg
+            const inputList = imagePaths.map((path, index) => `-loop 1 -t ${audioDuration / imagePaths.length} -i ${path}`).join(' ');
+            
+            // Create the video from the images
+            const ffmpegCommand = `ffmpeg ${inputList} -i ${audioPath} -filter_complex "concat=n=${imagePaths.length}:v=1:a=0" -c:v libx264 -r 30 -pix_fmt yuv420p -c:a aac -shortest ${outputPath}`;
+            
+            exec(ffmpegCommand, (err, stdout, stderr) => {
+                console.log("FFmpeg output:", stdout);
+                console.error("FFmpeg error:", stderr);
+                
+                // Cleanup temporary files
+                fs.unlinkSync(audioPath);
+                imagePaths.forEach((path) => fs.unlinkSync(path));
+                
+                if (err) {
+                    client.sendMessage(m.chat, { text: "Error creating video!" }, { quoted: m });
+                    return;
+                }
+                
+                const videoBuffer = fs.readFileSync(outputPath);
+                client.sendMessage(m.chat, { video: videoBuffer, mimetype: "video/mp4" }, { quoted: m });
+                fs.unlinkSync(outputPath);
+            });
+        });
+    } catch (error) {
+        console.error("Error processing media:", error);
+        client.sendMessage(m.chat, { text: "An error occurred while processing the media." }, { quoted: m });
+    }
+});
+//========================================================================================================================
+
+
+keith({
+    pattern: "robot",
+    desc: "Apply robot voice effect to audio",
+    category: "Utility",
+    react: "🤖",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, getRandom, prefix, command } = context;
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted || !/audio/.test(mime)) {
+            return await client.sendMessage(m.chat, { text: `Reply to an *audio file* with *${prefix}${command}* to modify it.` }, { quoted: m });
+        }
+
+        const mediaPath = await client.downloadAndSaveMediaMessage(quoted);
+        const outputPath = getRandom('.mp3');
+
+        exec(`ffmpeg -i ${mediaPath} -filter_complex "afftfilt=real='hypot(re,im)*sin(0)':imag='hypot(re,im)*cos(0)':win_size=512:overlap=0.75" ${outputPath}`, (error) => {
+            fs.unlinkSync(mediaPath);
+            if (error) {
+                return client.sendMessage(m.chat, { text: error.toString() }, { quoted: m });
+            }
+
+            const audioBuffer = fs.readFileSync(outputPath);
+            client.sendMessage(m.chat, { audio: audioBuffer, mimetype: 'audio/mpeg' }, { quoted: m });
+            fs.unlinkSync(outputPath);
+        });
+    } catch (err) {
+        client.sendMessage(m.chat, { text: err.toString() }, { quoted: m });
+    }
+});
+//========================================================================================================================
 
 
 keith({
