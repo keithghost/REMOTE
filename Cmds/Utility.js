@@ -8,12 +8,113 @@ const XLSX = require('xlsx');
 const path = require('path');
 const { exec } = require('child_process');
 const axios = require('axios');
+const fetch = require('node-fetch');
 const translatte = require('translatte');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
 
+keith({
+    pattern: "fetch",
+    desc: "Fetch and display content from a URL",
+    category: "Utility",
+    aliases: ["get", "curl"],
+    react: "🌐",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, reply } = context;
+
+        if (!text) return reply("Provide a valid URL to fetch!");
+
+        const response = await fetch(text);
+        const contentType = response.headers.get('content-type');
+
+        if (!contentType) {
+            return reply("The server did not return a content-type.");
+        }
+
+        console.log("Content-Type:", contentType);
+
+        if (contentType.includes('application/json')) {
+            const data = await response.json();
+            return reply(JSON.stringify(data, null, 2));
+        }
+
+        if (contentType.includes('text/html')) {
+            const html = await response.text();
+            return reply(html.substring(0, 4000)); // Limit to avoid message length issues
+        }
+
+        if (contentType.includes('image')) {
+            const imageBuffer = await response.buffer();
+            return client.sendMessage(
+                m.chat,
+                { image: imageBuffer, caption: text },
+                { quoted: m }
+            );
+        }
+
+        if (contentType.includes('video')) {
+            const videoBuffer = await response.buffer();
+            return client.sendMessage(
+                m.chat,
+                { video: videoBuffer, caption: text },
+                { quoted: m }
+            );
+        }
+
+        if (contentType.includes('audio')) {
+            const audioBuffer = await response.buffer();
+            const filename = text.split('/').pop(); 
+            return client.sendMessage(
+                m.chat,
+                {
+                    audio: audioBuffer,
+                    mimetype: "audio/mpeg",
+                    fileName: filename || "audio.mp3",
+                },
+                { quoted: m }
+            );
+        }
+
+        if (contentType.includes('application/pdf')) {
+            return client.sendMessage(
+                m.chat,
+                {
+                    document: { url: text },
+                    mimetype: "application/pdf",
+                    fileName: text.split('/').pop() || "document.pdf",
+                },
+                { quoted: m }
+            );
+        }
+
+        if (contentType.includes('application')) {
+            return client.sendMessage(
+                m.chat,
+                {
+                    document: { url: text },
+                    mimetype: contentType,
+                    fileName: text.split('/').pop() || "file.bin",
+                },
+                { quoted: m }
+            );
+        }
+
+        // For text/plain and other text types
+        if (contentType.includes('text/')) {
+            const textContent = await response.text();
+            return reply(textContent.substring(0, 4000)); // Limit text length
+        }
+
+        return reply("The content type is unsupported or could not be determined.");
+    } catch (error) {
+        console.error('Fetch error:', error);
+        return reply("An error occurred while fetching the URL.");
+    }
+});
 //========================================================================================================================
 
 keith({
