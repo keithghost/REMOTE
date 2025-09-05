@@ -68,7 +68,7 @@ keith({
             "FUN": ["FUN"],
             "GENERAL": ["GENERAL"],
             "IMAGES": ["IMAGES"],
-            "MODERN-LOGO": ["MODERN-LOGO"],
+            "LOGO": ["MODERN-LOGO"],
             "MODS": ["MODS"],
             "OWNER": ["OWNER"],
             "REACTION": ["REACTION"],
