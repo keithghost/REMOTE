@@ -7,12 +7,136 @@ const { Document, Packer, Paragraph, TextRun } = require('docx');
 const XLSX = require('xlsx');
 const path = require('path');
 const { exec } = require('child_process');
+const cheerio = require('cheerio');
 const axios = require('axios');
 const fetch = require('node-fetch');
 const translatte = require('translatte');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+    pattern: "inspect",
+    desc: "Inspect website content including HTML, CSS, JS, and media files",
+    category: "Utility",
+    alias: ["spyweb", "webspy", "analyze", "crawl"],
+    react: "🔍",
+    filename: __filename
+}, async (context) => {
+    try {
+        const { client, m, text, reply } = context;
+
+        if (!text) return reply("Provide a valid web link to fetch! The bot will crawl the website and fetch its HTML, CSS, JavaScript, and any media embedded in it.");
+
+        if (!/^https?:\/\//i.test(text)) {
+            return reply("Please provide a URL starting with http:// or https://");
+        }
+
+        const response = await fetch(text);
+        const html = await response.text();
+        const $ = cheerio.load(html);
+
+        // Extract media files
+        const mediaFiles = [];
+        $('img[src], video[src], audio[src], source[src]').each((i, element) => {
+            let src = $(element).attr('src');
+            if (src) {
+                const absoluteUrl = new URL(src, text).href;
+                mediaFiles.push(absoluteUrl);
+            }
+        });
+
+        // Extract CSS files
+        const cssFiles = [];
+        $('link[rel="stylesheet"]').each((i, element) => {
+            let href = $(element).attr('href');
+            if (href) {
+                const absoluteUrl = new URL(href, text).href;
+                cssFiles.push(absoluteUrl);
+            }
+        });
+
+        // Extract JS files
+        const jsFiles = [];
+        $('script[src]').each((i, element) => {
+            let src = $(element).attr('src');
+            if (src) {
+                const absoluteUrl = new URL(src, text).href;
+                jsFiles.push(absoluteUrl);
+            }
+        });
+
+        // Extract page title and meta description
+        const title = $('title').text() || 'No title found';
+        const description = $('meta[name="description"]').attr('content') || 'No description found';
+
+        // Send initial report
+        let report = `🔍 *Website Inspection Report* 🔍\n\n`;
+        report += `📝 *Title:* ${title}\n`;
+        report += `📋 *Description:* ${description}\n\n`;
+        report += `📊 *Statistics:*\n`;
+        report += `• Media files: ${mediaFiles.length}\n`;
+        report += `• CSS files: ${cssFiles.length}\n`;
+        report += `• JS files: ${jsFiles.length}\n\n`;
+        
+        await reply(report);
+
+        // Send HTML content (truncated)
+        const truncatedHtml = html.length > 2000 ? html.substring(0, 2000) + '...' : html;
+        await reply(`📄 *HTML Content (truncated):*\n\n${truncatedHtml}`);
+
+        // Process CSS files
+        if (cssFiles.length > 0) {
+            await reply(`🎨 *CSS Files Found (${cssFiles.length}):*`);
+            for (const cssFile of cssFiles.slice(0, 3)) { // Limit to 3 files
+                try {
+                    const cssResponse = await fetch(cssFile);
+                    if (cssResponse.ok) {
+                        const cssContent = await cssResponse.text();
+                        const truncatedCss = cssContent.length > 1500 ? cssContent.substring(0, 1500) + '...' : cssContent;
+                        await reply(`📁 ${cssFile}\n\n${truncatedCss}`);
+                    }
+                } catch (cssError) {
+                    await reply(`❌ Failed to fetch CSS: ${cssFile}`);
+                }
+            }
+        } else {
+            await reply("No external CSS files found.");
+        }
+
+        // Process JS files
+        if (jsFiles.length > 0) {
+            await reply(`⚡ *JS Files Found (${jsFiles.length}):*`);
+            for (const jsFile of jsFiles.slice(0, 3)) { // Limit to 3 files
+                try {
+                    const jsResponse = await fetch(jsFile);
+                    if (jsResponse.ok) {
+                        const jsContent = await jsResponse.text();
+                        const truncatedJs = jsContent.length > 1500 ? jsContent.substring(0, 1500) + '...' : jsContent;
+                        await reply(`📁 ${jsFile}\n\n${truncatedJs}`);
+                    }
+                } catch (jsError) {
+                    await reply(`❌ Failed to fetch JS: ${jsFile}`);
+                }
+            }
+        } else {
+            await reply("No external JavaScript files found.");
+        }
+
+        // Send media files list
+        if (mediaFiles.length > 0) {
+            const mediaList = mediaFiles.slice(0, 10).join('\n'); // Limit to 10 files
+            await reply(`*Media Files Found (first 10):*\n\n${mediaList}`);
+        } else {
+            await reply("No media files (images, videos, audios) found.");
+        }
+
+    } catch (error) {
+        console.error('Web inspection error:', error);
+        return reply("An error occurred while fetching the website content.");
+    }
+});
 //========================================================================================================================
 
 keith({
