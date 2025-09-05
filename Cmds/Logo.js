@@ -14,7 +14,7 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 keith({
-    pattern: "",
+    pattern: "thunder",
     desc: "Generate a logo with your text",
     category: "Logo",
     react: "💫",
@@ -28,7 +28,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "",
+            "https://en.ephoto360.com/thunder-text-effect-online-97.html",
             text
         );
 
@@ -48,7 +48,7 @@ keith({
 });
 //========================================================================================================================
 keith({
-    pattern: "",
+    pattern: "metalavatar",
     desc: "Generate a logo with your text",
     category: "Logo",
     react: "💫",
@@ -62,7 +62,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "",
+            "https://en.ephoto360.com/create-a-metal-avatar-by-your-name-299.html",
             text
         );
 
@@ -82,7 +82,7 @@ keith({
 });
 //========================================================================================================================
 keith({
-    pattern: "",
+    pattern: "underwater",
     desc: "Generate a logo with your text",
     category: "Logo",
     react: "💫",
@@ -96,7 +96,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "",
+            "https://en.ephoto360.com/3d-underwater-text-effect-online-682.html",
             text
         );
 
@@ -116,7 +116,7 @@ keith({
 });
 //========================================================================================================================
 keith({
-    pattern: "",
+    pattern: "firework",
     desc: "Generate a logo with your text",
     category: "Logo",
     react: "💫",
@@ -130,7 +130,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "",
+            "https://en.ephoto360.com/text-firework-effect-356.html",
             text
         );
 
@@ -150,7 +150,7 @@ keith({
 });
 //========================================================================================================================
 keith({
-    pattern: "",
+    pattern: "graffiticover",
     desc: "Generate a logo with your text",
     category: "Logo",
     react: "💫",
@@ -164,7 +164,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "",
+            "https://en.ephoto360.com/cover-graffiti-181.html",
             text
         );
 
@@ -184,7 +184,7 @@ keith({
 });
 //========================================================================================================================
 keith({
-    pattern: "",
+    pattern: "comic",
     desc: "Generate a logo with your text",
     category: "Logo",
     react: "💫",
@@ -198,7 +198,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "",
+            "https://en.ephoto360.com/create-online-3d-comic-style-text-effects-817.html",
             text
         );
 
