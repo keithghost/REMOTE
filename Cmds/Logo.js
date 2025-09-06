@@ -48,7 +48,7 @@ keith({
 });
 //========================================================================================================================
 keith({
-    pattern: "metalavatar",
+    pattern: "lighteffect",
     desc: "Generate a logo with your text",
     category: "Logo",
     react: "💫",
@@ -62,7 +62,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "https://en.ephoto360.com/create-a-metal-avatar-by-your-name-299.html",
+            "https://en.ephoto360.com/light-text-effect-futuristic-technology-style-648.html",
             text
         );
 
@@ -130,7 +130,7 @@ keith({
         }
 
         const logoUrl = await fetchLogoUrl(
-            "https://en.ephoto360.com/text-firework-effect-356.html",
+            "https://en.ephoto360.com/vibrant-fireworks-text-effect-535.html",
             text
         );
 
