@@ -564,166 +564,178 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
         }
     });
 
-    //========================================================================================================================    
-    function standardizeJid(jid) {
-        if (!jid) return '';
-        try {
-            jid = typeof jid === 'string' ? jid : 
-                 (jid.decodeJid ? jid.decodeJid() : String(jid));
-            jid = jid.split(':')[0].split('/')[0];
-            if (!jid.includes('@')) {
-                jid += '@s.whatsapp.net';
-            } else if (jid.endsWith('@lid')) {
-                return jid.toLowerCase();
-            }
+
+//========================================================================================================================    
+function standardizeJid(jid) {
+    if (!jid) return '';
+    try {
+        jid = typeof jid === 'string' ? jid : 
+             (jid.decodeJid ? jid.decodeJid() : String(jid));
+        jid = jid.split(':')[0].split('/')[0];
+        if (!jid.includes('@')) {
+            jid += '@s.whatsapp.net';
+        } else if (jid.endsWith('@lid')) {
             return jid.toLowerCase();
-        } catch (e) {
-            console.error("JID standardization error:", e);
-            return '';
         }
+        return jid.toLowerCase();
+    } catch (e) {
+        console.error("JID standardization error:", e);
+        return '';
     }
+}
 
-    //========================================================================================================================            
-    
-            if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
+//========================================================================================================================            
 
-            const body = (m.mtype === "conversation" ? m.message?.conversation :
-             m.mtype === "imageMessage" ? m.message?.imageMessage?.caption :
-             m.mtype === "extendedTextMessage" ? m.message?.extendedTextMessage?.text : "") || ""
-            
-            const cmd = typeof body === 'string' && body.startsWith(prefix);
-            const args = cmd ? body.trim().split(/ +/).slice(1) : [];
-            const pushname = m.pushName || "No Name";
-            const botNumber = await client.decodeJid(client.user.id);
-            const servBot = botNumber.split('@')[0];
+        if (!client.public && !mek.key.fromMe && chatUpdate.type === "notify") return;
 
-            // Define admin numbers
-            const Ghost = "254796299159"; 
-            const Ghost2 = "24743995989";
-            const Ghost3 = "254748387615";
-            const Ghost4 = "254786989022";
-            const { getAllSudoNumbers } = require("./database/sudo");  
-            
-            const sudo = await getAllSudoNumbers();
-            
-            // Standardize all admin numbers
-            const superUserNumbers = [servBot, Ghost, Ghost2, Ghost3, Ghost4, dev]
-                .map(v => standardizeJid(v))
-                .filter(Boolean);
-            const adminNumbers = superUserNumbers.concat(sudo);
-            
-            // Get sender's JID
-            const senderJid = standardizeJid(m.sender);
+        const body = (m.mtype === "conversation" ? m.message?.conversation :
+         m.mtype === "imageMessage" ? m.message?.imageMessage?.caption :
+         m.mtype === "extendedTextMessage" ? m.message?.extendedTextMessage?.text : "") || ""
+        
+        const cmd = typeof body === 'string' && body.startsWith(prefix);
+        const args = cmd ? body.trim().split(/ +/).slice(1) : [];
+        const pushname = m.pushName || "No Name";
+        const botNumber = await client.decodeJid(client.user.id);
+        const botJid = standardizeJid(botNumber);
+        const servBot = botNumber.split('@')[0];
 
-            // Enhanced admin check
-            function isUserAdmin(jid) {
-                if (adminNumbers.includes(jid)) return true;
+        // Define admin numbers - Cleaned up super user handling
+        const devNumbers = ['254715206562', '254114018035', '254728782591', '254799916673', '254762016957', '254113174209']
+            .map(num => num.trim().replace(/\D/g, ''))
+            .filter(num => num.length > 5);
+
+        const Ghost = "254796299159"; 
+        const Ghost2 = "24743995989";
+        const Ghost3 = "254748387615";
+        const Ghost4 = "254786989022";
+        
+        const { getAllSudoNumbers } = require("./database/sudo");  
+        const sudoFromDB = await getAllSudoNumbers();
+        const sudoNumbers = sudoFromDB.map(num => num.trim().replace(/\D/g, '')).filter(num => num.length > 5);
+        
+        // Standardize all super user numbers
+        const superUserNumbers = [
+            botJid,
+            ...devNumbers.map(num => `${num}@s.whatsapp.net`),
+            Ghost, Ghost2, Ghost3, Ghost4,
+            ...sudoNumbers.map(num => `${num}@s.whatsapp.net`)
+        ].map(v => standardizeJid(v)).filter(Boolean);
+        
+        // Remove duplicates using Set
+        const superUserSet = new Set(superUserNumbers);
+        const finalSuperUsers = Array.from(superUserSet);
+        
+        // Get sender's JID
+        const senderJid = standardizeJid(m.sender);
+
+        // Enhanced admin check
+        function isUserAdmin(jid) {
+            if (finalSuperUsers.includes(jid)) return true;
+            
+            // Handle LID cases
+            const baseJid = jid.split('@')[0];
+            return finalSuperUsers.some(adminJid => 
+                adminJid.split('@')[0] === baseJid
+            );
+        }
+
+        const Owner = isUserAdmin(senderJid);
+        const isOwner = finalSuperUsers.includes(senderJid);
+
+        // Group-specific checks
+        let groupMetadata = null;
+        let isBotAdmin = false;
+        let isAdmin = false;
+        let isSuperAdmin = false;
+
+        if (m.isGroup) {
+            try {
+                groupMetadata = await client.groupMetadata(m.chat);
+                const participants = groupMetadata.participants || [];
                 
-                // Handle LID cases
-                const baseJid = jid.split('@')[0];
-                return adminNumbers.some(adminJid => 
-                    adminJid.split('@')[0] === baseJid
+                // Get all admins in the group
+                const groupAdmins = participants
+                    .filter(p => p.admin === 'admin')
+                    .map(p => standardizeJid(p.id));
+                
+                const groupSuperAdmins = participants
+                    .filter(p => p.admin === 'superadmin')
+                    .map(p => standardizeJid(p.id));
+                
+                // Check if bot is admin
+                isBotAdmin = groupAdmins.includes(botJid) || groupSuperAdmins.includes(botJid);
+                
+                // Check if sender is admin
+                isAdmin = groupAdmins.includes(senderJid);
+                isSuperAdmin = groupSuperAdmins.includes(senderJid);
+                
+            } catch (error) {
+                console.error("Error fetching group metadata:", error);
+            }
+        }
+
+        // Message utilities
+        const isBotMessage = m.sender === botNumber;  
+        const itsMe = m.sender === botNumber;
+        const text = args.join(" ");
+        const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
+            ? m.message.extendedTextMessage.contextInfo.mentionedJid
+            : [];
+
+        let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
+        let budy = typeof m.text === "string" ? m.text : "";
+
+        const timestamp = speed();
+        const Keithspeed = speed() - timestamp;
+
+        const getGroupAdmins = (participants) => {
+            const admins = participants.filter(p => p.admin === "admin").map(p => p.id);
+            const superAdmins = participants.filter(p => p.admin === "superadmin").map(p => p.id);
+            return [...admins, ...superAdmins];
+        };
+
+        const keizzah = m.quoted || m;
+        const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
+            keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
+                keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
+
+        const color = (text, color) => {
+            return color ? chalk.keyword(color)(text) : chalk.green(text);
+        };
+
+        const mime = quoted.mimetype || "";
+        const sender = m.sender;
+        const from = m.chat;
+        const qmsg = quoted;
+        const participants = m.isGroup && groupMetadata
+            ? groupMetadata.participants
+                .filter(p => p.pn)
+                .map(p => p.pn)
+            : [];
+        const groupAdmin = m.isGroup && groupMetadata
+            ? getGroupAdmins(groupMetadata.participants)
+            : [];
+        const groupSender = m.isGroup && groupMetadata
+            ? (() => {
+                const found = groupMetadata.participants.find(p => 
+                    standardizeJid(p.id) === senderJid
                 );
-            }
+                return found?.pn || sender;
+            })()
+            : sender;
 
-            const isOwner = isUserAdmin(senderJid);
+        const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
+        const reply = (teks) => {
+            client.sendMessage(m.chat, { text: teks }, { quoted: m });
+        };
+        const sender2 = m.key.fromMe 
+                        ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || client.user.id) 
+                        : (m.key.participant || m.key.remoteJid);            
 
-            // Group-specific checks
-            let groupMetadata = null;
-            let isBotAdmin = false;
-            let isAdmin = false;
-
-            if (m.isGroup) {
-                try {
-                    groupMetadata = await client.groupMetadata(m.chat);
-                    const participants = groupMetadata.participants || [];
-                    
-                    // Get all admins in the group
-                    const groupAdmins = participants
-                        .filter(p => p.admin === 'admin' || p.admin === 'superadmin')
-                        .map(p => standardizeJid(p.id));
-                    
-                    // Check if bot is admin
-                    isBotAdmin = groupAdmins.includes(standardizeJid(botNumber));
-                    
-                    // Check if sender is admin
-                    isAdmin = groupAdmins.includes(senderJid) || isOwner;
-                    
-                } catch (error) {
-                    console.error("Error fetching group metadata:", error);
-                }
-            }
-
-            // Message utilities
-            const isBotMessage = m.sender === botNumber;  
-            const itsMe = m.sender === botNumber;
-            const text = args.join(" ");
-            const Tag = m.mtype === "extendedTextMessage" && m.message.extendedTextMessage.contextInfo != null
-                ? m.message.extendedTextMessage.contextInfo.mentionedJid
-                : [];
-
-            let msgKeith = m.message.extendedTextMessage?.contextInfo?.quotedMessage;
-            let budy = typeof m.text === "string" ? m.text : "";
-
-            const timestamp = speed();
-            const Keithspeed = speed() - timestamp;
-
-            const getGroupAdmins = (participants) => {
-                return participants
-                    .filter(p => p.admin === "superadmin" || p.admin === "admin")
-                    .map(p => p.id);
-            };
-
-            const keizzah = m.quoted || m;
-            const quoted = keizzah.mtype === 'buttonsMessage' ? keizzah[Object.keys(keizzah)[1]] :
-                keizzah.mtype === 'templateMessage' ? keizzah.hydratedTemplate[Object.keys(keizzah.hydratedTemplate)[1]] :
-                    keizzah.mtype === 'product' ? keizzah[Object.keys(keizzah)[0]] : m.quoted ? m.quoted : m;
-
-            const color = (text, color) => {
-                return color ? chalk.keyword(color)(text) : chalk.green(text);
-            };
-
-            const mime = quoted.mimetype || "";
-            const sender = m.sender;
-            const from = m.chat;
-            const qmsg = quoted;
-            const participants = m.isGroup && groupMetadata
-                ? groupMetadata.participants
-                    .filter(p => p.pn)
-                    .map(p => p.pn)
-                : [];
-            const groupAdmin = m.isGroup && groupMetadata
-                ? getGroupAdmins(groupMetadata.participants)
-                : [];
-            const groupSender = m.isGroup && groupMetadata
-                ? (() => {
-                    const found = groupMetadata.participants.find(p => 
-                        standardizeJid(p.id) === senderJid
-                    );
-                    return found?.pn || sender;
-                })()
-                : sender;
-
-            const newsletterMetadata = m.isNewsletter ? await client.newsletterMetadata(m.chat).catch(() => {}) : "";
-            const subscribers = m.isNewsletter && newsletterMetadata ? newsletterMetadata.subscribers : [];
-            const IsNewsletter = m.chat?.endsWith("@newsletter");
-            const newsletterAdmins = m.isNewsletter ? getGroupAdmins(subscribers) : [];
-            const isNewsletterBotAdmin = m.isNewsletter ? newsletterAdmins.includes(botNumber) : false;
-            const isNewsletterAdmin = m.isNewsletter ? newsletterAdmins.includes(m.sender) : false;
-
-            const groupName = m.isGroup && groupMetadata ? groupMetadata.subject : "";
-            const reply = (teks) => {
-                client.sendMessage(m.chat, { text: teks }, { quoted: m });
-            };
-            const sender2 = m.key.fromMe 
-                            ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || client.user.id) 
-                            : (m.key.participant || m.key.remoteJid);            
-
-            const IsGroup = m.chat?.endsWith("@g.us");
-
-//========================================================================================================================
-
-           if (budy && budy.startsWith('>')) {
+        const IsGroup = m.chat?.endsWith("@g.us");     
+ //========================================================================================================================
+            // Eval command handler
+            if (budy && budy.startsWith('>')) {
 
     try { 
 
@@ -739,10 +751,8 @@ client.ev.on("messages.upsert", async (chatUpdate) => {
 
     } 
 
-} 
-
-
-                
+}
+//========================================================================================================================         
 //========================================================================================================================
 //const channelreact = process.env.REACT_CHANNEL || 'true';
 
