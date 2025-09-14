@@ -381,13 +381,13 @@ keith({
             
             if (data && data.status) {
                 // Extract download URL based on API response structure
-                if (api.includes('dlmp3')) {
+                if (api.includes('audio')) {
                     downloadUrl = data.result.url;
                 } else if (api.includes('mp3')) {
                     downloadUrl = data.result.downloadUrl;
                 } else if (api.includes('ytmp3')) {
                     downloadUrl = data.result.data.downloadUrl;
-                } else if (api.includes('audio')) {
+                } else if (api.includes('dlmp3')) {
                     downloadUrl = data.result;
                 }
                 
@@ -511,13 +511,13 @@ keith({
             
             if (data && data.status) {
                 // Extract download URL based on API response structure
-                if (api.includes('dlmp4')) {
+                if (api.includes('video')) {
                     downloadUrl = data.result.url;
                 } else if (api.includes('mp4')) {
                     downloadUrl = data.result.downloadUrl;
                 } else if (api.includes('ytmp4')) {
                     downloadUrl = data.result.data.downloadUrl;
-                } else if (api.includes('video')) {
+                } else if (api.includes('dlmp4')) {
                     downloadUrl = data.result;
                 }
                 
