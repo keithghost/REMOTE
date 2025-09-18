@@ -254,7 +254,7 @@ The best bot in the universe developed by ${author}. Fork and give a star 🌟 t
                                     })
                                 },
                                 {
-                                    name: "cta_copy",
+                                    name: "cta_url",
                                     buttonParamsJson: JSON.stringify({
                                         display_text: "🔗Session Scanner",
                                         //copy_text: "https://keith-site.vercel.app/keithpair",
