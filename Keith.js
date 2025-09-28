@@ -26,7 +26,7 @@ const {
 const KeithLogger = require('./logger');
 const { sendReply, sendMediaMessage } = require("./lib/context");
 const daddy = "254748387615@s.whatsapp.net";
-const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
+//const { downloadYouTube, downloadSoundCloud, downloadSpotify, searchYouTube, searchSoundCloud, searchSpotify } = require("./lib/dl");
 const { imageToWebp, videoToWebp, writeExifImg, writeExifVid } = require("./lib/exif");
 
 //========================================================================================================================
@@ -1257,12 +1257,7 @@ if ((!IsGroup && chatbotSettings.voicePrivate) || (IsGroup && chatbotSettings.vo
 
                     await commandHandler.function({
                         client,
-                        downloadYouTube, 
-                        downloadSoundCloud, 
-                        downloadSpotify, 
-                        searchYouTube, 
-                        searchSoundCloud, 
-                        searchSpotify, 
+                        
                         fetchLogoUrl, 
                         isOwner, 
                         fetchJson, 
