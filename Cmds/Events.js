@@ -17,7 +17,7 @@ async function uploadToCDN(filePath) {
     form.append("file", fs.createReadStream(filePath)); // <-- matches Express multer.single("file")
 
     const response = await axios.post(
-      "https://uploaderjs-eb8b48b9d3fa.herokuapp.com/upload",
+      "https://keith-uploader.onrender.com/upload",
       form,
       { headers: { ...form.getHeaders() } }
     );
