@@ -396,132 +396,81 @@ keith({
 });
 
 //========================================================================================================================
+
 keith({
     pattern: "video",
-    alias: ["videodl", "ytmp4"],
+    alias: ["ytv", "ytmp4", "dlmp4"],
     desc: "Download music from YouTube",
     category: "Download",
     react: "🎧",
     filename: __filename
 }, async ({ client, m, text, reply }) => {
 
-    // Check if a query is provided
-    if (!text) {
-        return reply("Please provide a video name or YouTube link.");
-    }
+    if (!text) return reply("Please provide a video name or YouTube link.");
 
     let videoUrl, videoInfo;
     const query = text;
 
     try {
-        // Check if it's a YouTube URL
+        // Determine if input is a YouTube URL or search query
         if (query.match(/(youtube\.com|youtu\.be)/i)) {
             videoUrl = query;
-            // Extract video ID for getting info
             const videoId = videoUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i)?.[1];
             videoInfo = await ytSearch({ videoId });
         } else {
-            // Perform a YouTube search based on the query
             const searchResults = await ytSearch(query);
-
-            // Check if any videos were found
-            if (!searchResults || !searchResults.videos.length) {
-                return reply('No video found for the specified query.');
-            }
-
+            if (!searchResults || !searchResults.videos.length) return reply('No video found for the specified query.');
             videoInfo = searchResults.videos[0];
             videoUrl = videoInfo.url;
         }
 
-        // Function to get download data from APIs
-        const getDownloadData = async (url) => {
-            try {
-                const response = await axios.get(url, { timeout: 10000 });
-                return response.data;
-            } catch (error) {
-                console.error('Error fetching data from API:', error.message);
-                return { status: false };
+        // Fetch download URL from the audio endpoint
+        const apiUrl = `https://apis-keith.vercel.app/download/video?url=${encodeURIComponent(videoUrl)}`;
+        const response = await axios.get(apiUrl, { timeout: 100000 });
+        const data = response.data;
+
+        if (!data || !data.status || !data.result) {
+            return reply('Failed to retrieve audio. Please try again later.');
+        }
+
+        const downloadUrl = data.result;
+        const title = videoInfo.title || 'Audio Download';
+        const thumbnail = videoInfo.thumbnail || 'https://i.ytimg.com/vi/2WmBa1CviYE/hqdefault.jpg';
+
+        const contextInfo = {
+            externalAdReply: {
+                title,
+                body: 'Powered by Keith API',
+                mediaType: 1,
+                sourceUrl: videoUrl,
+                thumbnailUrl: thumbnail,
+                renderLargerThumbnail: false
             }
         };
 
-        // List of APIs to try in order
-        const apis = [
-            `https://apis-keith.vercel.app/download/ytmp4?url=${encodeURIComponent(videoUrl)}`,
-            `https://apis-keith.vercel.app/download/mp4?url=${encodeURIComponent(videoUrl)}`,
-            `https://apis-keith.vercel.app/download/dlmp4?url=${encodeURIComponent(videoUrl)}`,
-            `https://apis-keith.vercel.app/download/video?url=${encodeURIComponent(videoUrl)}`
-        ];
+        // Send audio message
+        await client.sendMessage(m.chat, {
+            video: { url: downloadUrl },
+            mimetype: 'video/mp4',
+            contextInfo
+        }, { quoted: m });
 
-        let downloadUrl;
-        
-        // Try each API in order until we get a successful response
-        for (const api of apis) {
-            const data = await getDownloadData(api);
-            
-            if (data && data.status) {
-                // Extract download URL based on API response structure
-                if (api.includes('video')) {
-                    downloadUrl = data.result.url;
-                } else if (api.includes('mp4')) {
-                    downloadUrl = data.result.downloadUrl;
-                } else if (api.includes('ytmp4')) {
-                    downloadUrl = data.result.data.downloadUrl;
-                } else if (api.includes('dlmp4')) {
-                    downloadUrl = data.result;
-                }
-                
-                if (downloadUrl) break;
-            }
-        }
-
-        // If no download URL was found
-        if (!downloadUrl) {
-            return reply('Failed to retrieve download URL from all sources. Please try again later.');
-        }
-
-        // Prepare the message payloads for both audio and document
-        const messagePayloads = [
-            // Audio message
-            {
-                video: { url: downloadUrl },
-                mimetype: 'video/mp4',
-                contextInfo: {
-                    externalAdReply: {
-                        title: videoInfo.title || 'video Download',
-                        body: 'Powered by Keith API',
-                        mediaType: 1,
-                        sourceUrl: videoUrl,
-                        thumbnailUrl: videoInfo.thumbnail || 'https://i.ytimg.com/vi/2WmBa1CviYE/hqdefault.jpg',
-                        renderLargerThumbnail: false
-                    }
-                }
-            },
-            // Document message (mp4 file)
-            {
-                document: { url: downloadUrl },
-                mimetype: 'video/mp4',
-                fileName: `${videoInfo.title.replace(/[^\w\s]/gi, '')}.mp4` || 'video.mp4',
-                contextInfo: {
-                    externalAdReply: {
-                        title: videoInfo.title || 'Audio Download',
-                        body: 'Document version - Powered by Keith API',
-                        mediaType: 1,
-                        sourceUrl: videoUrl,
-                        thumbnailUrl: videoInfo.thumbnail || 'https://i.ytimg.com/vi/2WmBa1CviYE/hqdefault.jpg',
-                        renderLargerThumbnail: false
-                    }
+        // Send document version
+        await client.sendMessage(m.chat, {
+            document: { url: downloadUrl },
+            mimetype: 'video/mp4',
+            fileName: `${title.replace(/[^\w\s]/gi, '')}.mp3`,
+            contextInfo: {
+                ...contextInfo,
+                externalAdReply: {
+                    ...contextInfo.externalAdReply,
+                    body: 'Document version - Powered by Keith API'
                 }
             }
-        ];
-
-        // Send both audio and document versions
-        for (const payload of messagePayloads) {
-            await client.sendMessage(m.chat, payload, { quoted: m });
-        }
+        }, { quoted: m });
 
     } catch (error) {
-        console.error('Error during download process:', error);
-        return reply(`Download failed due to an error: ${error.message || error}`);
+        console.error('Download error:', error);
+        return reply(`Download failed: ${error.message || error}`);
     }
 });
-//========================================================================================================================
