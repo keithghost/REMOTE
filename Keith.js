@@ -148,10 +148,10 @@ async function startKeith() {
     
     const { default: KeithConnect, downloadContentFromMessage, jidDecode, generateMessageID } = require("@whiskeysockets/baileys");
     const client = KeithConnect({
-        logger: pino({ level: "silent" }),
-        printQRInTerminal: true,
         version,
-        browser: ["KEITH-MD", "Safari", "3.0"],
+        logger: pino({ level: "silent" }),
+        printQRInTerminal: true,        
+        browser: ["KEITH-MD", "Safari", "1.0.0"],
         fireInitQueries: false,
         shouldSyncHistoryMessage: true,
         downloadHistory: true,
