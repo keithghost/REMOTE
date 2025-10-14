@@ -8,7 +8,7 @@ const { DateTime } = require("luxon");
 const permit = process.env.PERMIT || 'true';
 const { Boom } = require("@hapi/boom");
 const pino = require("pino");
-const { useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
+const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
 const FileType = require("file-type");
 const { exec } = require("child_process");
 const express = require("express");
@@ -144,11 +144,12 @@ async function startKeith() {
     loadAllCommands();
 
     const { state, saveCreds } = await useMultiFileAuthState("session");
+    const { version, isLatest } = await fetchLatestBaileysVersion();
     const store = makeInMemoryStore({ logger: pino().child({ level: "silent", stream: "store" }) });
     
     const { default: KeithConnect, downloadContentFromMessage, jidDecode, generateMessageID } = require("@whiskeysockets/baileys");
     const client = KeithConnect({
-        version: "*",
+        version,
         logger: pino({ level: "silent" }),
         printQRInTerminal: true,        
         browser: ["KEITH-MD", "Safari", "1.0.0"],
