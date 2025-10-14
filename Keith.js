@@ -150,7 +150,7 @@ async function startKeith() {
     const client = KeithConnect({
         logger: pino({ level: "silent" }),
         printQRInTerminal: true,
-        version: [2, 3000, 1023223821],
+        version,
         browser: ["KEITH-MD", "Safari", "3.0"],
         fireInitQueries: false,
         shouldSyncHistoryMessage: true,
