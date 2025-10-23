@@ -30,8 +30,8 @@ keith({
     }
 
     // Fetch audio download URL from Keith API
-    const apiUrl = `https://apiskeith.vercel.app/download/mp3?url=${encodeURIComponent(videoUrl)}`;
-    const response = await axios.get(apiUrl, { timeout: 100000 });
+    const apiUrl = `https://apiskeith.vercel.app/download/dlmp3?url=${encodeURIComponent(videoUrl)}`;
+    const response = await axios.get(apiUrl, { timeout: 1000000 });
     const data = response.data;
 
     if (!data || !data.status || !data.result) {
@@ -108,8 +108,8 @@ keith({
     }
 
     // Fetch audio download URL from Keith API
-    const apiUrl = `https://apiskeith.vercel.app/download/mp4?url=${encodeURIComponent(videoUrl)}`;
-    const response = await axios.get(apiUrl, { timeout: 100000 });
+    const apiUrl = `https://apiskeith.vercel.app/download/dlmp4?url=${encodeURIComponent(videoUrl)}`;
+    const response = await axios.get(apiUrl, { timeout: 1000000 });
     const data = response.data;
 
     if (!data || !data.status || !data.result) {
