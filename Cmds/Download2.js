@@ -1,36 +1,11 @@
 const { keith } = require('../commandHandler');
 const axios = require('axios');
 const getFBInfo = require("@xaviabot/fb-downloader");
-const { Catbox } = require("node-catbox");
 const fs = require('fs-extra');
 const { downloadAndSaveMediaMessage } = require('@whiskeysockets/baileys');
 const acrcloud = require("acrcloud");
-const catbox = new Catbox();
 const path = require('path');
-
-/*async function uploadToCatbox(filePath) {
-  if (!fs.existsSync(filePath)) throw new Error("File does not exist");
-  try {
-    const uploadResult = await catbox.uploadFile({ path: filePath });
-    if (uploadResult) return uploadResult;
-    else throw new Error("Error retrieving file link");
-  } catch (error) {
-    throw new Error(String(error));
-  }
-}*/
-
-
-
-async function uploadToCatbox(filePath) {
-  if (!fs.existsSync(filePath)) throw new Error("File does not exist");
-  try {
-    const uploadResult = await catbox.uploadFile({ path: filePath });
-    if (uploadResult) return uploadResult;
-    else throw new Error("Error retrieving file link");
-  } catch (error) {
-    throw new Error(String(error));
-  }
-}
+const FormData = require('form-data');
 
 function getMediaType(quoted) {
   if (quoted.imageMessage) return "image";
@@ -50,10 +25,38 @@ async function saveMediaToTemp(client, quotedMedia, type) {
   return savedPath;
 }
 
+async function uploadToQuax(filePath) {
+  if (!fs.existsSync(filePath)) throw new Error("File does not exist");
+
+  const form = new FormData();
+  form.append('files[]', fs.createReadStream(filePath));
+  form.append('expiry', '-1'); // permanent
+
+  try {
+    const response = await axios.post('https://qu.ax/upload.php', form, {
+      headers: {
+        ...form.getHeaders(),
+        'origin': 'https://qu.ax',
+        'referer': 'https://qu.ax/',
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36'
+      }
+    });
+
+    const result = response.data;
+    if (result.success && result.files?.[0]?.url) {
+      return result.files[0].url;
+    } else {
+      throw new Error("Upload failed or malformed response");
+    }
+  } catch (error) {
+    throw new Error("Qu.ax upload error: " + error.message);
+  }
+}
+
 keith({
   pattern: "url",
-  alias: ["upload", "urlconvert"],
-  desc: "Convert quoted media to Catbox URL",
+  alias: ["upload", "quax"],
+  desc: "Convert quoted media to Qu.ax URL",
   category: "Download",
   react: "📦",
   filename: __filename
@@ -73,8 +76,8 @@ keith({
     const filePath = await saveMediaToTemp(client, mediaNode, type);
 
     try {
-      const link = await uploadToCatbox(filePath);
-      await sendReply(client, m, `✅ Uploaded to Catbox:\n\n${link}`);
+      const link = await uploadToQuax(filePath);
+      await sendReply(client, m, `✅ Uploaded to Qu.ax:\n\n${link}`);
     } catch (err) {
       await sendReply(client, m, "❌ Failed to upload. Error:\n" + err.message);
     } finally {
@@ -85,7 +88,6 @@ keith({
     console.error("Unexpected error in URL upload:", err);
   }
 });
-
 
 keith({
     pattern: "shazam",
