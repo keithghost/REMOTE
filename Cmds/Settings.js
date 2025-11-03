@@ -1,7 +1,7 @@
 //========================================================================================================================
 //========================================================================================================================
 
-
+//
 const { keith } = require('../commandHandler');
 const { getAntiDeleteSettings, updateAntiDeleteSettings } = require('../database/antidelete');
 const { getAntiLinkSettings, updateAntiLinkSettings, clearAllWarns } = require('../database/antilink');
