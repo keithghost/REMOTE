@@ -26,21 +26,7 @@ const {
 
 const { getSudoNumbers, setSudo, delSudo, isSudo } = require("./database/sudo");
 
-const {
-    sessionName,
-    database,  
-    botname, 
-    mode,
-    prefix,
-    timezone,
-    author,  
-    url,
-    gurl,
-    dev,
-    packname, 
-    session,
-    DevKeith
-} = require("./settings");
+const { session } = require("./settings");
 
 const { keith, commands, evt } = require("./commandHandler");
 const { 
@@ -73,7 +59,7 @@ const { initSettingsDB, getSettings, updateSettings, getSetting } = require('./d
 const { initAutoBioDB, getAutoBioSettings, updateAutoBioSettings } = require('./database/autobio');
 const { initAntiLinkDB, getAntiLinkSettings, updateAntiLinkSettings, getWarnCount, incrementWarnCount, resetWarnCount, clearAllWarns } = require('./database/antilink');
 const { initAntiStatusMentionDB, getAntiStatusMentionSettings, updateAntiStatusMentionSettings, getStatusWarnCount, incrementStatusWarnCount, resetStatusWarnCount, clearAllStatusWarns } = require('./database/antistatusmention');
-const { initAntiSpamDB, getAntiSpamSettings, updateAntiSpamSettings, getSpamWarnCount, incrementSpamWarnCount, resetSpamWarnCount, clearAllSpamWarns, addUserMessageTimestamp, isUserSpamming } = require('./database/antispam');
+//const { initAntiSpamDB, getAntiSpamSettings, updateAntiSpamSettings, getSpamWarnCount, incrementSpamWarnCount, resetSpamWarnCount, clearAllSpamWarns, addUserMessageTimestamp, isUserSpamming } = require('./database/antispam');
 const { initPresenceDB } = require('./database/presence');
 const { initChatbotDB, saveConversation, getConversationHistory, clearConversationHistory, getLastConversation, getChatbotSettings, updateChatbotSettings, availableVoices } = require('./database/chatbot');
 const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
@@ -91,7 +77,7 @@ async function initializeDatabases() {
         await initAutoBioDB();
         await initAntiLinkDB();
         await initAntiStatusMentionDB();
-        await initAntiSpamDB();
+      //  await initAntiSpamDB();
         await initPresenceDB();
         await initChatbotDB();
         await initGroupEventsDB();
@@ -525,7 +511,7 @@ async function detectAndHandleStatusMention(client, message, isBotAdmin, isAdmin
 //========================================================================================================================
 
 // Anti Spam detection function
-async function detectAndHandleSpam(client, message, isBotAdmin, isAdmin, isSuperAdmin, isSuperUser) {
+/*async function detectAndHandleSpam(client, message, isBotAdmin, isAdmin, isSuperAdmin, isSuperUser) {
     try {
         const settings = await getAntiSpamSettings();
         
@@ -597,7 +583,7 @@ async function detectAndHandleSpam(client, message, isBotAdmin, isAdmin, isSuper
     } catch (error) {
         console.error('Anti-spam error:', error);
     }
-}
+}*/
 //========================================================================================================================
 // Helper function to detect links
 // AntiLink detection function
@@ -1443,7 +1429,7 @@ await detectAndHandleLinks(client, ms, isBotAdmin, isAdmin, isSuperAdmin, isSupe
     
 await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin, isSuperUser); // Add this line
     await handleChatbot(client, ms.message, from, sender, isGroup, isSuperUser, ms); //
-  await detectAndHandleSpam(client, ms, isBotAdmin, isAdmin, isSuperAdmin, isSuperUser);  //========================================================================================================================//========================================================================================================================
+  //await detectAndHandleSpam(client, ms, isBotAdmin, isAdmin, isSuperAdmin, isSuperUser);  //========================================================================================================================//========================================================================================================================
 
     if (isCommandMessage && cmd) {
         const keithCmd = Array.isArray(evt.commands) 
@@ -1650,7 +1636,7 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
                 KeithLogger.error(`Command error [${cmd}]:`, error);
                 try {
                     await client.sendMessage(from, {
-                        text: `🚨 Command failed: ${error.message}`
+                        text: `😡Command failed: ${error.message}`
                     }, { quoted: ms });
                 } catch (sendErr) {
                     KeithLogger.error("Error sending error message:", sendErr);
@@ -1667,12 +1653,12 @@ client.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect } = update;
     
     if (connection === "connecting") {
-        KeithLogger.info("🕗 Connecting Bot...");
+        KeithLogger.info("Keith md is connecting..");
         reconnectAttempts = 0;
     }
 
     if (connection === "open") {
-        KeithLogger.success("✅ Connection Instance is Online");
+        KeithLogger.success("✅ keith md is active , enjoy 😀");
         reconnectAttempts = 0;
         startAutoBio();
         
@@ -1686,11 +1672,12 @@ client.ev.on("connection.update", async (update) => {
                 const currentMode = botSettings.mode || mode;
                 const currentPrefix = botSettings.prefix || prefix;
                 
-                const connectionMsg = `  ╭═『 ${currentBotName}══⊷ 
-║ ᴍᴏᴅᴇ ${currentMode}
-║ ᴘʀᴇғɪx [ ${currentPrefix} ] 
-║  t.me/keithmd
-╰═════════════⊷
+                const connectionMsg = `  
+    ╭═『 ${currentBotName}══⊷ 
+    ║ ᴍᴏᴅᴇ ${currentMode}
+    ║ ᴘʀᴇғɪx [ ${currentPrefix} ] 
+    ║  hi ${pushName} 💔🥺
+    ╰═════════════⊷
 `;
 
                 await client.sendMessage(
