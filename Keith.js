@@ -26,7 +26,7 @@ const {
 
 const { getSudoNumbers, setSudo, delSudo, isSudo } = require("./database/sudo");
 
-const { session } = require("./settings");
+const { session, dev } = require("./settings");
 
 const { keith, commands, evt } = require("./commandHandler");
 const { 
@@ -1676,7 +1676,7 @@ client.ev.on("connection.update", async (update) => {
     ╭═『 ${currentBotName}══⊷ 
     ║ ᴍᴏᴅᴇ ${currentMode}
     ║ ᴘʀᴇғɪx [ ${currentPrefix} ] 
-    ║  hi ${pushName} 💔🥺
+    ║  🥺
     ╰═════════════⊷
 `;
 
