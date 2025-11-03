@@ -13,16 +13,309 @@ const { getAutoStatusSettings, updateAutoStatusSettings } = require('../database
 const { getAutoStatusSettings, updateAutoStatusSettings } = require('../database/autostatus');
 const { getChatbotSettings, updateChatbotSettings, clearConversationHistory, getConversationHistory, availableVoices } = require('../database/chatbot');
 const axios = require('axios');
+const { getGreetSettings, updateGreetSettings, clearRepliedContacts } = require('../database/greet');
+const { getPresenceSettings, updatePresenceSettings } = require('../database/presence');
+const { updateSettings, getSettings } = require('../database/settings');
 
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "settings",
+  aliases: ["config", "botconfig"],
+  category: "Settings",
+  description: "Manage all bot settings"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser, prefix } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const args = q?.trim().split(/\s+/) || [];
+  const action = args[0]?.toLowerCase();
+  const key = args[1]?.toLowerCase();
+  const value = args.slice(2).join(" ");
+
+  const settings = await getSettings();
+
+  if (!action) {
+    return reply(
+      `*⚙️ Bot Settings*\n\n` +
+      `🔹 *Prefix:* \`${settings.prefix}\`\n` +
+      `🔹 *Mode:* ${settings.mode.toUpperCase()}\n` +
+      `🔹 *Bot Name:* ${settings.botname}\n` +
+      `🔹 *Author:* ${settings.author}\n` +
+      `🔹 *Packname:* ${settings.packname}\n` +
+      `🔹 *Timezone:* ${settings.timezone}\n` +
+      `🔹 *URL:* ${settings.url || '❌ Not Set'}\n` +
+      `🔹 *GitHub:* ${settings.gurl || '❌ Not Set'}\n\n` +
+      `*🛠 Usage:*\n` +
+      `▸ ${settings.prefix}settings list\n` +
+      `▸ ${settings.prefix}settings set <key> <value>\n` +
+      `▸ ${settings.prefix}settings reset`
+    );
+  }
+
+  switch (action) {
+    case 'list':
+      return reply(
+        `*📋 Available Settings:*\n\n` +
+        `▸ prefix - Bot command prefix\n` +
+        `▸ mode - Bot mode (public/private)\n` +
+        `▸ botname - Bot display name\n` +
+        `▸ author - Bot author name\n` +
+        `▸ packname - Sticker pack name\n` +
+        `▸ timezone - Timezone for bot\n` +
+        `▸ url - Bot profile picture URL\n` +
+        `▸ gurl - GitHub/Repo URL`
+      );
+
+    case 'set':
+      if (!key || !value) {
+        return reply("❌ Usage: settings set <key> <value>");
+      }
+
+      const validKeys = ['prefix', 'mode', 'botname', 'author', 'packname', 'timezone', 'url', 'gurl'];
+      if (!validKeys.includes(key)) {
+        return reply(`❌ Invalid setting! Available: ${validKeys.join(', ')}`);
+      }
+
+      // Validation for specific keys
+      if (key === 'prefix' && value.length > 3) {
+        return reply("❌ Prefix must be 1-3 characters long!");
+      }
+
+      if (key === 'mode' && !['public', 'private'].includes(value.toLowerCase())) {
+        return reply("❌ Mode must be 'public' or 'private'!");
+      }
+
+      try {
+        const updateData = { [key]: value };
+        await updateSettings(updateData);
+        // Update the botSettings in context
+        conText.botSettings[key] = value;
+        return reply(`✅ Setting *${key}* updated to:\n${value}`);
+      } catch (error) {
+        return reply("❌ Failed to update setting!");
+      }
+      break;
+
+    case 'reset':
+      try {
+        const defaultSettings = {
+          prefix: ".",
+          author: "Keith",
+          url: "https://files.catbox.moe/07dmp1.jpg",
+          gurl: "https://github.com/Keithkeizzah/KEITH-MD",
+          timezone: "Africa/Nairobi",
+          botname: "Keith-Md",
+          packname: "Keith-Md",
+          mode: "public"
+        };
+        await updateSettings(defaultSettings);
+        // Update all settings in context
+        Object.assign(conText.botSettings, defaultSettings);
+        return reply("✅ All settings reset to default values!");
+      } catch (error) {
+        return reply("❌ Failed to reset settings!");
+      }
+      break;
+
+    default:
+      return reply(
+        "❌ Invalid subcommand. Options:\n\n" +
+        `▸ ${settings.prefix}settings list\n` +
+        `▸ ${settings.prefix}settings set <key> <value>\n` +
+        `▸ ${settings.prefix}settings reset`
+      );
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "mode",
+  aliases: ["setmode"],
+  category: "Settings",
+  description: "Change bot mode (public/private)"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newMode = q?.trim().toLowerCase();
+
+  if (!newMode) {
+    const settings = await getSettings();
+    return reply(
+      `*🤖 Bot Mode*\n\n` +
+      `🔹 *Current Mode:* ${settings.mode.toUpperCase()}\n\n` +
+      `*Available Modes:*\n` +
+      `▸ public - Everyone can use commands\n` +
+      `▸ private - Only owner/sudo can use commands\n\n` +
+      `*Usage:* \`${settings.prefix}mode <public/private>\``
+    );
+  }
+
+  if (!['public', 'private'].includes(newMode)) {
+    return reply("❌ Invalid mode! Use: public or private");
+  }
+
+  try {
+    await updateSettings({ mode: newMode });
+    // Update the botSettings in context
+    conText.botSettings.mode = newMode;
+    return reply(`✅ Bot mode changed to: *${newMode.toUpperCase()}*`);
+  } catch (error) {
+    return reply("❌ Failed to update mode!");
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "prefix",
+  aliases: ["setprefix"],
+  category: "Settings",
+  description: "Change bot prefix"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newPrefix = q?.trim();
+
+  if (!newPrefix) {
+    const settings = await getSettings();
+    return reply(`*🔧 Current Prefix:* \`${settings.prefix}\`\n\n*Usage:* \`${settings.prefix}prefix <new_prefix>\``);
+  }
+
+  if (newPrefix.length > 3) {
+    return reply("❌ Prefix must be 1-3 characters long!");
+  }
+
+  try {
+    await updateSettings({ prefix: newPrefix });
+    // Update the botSettings in context
+    conText.botSettings.prefix = newPrefix;
+    return reply(`✅ Prefix changed to: \`${newPrefix}\``);
+  } catch (error) {
+    return reply("❌ Failed to update prefix!");
+  }
+});
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "presence",
+  aliases: ["setpresence", "mypresence"],
+  category: "Settings",
+  description: "Manage your presence settings"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const args = q?.trim().split(/\s+/) || [];
+  const type = args[0]?.toLowerCase();
+  const status = args[1]?.toLowerCase();
+
+  const settings = await getPresenceSettings();
+
+  if (!type) {
+    const format = (s) => s === 'off' ? '❌ OFF' : `✅ ${s.toUpperCase()}`;
+    return reply(
+      `*🔄 Presence Settings*\n\n` +
+      `🔹 *Private Chats:* ${format(settings.privateChat)}\n` +
+      `🔹 *Group Chats:* ${format(settings.groupChat)}\n\n` +
+      `*🛠 Usage:*\n` +
+      `▸ presence private [off/online/typing/recording]\n` +
+      `▸ presence group [off/online/typing/recording]`
+    );
+  }
+
+  if (!['private', 'group'].includes(type)) {
+    return reply(
+      "❌ Invalid type. Use:\n\n" +
+      `▸ presence private [status]\n` +
+      `▸ presence group [status]`
+    );
+  }
+
+  if (!['off', 'online', 'typing', 'recording'].includes(status)) {
+    return reply(
+      "❌ Invalid status. Options:\n\n" +
+      `▸ off - No presence\n` +
+      `▸ online - Show as online\n` +
+      `▸ typing - Show typing indicator\n` +
+      `▸ recording - Show recording indicator`
+    );
+  }
+
+  await updatePresenceSettings({ [type === 'private' ? 'privateChat' : 'groupChat']: status });
+  reply(`✅ ${type === 'private' ? 'Private chat' : 'Group chat'} presence set to *${status}*`);
+});
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "greet",
+  aliases: ["autoreply"],
+  category: "Settings",
+  description: "Manage private chat greeting settings"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const args = q?.trim().split(/\s+/) || [];
+  const action = args[0]?.toLowerCase();
+  const message = args.slice(1).join(" ");
+
+  const settings = await getGreetSettings();
+
+  if (!action) {
+    return reply(
+      `*👋 Greeting Settings*\n\n` +
+      `🔹 *Status:* ${settings.enabled ? '✅ ON' : '❌ OFF'}\n` +
+      `🔹 *Message:* ${settings.message}\n\n` +
+      `*🛠 Usage:*\n` +
+      `▸ greet on/off\n` +
+      `▸ greet set <message>\n` +
+      `▸ greet clear`
+    );
+  }
+
+  switch (action) {
+    case 'on':
+      await updateGreetSettings({ enabled: true });
+      return reply("✅ Private chat greetings enabled.");
+
+    case 'off':
+      await updateGreetSettings({ enabled: false });
+      return reply("✅ Private chat greetings disabled.");
+
+    case 'set':
+      if (!message) return reply("❌ Provide a greeting message.");
+      await updateGreetSettings({ message });
+      return reply(`✅ Greet message updated:\n"${message}"`);
+
+    case 'clear':
+      clearRepliedContacts();
+      return reply("✅ Replied contacts memory cleared.");
+
+    default:
+      return reply(
+        "❌ Invalid subcommand. Options:\n\n" +
+        `▸ greet on/off\n` +
+        `▸ greet set <message>\n` +
+        `▸ greet clear`
+      );
+  }
+});
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
