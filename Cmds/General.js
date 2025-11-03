@@ -16,7 +16,7 @@ const { keith, commands } = require('../commandHandler');
 keith({
   pattern: "menu",
   aliases: ["help", "commands"],
-  category: "general",
+  category: "General",
   description: "Show all available commands"
 },
 async (from, client, { prefix, botPic, botname, author }) => {
