@@ -64,7 +64,7 @@ const { initPresenceDB } = require('./database/presence');
 const { initChatbotDB, saveConversation, getConversationHistory, clearConversationHistory, getLastConversation, getChatbotSettings, updateChatbotSettings, availableVoices } = require('./database/chatbot');
 const { initGroupEventsDB, getGroupEventsSettings } = require('./database/groupevents');
 const { initAntiCallDB, getAntiCallSettings } = require('./database/anticall');
-const { getAutoDownloadStatusSettings, initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
+//const { getAutoDownloadStatusSettings, initAutoDownloadStatusDB } = require('./database/autodownloadstatus');
 // Initialize all databases
 async function initializeDatabases() {
     try {
@@ -82,7 +82,7 @@ async function initializeDatabases() {
         await initChatbotDB();
         await initGroupEventsDB();
          await initAntiCallDB();
-        await initAutoDownloadStatusDB();
+       // await initAutoDownloadStatusDB();
         console.log('All databases initialized successfully');
     } catch (error) {
         console.error('Error initializing databases:', error);
