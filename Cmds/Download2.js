@@ -286,8 +286,8 @@ async (from, client, conText) => {
 //========================================================================================================================
 
 keith({
-  pattern: "igdl",
-  aliases: ["insta", "instagram"],
+  pattern: "instagram",
+  aliases: ["insta", "igdl"],
   category: "Downloader",
   description: "Download Instagram video"
 },
@@ -468,7 +468,7 @@ async (from, client, conText) => {
 keith({
   pattern: "tiktok",
   aliases: ["ttdl", "tt"],
-  category: "downloader",
+  category: "Downloader",
   description: "Download video from TikTok"
 },
 async (from, client, conText) => {
