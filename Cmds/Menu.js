@@ -40,7 +40,7 @@ function getCategoryCommands(categories, selectedNumber) {
 }
 
 keith({
-  pattern: "menu2",
+  pattern: "menu",
   category: "general",
   description: "Interactive category-based menu"
 },
