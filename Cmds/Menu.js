@@ -1,12 +1,13 @@
-
 const { keith } = require('../commandHandler');
 const activeMenus = new Map();
 
 const commandList = {};
+let totalCommands = 0;
 
 function initializeCommands() {
   if (Object.keys(commandList).length === 0) {
     const commands = require('../commandHandler').commands;
+    totalCommands = commands.filter(cmd => !cmd.dontAddCommandList).length;
     commands.forEach((cmd) => {
       const category = cmd.category?.toUpperCase() || 'UNCATEGORIZED';
       if (!commandList[category]) commandList[category] = [];
@@ -14,7 +15,6 @@ function initializeCommands() {
     });
   }
 }
-const total = commands.filter(cmd => !cmd.dontAddCommandList).length;
 
 function getCategoryCommands(categories, selectedNumber) {
   const selectedCategory = categories?.[selectedNumber - 1];
@@ -40,7 +40,7 @@ function getCategoryCommands(categories, selectedNumber) {
 }
 
 keith({
-  pattern: "menu",
+  pattern: "menu2",
   category: "general",
   description: "Interactive category-based menu"
 },
@@ -61,7 +61,7 @@ async (from, client, conText) => {
   const menuText = `╰►Hey, ${pushName}
 ╭───〔  *${botname}* 〕──────┈⊷
 ├──────────────
-│✵│▸ 𝐓𝐎𝐓𝐀𝐋 𝐏𝐋𝐔𝐆𝐈𝐍𝐒 ${total}
+│✵│▸ 𝐓𝐎𝐓𝐀𝐋 𝐏𝐋𝐔𝐆𝐈𝐍𝐒: ${totalCommands}
 ╰──────────────────────⊷
 
 ╭───◇ *𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗘𝗦* ◇──────┈⊷
