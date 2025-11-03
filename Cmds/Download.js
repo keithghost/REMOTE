@@ -11,7 +11,7 @@ const { keith } = require('../commandHandler');
 keith({
   pattern: "play",
   aliases: ["ytmp3", "ytmp3doc", "audiodoc", "yta"],
-  category: "downloader",
+  category: "Downloader",
   description: "Download Video from Youtube"
 },
 async (from, client, conText) => {
@@ -92,7 +92,7 @@ async (from, client, conText) => {
 keith({
   pattern: "video",
   aliases: ["ytmp4", "ytmp4doc", "videodoc", "ytv"],
-  category: "downloader",
+  category: "Downloader",
   description: "Download Video from Youtube"
 },
 async (from, client, conText) => {
