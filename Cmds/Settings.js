@@ -16,11 +16,86 @@ const axios = require('axios');
 const { getGreetSettings, updateGreetSettings, clearRepliedContacts } = require('../database/greet');
 const { getPresenceSettings, updatePresenceSettings } = require('../database/presence');
 const { updateSettings, getSettings } = require('../database/settings');
+const { getGroupEventsSettings, updateGroupEventsSettings } = require('../database/groupevents');
 
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "events",
+  aliases: ["gevents", "groupevents"],
+  category: "owner",
+  description: "Manage group welcome/leave events"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const args = q?.trim().split(/\s+/) || [];
+  const action = args[0]?.toLowerCase();
+  const value = args.slice(1).join(" ");
+
+  const settings = await getGroupEventsSettings();
+
+  if (!action) {
+    return reply(
+      `*🎉 Group Events Settings*\n\n` +
+      `🔹 *Status:* ${settings.enabled ? '✅ ON' : '❌ OFF'}\n` +
+      `🔹 *Promotions:* ${settings.showPromotions ? '✅ ON' : '❌ OFF'}\n\n` +
+      `*Welcome Message:*\n${settings.welcomeMessage}\n\n` +
+      `*Goodbye Message:*\n${settings.goodbyeMessage}\n\n` +
+      `*🛠 Usage:*\n` +
+      `▸ events on/off\n` +
+      `▸ events promote on/off\n` +
+      `▸ events welcome <message>\n` +
+      `▸ events goodbye <message>\n\n` +
+      `*Placeholders:*\n` +
+      `@user - Mention new member\n` +
+      `{group} - Group name\n` +
+      `{count} - Member count\n` +
+      `{time} - Join time\n` +
+      `{desc} - Group description`
+    );
+  }
+
+  switch (action) {
+    case 'on':
+      await updateGroupEventsSettings({ enabled: true });
+      return reply("✅ Group events enabled.");
+
+    case 'off':
+      await updateGroupEventsSettings({ enabled: false });
+      return reply("✅ Group events disabled.");
+
+    case 'promote':
+      if (!['on', 'off'].includes(value)) return reply("❌ Use 'on' or 'off'.");
+      await updateGroupEventsSettings({ showPromotions: value === 'on' });
+      return reply(`✅ Promotion notices ${value === 'on' ? 'enabled' : 'disabled'}.`);
+
+    case 'welcome':
+      if (!value) return reply("❌ Provide a welcome message.");
+      await updateGroupEventsSettings({ welcomeMessage: value });
+      return reply("✅ Welcome message updated.");
+
+    case 'goodbye':
+      if (!value) return reply("❌ Provide a goodbye message.");
+      await updateGroupEventsSettings({ goodbyeMessage: value });
+      return reply("✅ Goodbye message updated.");
+
+    default:
+      return reply(
+        "❌ Invalid subcommand. Options:\n\n" +
+        `▸ events on/off\n` +
+        `▸ events promote on/off\n` +
+        `▸ events welcome <message>\n` +
+        `▸ events goodbye <message>`
+      );
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "settings",
