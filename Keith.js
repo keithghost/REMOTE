@@ -91,6 +91,7 @@ async function initializeDatabases() {
 
 initializeDatabases().catch(console.error);
 //========================================================================================================================
+const plugins = commands.filter(cmd => !cmd.dontAddCommandList).length;
 
 //========================================================================================================================
 // Chatbot Functions
@@ -1676,7 +1677,7 @@ client.ev.on("connection.update", async (update) => {
     ╭═『 ${currentBotName}══⊷ 
     ║ ᴍᴏᴅᴇ ${currentMode}
     ║ ᴘʀᴇғɪx [ ${currentPrefix} ] 
-    ║  🥺
+    ║ ᴛᴏᴛᴀʟ ᴘʟᴜɢɪɴꜱ ${plugins}
     ╰═════════════⊷
 `;
 
