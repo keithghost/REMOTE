@@ -42,7 +42,7 @@ const fs = require('fs/promises');
 
 keith({
   pattern: "profile",
-  aliases: ["owner"],
+  aliases: ["getpp"],
   category: "Owner",
   description: "Get someone's full profile info"
 },
