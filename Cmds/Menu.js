@@ -14,6 +14,7 @@ function initializeCommands() {
     });
   }
 }
+const total = commands.filter(cmd => !cmd.dontAddCommandList).length;
 
 function getCategoryCommands(categories, selectedNumber) {
   const selectedCategory = categories?.[selectedNumber - 1];
@@ -60,7 +61,7 @@ async (from, client, conText) => {
   const menuText = `╰►Hey, ${pushName}
 ╭───〔  *${botname}* 〕──────┈⊷
 ├──────────────
-│✵│▸ 𝗠𝗲𝗻𝘂 𝗧𝘆𝗽𝗲: Category Navigator
+│✵│▸ 𝐓𝐎𝐓𝐀𝐋 𝐏𝐋𝐔𝐆𝐈𝐍𝐒 ${total}
 ╰──────────────────────⊷
 
 ╭───◇ *𝗖𝗔𝗧𝗘𝗚𝗢𝗥𝗜𝗘𝗦* ◇──────┈⊷
