@@ -1,0 +1,751 @@
+const { keith } = require('../commandHandler');
+const { getBinaryNodeChild, getBinaryNodeChildren } = require('@whiskeysockets/baileys');
+
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+
+keith({
+  pattern: "gpp",
+  aliases: ["gprofile", "groupinfo"],
+  category: "group",
+  description: "Show group or user profile info"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, quoted, sender } = conText;
+
+  try {
+    let profileInfo;
+
+    if (isGroup) {
+      const metadata = await client.groupMetadata(from);
+      const participants = metadata.participants || [];
+
+      let ppUrl;
+      try {
+        ppUrl = await client.profilePictureUrl(from, 'image');
+      } catch {
+        ppUrl = "https://telegra.ph/file/95680cd03e012bb08b9e6.jpg";
+      }
+
+      profileInfo = {
+        image: { url: ppUrl },
+        caption: `👥 *Group Information*\n\n` +
+                 `🔖 *Name:* ${metadata.subject}\n` +
+                 `📝 *Description:* ${metadata.desc || 'No description'}\n` +
+                 `📅 *Created:* ${new Date(metadata.creation * 1000).toLocaleDateString()}\n` +
+                 `👤 *Members:* ${participants.length}\n` +
+                 `👑 *Admins:* ${participants.filter(p => p.admin).length}\n` +
+                 `🔒 *Restricted:* ${metadata.restrict ? 'Yes' : 'No'}\n` +
+                 `🆔 *ID:* ${metadata.id}`
+      };
+    } else {
+      const target = quoted?.sender || sender;
+      const contact = await client.getContact(target, 'full');
+      const name = contact.notify || contact.name || target.split('@')[0];
+
+      let ppUrl;
+      try {
+        ppUrl = await client.profilePictureUrl(target, 'image');
+      } catch {
+        ppUrl = "https://telegra.ph/file/95680cd03e012bb08b9e6.jpg";
+      }
+
+      let status;
+      try {
+        status = await client.fetchStatus(target);
+      } catch {
+        status = { status: "🔒 Private (status not available)" };
+      }
+
+      profileInfo = {
+        image: { url: ppUrl },
+        caption: `👤 *User Profile*\n\n` +
+                 `🔖 *Name:* ${name}\n` +
+                 `📝 *About:* ${status.status}\n` +
+                 `📱 *Number:* ${target.split('@')[0]}\n` +
+                 `🆔 *ID:* ${target}`,
+        mentions: [target]
+      };
+    }
+
+    await client.sendMessage(from, profileInfo);
+
+  } catch (err) {
+    console.error('gpp error:', err);
+    reply("❌ Failed to fetch profile info. Try again.");
+  }
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "tagall",
+  aliases: ["all", "everyone", "mentionall"],
+  category: "group",
+  description: "Mention all group members with numbered list"
+},
+async (from, client, conText) => {
+  const { reply, q, isGroup, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+
+  const metadata = await client.groupMetadata(from);
+  const members = metadata.participants.map(p => p.id);
+  const tags = members.map((id, i) => `${i + 1} @${id.split('@')[0]}`).join('\n');
+
+  await client.sendMessage(from, {
+    text: `${q ? q + '\n\n' : ''}${tags}`,
+    mentions: members
+  });
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "opentime",
+  aliases: ["timeopen", "delayopen", "unlockafter"],
+  category: "group",
+  description: "Set a timer to unmute the group after a delay (in seconds)"
+},
+async (from, client, conText) => {
+  const { reply, q, isAdmin, isGroup, isBotAdmin, isSuperUser, mek, sender } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("Groups Only Command only");
+
+  if (!isAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} you are not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    });
+  }
+
+  if (!isBotAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} This bot is not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!q || isNaN(q)) return reply("⏱️ Provide a valid time in seconds. Example: .opentime 10");
+
+  const delay = Number(q);
+  reply(`⏳ Group will be unmuted in ${delay} seconds...`);
+
+  if (delay > 3) {
+    setTimeout(() => {
+      reply("⚠️ Group will be unmuted in 3 seconds...");
+    }, (delay - 3) * 1000);
+  }
+
+  setTimeout(async () => {
+    await client.groupSettingUpdate(from, 'not_announcement');
+    reply(`🔓 Group has been opened successfully after ${delay} seconds.`);
+  }, delay * 1000);
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "closetime",
+  aliases: ["timemute", "delayclose", "lockafter"],
+  category: "group",
+  description: "Set a timer to mute the group after a delay (in seconds)"
+},
+async (from, client, conText) => {
+  const { reply, q, isAdmin, isGroup, isBotAdmin, isSuperUser, mek, sender } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("Groups Only Command only");
+
+  if (!isAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} you are not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    });
+  }
+
+  if (!isBotAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} This bot is not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!q || isNaN(q)) return reply("⏱️ Provide a valid time in seconds. Example: .closetime 10");
+
+  const delay = Number(q);
+  reply(`⏳ Group will be muted in ${delay} seconds...`);
+
+  if (delay > 3) {
+    setTimeout(() => {
+      reply("⚠️ Group will be muted in 3 seconds...");
+    }, (delay - 3) * 1000);
+  }
+
+  setTimeout(async () => {
+    await client.groupSettingUpdate(from, 'announcement');
+    reply(`🔒 Group has been closed successfully after ${delay} seconds.`);
+  }, delay * 1000);
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "disap-off",
+  aliases: ["disapoff", "ephemeraloff", "disappearoff"],
+  category: "group",
+  description: "Turn off disappearing messages in the group"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+
+  await client.groupToggleEphemeral(from, 0);
+  reply("🧼 Disappearing messages have been turned off.");
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "disap1",
+  aliases: ["disap24h", "ephemeral1", "disappear1"],
+  category: "group",
+  description: "Enable disappearing messages for 24 hours"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+
+  await client.groupToggleEphemeral(from, 86400);
+  reply("🕒 Disappearing messages set to 24 hours.");
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "disap7",
+  aliases: ["disap7d", "ephemeral7", "disappear7"],
+  category: "group",
+  description: "Enable disappearing messages for 7 days"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+
+  await client.groupToggleEphemeral(from, 604800);
+  reply("📆 Disappearing messages set to 7 days.");
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "disap90",
+  aliases: ["disap3mo", "ephemeral90", "disappear90"],
+  category: "group",
+  description: "Enable disappearing messages for 90 days"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+
+  await client.groupToggleEphemeral(from, 7776000);
+  reply("📆 Disappearing messages set to 90 days.");
+});
+//========================================================================================================================
+
+keith({
+  pattern: "revoke",
+  aliases: ["resetlink"],
+  category: "group",
+  description: "Revoke and regenerate the group invite link"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+
+  await client.groupRevokeInvite(from);
+  const newCode = await client.groupInviteCode(from);
+
+  reply(`🔄 Group link has been reset:\nhttps://chat.whatsapp.com/${newCode}`);
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "grouplink",
+  aliases: ["link"],
+  category: "group",
+  description: "Get the group invite link"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+
+  const code = await client.groupInviteCode(from);
+  reply(`🔗 Group Link:\nhttps://chat.whatsapp.com/${code}`);
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "approveall",
+  aliases: ["acceptall"],
+  category: "group",
+  description: "Approve all pending join requests"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isAdmin, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command is meant for groups");
+  if (!isAdmin) return reply("You need admin privileges");
+  if (!isBotAdmin) return reply("I need admin privileges");
+
+  const responseList = await client.groupRequestParticipantsList(from);
+
+  if (!responseList.length) return reply("There are no pending join requests at this time.");
+
+  for (const participant of responseList) {
+    await client.groupRequestParticipantsUpdate(from, [participant.jid], "approve");
+  }
+
+  reply("✅ All pending participants have been approved to join.");
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "add",
+  aliases: ["invite"],
+  category: "group",
+  description: "Add user(s) to the group"
+},
+async (from, client, conText) => {
+  const { reply, q, participants, isSuperUser, isGroup, isBotAdmin, sender, mek, pushName } = conText;
+  if (!isSuperUser) return reply("owner only!");
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("Bot is not an admin");
+  if (!q) return reply("Provide number(s) to add in this format:\n\nadd 2547xxxxxxx");
+
+  const groupMetadata = await client.groupMetadata(from);
+  
+  const existing = participants.map(p => p.id);
+  const numbers = q.split(',').map(v => v.replace(/[^0-9]/g, '')).filter(v => v.length > 4 && v.length < 20);
+  const targets = (await Promise.all(
+    numbers
+      .filter(v => !existing.includes(v + '@s.whatsapp.net'))
+      .map(async v => [v, await client.onWhatsApp(v + '@s.whatsapp.net')])
+  )).filter(v => v[1][0]?.exists).map(v => v[0] + '@c.us');
+
+  if (!targets.length) return reply("No valid numbers to add");
+
+  const response = await client.query({
+    tag: 'iq',
+    attrs: { type: 'set', xmlns: 'w:g2', to: from },
+    content: targets.map(jid => ({
+      tag: 'add',
+      attrs: {},
+      content: [{ tag: 'participant', attrs: { jid } }]
+    }))
+  });
+
+  const addNode = getBinaryNodeChild(response, 'add');
+  const failed = getBinaryNodeChildren(addNode, 'participant');
+  const inviteCode = await client.groupInviteCode(from);
+
+  for (const user of failed.filter(u => ['401', '403', '408'].includes(u.attrs.error))) {
+    const jid = user.attrs.jid;
+    const reason = {
+      '401': 'has blocked the bot.',
+      '403': 'has set privacy settings for group adding.',
+      '408': 'recently left the group.'
+    }[user.attrs.error];
+
+    await client.sendMessage(from, {
+      text: `@${jid.split('@')[0]} ${reason}`,
+      mentions: [jid]
+    }, { quoted: mek });
+
+    const inviteText = `${pushName} is trying to add or request you to join the group ${groupMetadata.subject}:\n\nhttps://chat.whatsapp.com/${inviteCode}`;
+
+    await client.sendMessage(jid, { text: inviteText }, { quoted: mek });
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "delete",
+  aliases: ['del'],
+  category: "group", 
+  description: "Delete bot's message",
+}, async (from, client, conText) => {
+  const { reply, isGroup, isBotAdmin, mek, quotedMsg, isSuperUser, quotedKey, quotedSender } = conText;
+
+  if (!isSuperUser) return reply("owner only!");
+  if (!quotedMsg) return reply("did you quote a message?");
+
+  
+  try {
+    await client.sendMessage(from, {
+      delete: {
+        remoteJid: from,
+        fromMe: false,
+        id: quotedKey,
+        participant: quotedSender
+      }
+    });
+  } catch (err) {
+    console.error("Delete Error:", err);
+    reply(`❌ Failed to delete message: ${err.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "poll",
+  aliases: ["vote", "question"],
+  category: "group",
+  description: "Create a poll in the group"
+},
+async (from, client, conText) => {
+  const { q, reply, isGroup } = conText;
+
+  if (!isGroup) return reply("Polls can only be created in groups.");
+  if (!q || !q.includes('|')) return reply("Use format: .poll Question | Option 1 | Option 2");
+
+  const parts = q.split('|').map(p => p.trim());
+  const title = parts[0];
+  const options = parts.slice(1);
+
+  if (options.length < 2 || options.length > 12) return reply("Poll must have 2–12 options.");
+
+  try {
+    await client.sendMessage(from, {
+      poll: {
+        name: title,
+        values: options,
+        selectableCount: 1,
+        toAnnouncementGroup: false
+      }
+    });
+  } catch (err) {
+    console.error("Poll Error:", err);
+    reply(`❌ Failed to send poll: ${err.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "open",
+  aliases: ["unmute", "groupopen", "gcopen", "adminonly", "adminsonly"],
+  category: "group",
+  description: "Open Group Chat"
+},
+async (from, client, conText) => {
+  const { reply, isAdmin, isGroup, isBotAdmin, isSuperUser, mek, sender } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return client.sendMessage(from, { text: "Groups Only Command only" });
+
+  if (!isAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} you are not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    });
+  }
+
+  if (!isBotAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} This bot is not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  await client.groupSettingUpdate(from, 'not_announcement');
+
+  const userNumber = sender.split('@')[0];
+  return client.sendMessage(from, {
+    text: `@${userNumber} Group successfully unmuted as you wished!`,
+    mentions: [`${userNumber}@s.whatsapp.net`]
+  }, { quoted: mek });
+});
+//========================================================================================================================
+keith({
+  pattern: "close",
+  aliases: ["mute", "groupmute", "gcmute", "gcclose"],
+  category: "group",
+  description: "Close Group Chat"
+},
+async (from, client, conText) => {
+  const { reply, isAdmin, isGroup, isBotAdmin, isSuperUser, mek, sender } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return client.sendMessage(from, { text: "Groups Only Command only" });
+
+  if (!isAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} you are not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    });
+  }
+
+  if (!isBotAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} This bot is not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  await client.groupSettingUpdate(from, 'announcement');
+
+  const userNumber = sender.split('@')[0];
+  return client.sendMessage(from, {
+    text: `@${userNumber} Group successfully muted as you wished!`,
+    mentions: [`${userNumber}@s.whatsapp.net`]
+  }, { quoted: mek });
+});
+//========================================================================================================================
+
+
+keith({
+  pattern: "kick",
+  aliases: ["remove", "bye"],
+  category: "group",
+  description: "Remove a user from the group."
+},
+async (from, client, conText) => {
+  const { reply, sender, quotedUser, isSuperUser, isGroup, isAdmin, isBotAdmin, isSuperAdmin, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("This command only works in groups!");
+
+  if (!isAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} you are not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!isBotAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} This bot is not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!quotedUser) return reply("Please reply to/quote a user to kick");
+
+  let result = quotedUser.startsWith('@') && quotedUser.includes('@lid')
+    ? quotedUser.replace('@', '') + '@lid'
+    : quotedUser;
+
+  let finalResult = result.includes('@lid')
+    ? await client.getJidFromLid(result)
+    : result;
+
+  if (!finalResult.includes('@')) return reply("Invalid user ID");
+
+  if (finalResult.includes(isSuperAdmin)) {
+    const userNumber = finalResult.split('@')[0];
+    return reply(`@${userNumber} is a super admin and cannot be removed`, { mentions: [`${userNumber}@s.whatsapp.net`] });
+  }
+
+  try {
+    await client.groupParticipantsUpdate(from, [finalResult], 'remove');
+    const removedUser = finalResult.split('@')[0];
+    await reply(`@${removedUser} has been removed from the group.`, { mentions: [`${removedUser}@s.whatsapp.net`] });
+  } catch (error) {
+    console.error("Kick Error:", error);
+    await reply(`❌ Failed to remove: ${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "promote",
+  aliases: ['toadmin'],
+  category: "group",
+  description: "Promote a user to admin.",
+}, async (from, client, conText) => {
+  const { reply, sender, quotedUser, superUser, isSuperAdmin, isAdmin, isSuperUser, isGroup, isBotAdmin, mek } = conText;
+    if (!isSuperUser) {
+    return reply("❌ Owner Only Command!");
+  }
+
+  if (!isGroup) {
+    return reply("This command only works in groups!");
+  }
+
+  if (!isAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, { 
+      text: `@${userNumber} you are not an admin`, 
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!isBotAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, { 
+      text: `@${userNumber} This bot is not an admin`, 
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!quotedUser) {
+    return reply("Please reply to/quote a user to promote");
+  }
+
+  let result;
+  if (quotedUser) {
+    if (quotedUser.startsWith('@') && quotedUser.includes('@lid')) {
+      result = quotedUser.replace('@', '') + '@lid';
+    } else {
+      result = quotedUser;
+    }
+  }
+
+  let finalResult = result;
+  if (result && result.includes('@lid')) {
+    finalResult = await client.getJidFromLid(result);
+  }
+
+  if (finalResult.includes(isAdmin)) {
+    const userNumber = finalResult.split('@')[0];
+    return reply(`@${userNumber} is already an admin`);
+  }
+
+  if (finalResult.includes(isSuperAdmin)) {
+    const userNumber = finalResult.split('@')[0];
+    return reply(`@${userNumber} is already an admin`);
+  }
+
+  try {
+    await client.groupParticipantsUpdate(from, [finalResult], 'promote'); 
+    const promotedUser = finalResult.split('@')[0];
+    await reply(`@${promotedUser} is now an admin. 👑`, { mentions: [`${promotedUser}@s.whatsapp.net`] }); 
+    
+  } catch (error) {
+    console.error("Promotion Error:", error);
+    await reply(`❌ Failed to promote: ${error.message}`);
+   
+  }
+});
+
+//========================================================================================================================
+
+
+keith({
+  pattern: "demote",
+  aliases: ["removeadmin"],
+  category: "group",
+  description: "Demote a user from admin."
+},
+async (from, client, conText) => {
+  const { reply, sender, quotedUser, isSuperUser, isGroup, isAdmin, isBotAdmin, isSuperAdmin, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("This command only works in groups!");
+
+  if (!isAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} you are not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!isBotAdmin) {
+    const userNumber = sender.split('@')[0];
+    return client.sendMessage(from, {
+      text: `@${userNumber} This bot is not an admin`,
+      mentions: [`${userNumber}@s.whatsapp.net`]
+    }, { quoted: mek });
+  }
+
+  if (!quotedUser) return reply("Please reply to/quote a user to demote");
+
+  let result = quotedUser.startsWith('@') && quotedUser.includes('@lid')
+    ? quotedUser.replace('@', '') + '@lid'
+    : quotedUser;
+
+  let finalResult = result.includes('@lid')
+    ? await client.getJidFromLid(result)
+    : result;
+
+  if (!finalResult.includes('@')) return reply("Invalid user ID");
+
+  if (!finalResult.includes(isAdmin)) {
+    const userNumber = finalResult.split('@')[0];
+    return reply(`@${userNumber} is not an admin`, { mentions: [`${userNumber}@s.whatsapp.net`] });
+  }
+
+  if (finalResult.includes(isSuperAdmin)) {
+    const userNumber = finalResult.split('@')[0];
+    return reply(`@${userNumber} is a super admin and cannot be demoted`, { mentions: [`${userNumber}@s.whatsapp.net`] });
+  }
+
+  try {
+    await client.groupParticipantsUpdate(from, [finalResult], 'demote');
+    const demotedUser = finalResult.split('@')[0];
+    await reply(`@${demotedUser} has been demoted.`, { mentions: [`${demotedUser}@s.whatsapp.net`] });
+  } catch (error) {
+    console.error("Demotion Error:", error);
+    await reply(`❌ Failed to demote: ${error.message}`);
+  }
+});
+//========================================================================================================================
