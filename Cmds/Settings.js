@@ -17,10 +17,98 @@ const { getGreetSettings, updateGreetSettings, clearRepliedContacts } = require(
 const { getPresenceSettings, updatePresenceSettings } = require('../database/presence');
 const { updateSettings, getSettings } = require('../database/settings');
 const { getGroupEventsSettings, updateGroupEventsSettings } = require('../database/groupevents');
+const { getAntiCallSettings, updateAntiCallSettings } = require('../database/anticall');
 
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "anticall",
+  aliases: ["callset", "anticallsetting"],
+  description: "Manage anti-call settings",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, prefix, reply, isSuperUser } = conText;
+
+  if (!isSuperUser) {
+    return reply("❌ You need superuser privileges to manage anti-call settings.");
+  }
+
+  const args = q?.trim().split(/\s+/) || [];
+  const subcommand = args[0]?.toLowerCase();
+  const value = args.slice(1).join(" ");
+  const settings = await getAntiCallSettings();
+
+  if (!subcommand) {
+    const status = settings.status ? '✅ ON' : '❌ OFF';
+    const action = settings.action === 'block' ? 'Block caller' : 'Reject call';
+    const actionEmoji = settings.action === 'block' ? '🚫' : '❌';
+
+    return reply(
+      `*📜 Anti-Call Settings*\n\n` +
+      `🔹 *Status:* ${status}\n` +
+      `🔹 *Action:* ${actionEmoji} ${action}\n` +
+      `🔹 *Message:* ${settings.message || '*No message set*'}\n\n` +
+      `*🛠 Usage Instructions:*\n` +
+      `▸ *${prefix}anticall on/off* - Toggle anti-call\n` +
+      `▸ *${prefix}anticall message <text>* - Set rejection message\n` +
+      `▸ *${prefix}anticall action reject/block* - Set call action\n\n` +
+      `*💡 Action Differences:*\n` +
+      `✔️ Reject: Declines call but allows future calls\n` +
+      `🚫 Block: Declines and blocks the caller`
+    );
+  }
+
+  switch (subcommand) {
+    case 'on':
+    case 'off': {
+      const newStatus = subcommand === 'on';
+      if (settings.status === newStatus) {
+        return reply(`⚠️ Anti-call is already ${newStatus ? 'enabled' : 'disabled'}.`);
+      }
+      await updateAntiCallSettings({ status: newStatus });
+      return reply(`✅ Anti-call has been ${newStatus ? 'enabled' : 'disabled'}.`);
+    }
+
+    case 'message': {
+      if (!value) return reply('❌ Please provide a message for anti-call rejection.');
+      await updateAntiCallSettings({ message: value });
+      return reply(`✅ Anti-call message updated successfully:\n\n"${value}"`);
+    }
+
+    case 'action': {
+      const action = value.toLowerCase();
+      if (!['reject', 'block'].includes(action)) {
+        return reply(
+          '❌ Invalid action. Use "reject" or "block".\n\n' +
+          '*Reject:* Declines call but allows future calls\n' +
+          '*Block:* Declines and permanently blocks the caller'
+        );
+      }
+      if (settings.action === action) {
+        return reply(`⚠️ Action is already set to "${action}".`);
+      }
+      await updateAntiCallSettings({ action });
+      return reply(
+        `🔹 Call action changed to: *${action}*\n\n` +
+        (action === 'block'
+          ? '🚫 Now blocking callers who try to call.'
+          : '✔️ Calls will now be rejected without blocking.')
+      );
+    }
+
+    default:
+      return reply(
+        '❌ Invalid subcommand. Available options:\n\n' +
+        `▸ *${prefix}anticall on/off*\n` +
+        `▸ *${prefix}anticall message <text>*\n` +
+        `▸ *${prefix}anticall action reject/block*`
+      );
+  }
+});
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
