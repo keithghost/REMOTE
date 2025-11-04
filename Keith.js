@@ -330,7 +330,7 @@ async function handleAudioResponse(client, from, sender, message, voice, quoted)
             if (audioBuffer) {
                 await client.sendMessage(from, {
                     audio: audioBuffer,
-                    ptt: true,
+                    ptt: false,
                     mimetype: 'audio/mpeg'
                 }, { 
                     quoted: quoted 
