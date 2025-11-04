@@ -63,6 +63,8 @@ keith(
 );
 //========================================================================================================================
 
+//const { keith } = require('../commandHandler');
+
 keith(
   {
     pattern: "ping",
@@ -74,7 +76,7 @@ keith(
     const { botname, author } = conText;
 
     try {
-      const start = performance.now(); // More precise than Date.now()
+      const start = performance.now();
 
       const contactMessage = {
         key: {
@@ -90,14 +92,11 @@ keith(
         },
       };
 
-      const sent = await client.sendMessage(from, { text: "Measuring speed..." }, { quoted: contactMessage });
-      const end = performance.now();
+      const latencyText = `${botname} speed: *${Math.round(performance.now() - start)}ms*`;
 
-      const speed = Math.round(end - start);
-
-      await client.sendMessage(from, { text: `${botname} speed: *${speed}ms*` }, { quoted: sent });
+      await client.sendMessage(from, { text: latencyText }, { quoted: contactMessage });
     } catch (error) {
-      console.error("Error measuring bot speed:", error);
+      console.error("Error sending ping message:", error);
     }
   }
 );
