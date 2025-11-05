@@ -16,6 +16,50 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "volume",
+  description: "Adjust volume of quoted audio or video",
+  category: "Utility",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, q, mek, reply, keithRandom } = conText;
+
+  if (!q) {
+    return reply("⚠️ Example: volume 1.5");
+  }
+
+  const mediaType = quotedMsg?.audioMessage || quotedMsg?.videoMessage;
+  if (!mediaType) {
+    return reply("❌ Quote an audio or video file to adjust its volume.");
+  }
+
+  try {
+    const mediaPath = await client.downloadAndSaveMediaMessage(mediaType);
+    const isAudio = !!quotedMsg.audioMessage;
+    const outputExt = isAudio ? ".mp3" : ".mp4";
+    const outputPath = await keithRandom(outputExt);
+
+    exec(`ffmpeg -i ${mediaPath} -filter:a volume=${q} ${outputPath}`, async (err) => {
+      fs.unlinkSync(mediaPath);
+      if (err) {
+        console.error("ffmpeg error:", err);
+        return reply("❌ Volume adjustment failed.");
+      }
+
+      const buffer = fs.readFileSync(outputPath);
+      const message = isAudio
+        ? { audio: buffer, mimetype: "audio/mpeg" }
+        : { video: buffer, mimetype: "video/mp4" };
+
+      await client.sendMessage(from, message, { quoted: mek });
+      fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("volume error:", error);
+    await reply("❌ An error occurred while processing the media.");
+  }
+});
 //========================================================================================================================
 
 keith({
@@ -143,4 +187,5 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
