@@ -1021,7 +1021,7 @@ async (from, client, conText) => {
   const { reply, q, isSuperUser, isBotAdmin, isGroup } = conText;
 
   if (!isGroup) return reply("❌ Group command only!");
-  if (!isBotAdmin) return reply("❌ Need admin role!");
+ // if (!isBotAdmin) return reply("❌ Need admin role!");
   if (!isSuperUser) return reply("❌ Admin only command!");
 
   const args = q?.trim().split(/\s+/) || [];
@@ -1096,7 +1096,7 @@ async (from, client, conText) => {
   const { reply, q, isSuperUser, isBotAdmin, isGroup } = conText;
 
   if (!isGroup) return reply("❌ Group command only!");
-  if (!isBotAdmin) return reply("❌ Need admin role!");
+ // if (!isBotAdmin) return reply("❌ Need admin role!");
   if (!isSuperUser) return reply("❌ Admin only command!");
 
   const args = q?.trim().split(/\s+/) || [];
