@@ -1,4 +1,7 @@
 const { keith } = require('../commandHandler');
+const fs = require('fs');
+const path = require('path');
+
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
@@ -9,6 +12,31 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "resetdb",
+  aliases: ["cleardb", "refreshdb"],
+  description: "Delete the database file at ./database.db",
+  category: "System",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("✖ You need superuser privileges to execute this command.");
+
+  const dbPath = path.resolve("./database.db");
+
+  try {
+    if (!fs.existsSync(dbPath)) return reply("✅ No database file found to delete.");
+
+    fs.unlinkSync(dbPath);
+    reply("🗑️ Database file deleted successfully.");
+  } catch (err) {
+    console.error("cleardb error:", err);
+    reply("❌ Failed to delete database file. Check logs for details.");
+  }
+});
 //========================================================================================================================
 
 
@@ -127,4 +155,5 @@ keith(
     }
   }
 );
+
 
