@@ -72,9 +72,9 @@ async function uploadToUguu(filePath) {
 //========================================================================================================================
 keith({
   pattern: "vision",
-  alias: ["imgai", "describe", "gemini"],
+  alias: ["imgai", "analyze", "geminivision"],
   description: "Analyze quoted image using Gemini Vision AI",
-  category: "search",
+  category: "Ai",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, quoted, quotedMsg, reply, q } = conText;
@@ -112,7 +112,7 @@ keith({
   pattern: "transcribe",
   alias: ["speech", "audio2text", "whisper"],
   desc: "Transcribe quoted audio or video to text",
-  category: "search",
+  category: "Ai",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, quoted, quotedMsg, reply } = conText;
