@@ -4,6 +4,8 @@ const { S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const Jimp = require('jimp');
 const moment = require('moment-timezone');
 const fs = require('fs/promises');
+const { exec } = require("child_process");
+
 
 //========================================================================================================================
 //========================================================================================================================
@@ -33,6 +35,29 @@ const fs = require('fs/promises');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "shell",
+  aliases: ["sh", "exec"],
+  description: "Execute shell commands",
+  category: "Coding",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ Superuser only command.");
+  if (!q) return reply("❌ No command provided. Please provide a valid shell command.");
+
+  try {
+    exec(q, (err, stdout, stderr) => {
+      if (err) return reply(`❌ Error: ${err.message}`);
+      if (stderr) return reply(`⚠️ stderr: ${stderr}`);
+      if (stdout) return reply(stdout);
+    });
+  } catch (error) {
+    await reply("❌ An error occurred while running the shell command:\n" + error);
+  }
+});
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
