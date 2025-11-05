@@ -56,7 +56,7 @@ keith({
   pattern: "url",
   alias: ["upload", "urlconvert"],
   desc: "Convert quoted media to Qu.ax URL",
-  category: "Upload",
+  category: "Uploader",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, quoted, quotedMsg, reply } = conText;
