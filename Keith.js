@@ -20,6 +20,7 @@ const {
     keithBuffer, 
     keithJson, 
     formatAudio, 
+    keithRandom,
     formatVideo,
     verifyJidState
 } = require("./lib/botFunctions");
@@ -1600,6 +1601,7 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
                     keithJson, 
                     formatAudio, 
                     formatVideo,
+                    keithRandom,
                     groupMember: isGroup ? messageAuthor : '',
                     from,
                     tagged,
