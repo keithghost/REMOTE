@@ -288,3 +288,72 @@ keith(
 
 
 
+const formatSize = (bytes) => {
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes === 0) return '0 B';
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+};
+
+keith({
+  pattern: "test",
+  aliases: ["botstatus", "alive"],
+  description: "Display bot system information",
+  category: "System",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ You need superuser privileges to view system status.");
+
+  const start = now();
+
+  const uptime = process.uptime();
+  const formattedUptime = formatUptime(uptime);
+
+  const totalRam = os.totalmem();
+  const freeRam = os.freemem();
+  const usedRam = totalRam - freeRam;
+
+  const memory = process.memoryUsage();
+  const heapUsed = formatSize(memory.heapUsed);
+  const heapTotal = formatSize(memory.heapTotal);
+
+  let disk = { size: "N/A", free: "N/A" };
+  try {
+    const { stdout } = await execAsync('df -h --total | grep total');
+    const parts = stdout.trim().split(/\s+/);
+    disk.size = parts[1];
+    disk.free = parts[3];
+  } catch (err) {
+    console.error("Disk usage error:", err);
+  }
+
+  let download = "N/A", upload = "N/A";
+  try {
+    const { stdout } = await execAsync("vnstat --oneline | awk -F';' '{print $4, $6}'");
+    const [dl, ul] = stdout.trim().split(" ");
+    download = dl || "N/A";
+    upload = ul || "N/A";
+  } catch (err) {
+    console.error("Network stats error:", err);
+  }
+
+  const ping = `${(now() - start).toFixed(2)} ms`;
+
+  const status = `📊 *Bot Status*\n\n` +
+    `🔸 *Ping:* ${ping}\n` +
+    `🔸 *Uptime:* ${formattedUptime}\n` +
+    `🔸 *RAM Usage:* ${formatSize(usedRam)} / ${formatSize(totalRam)}\n` +
+    `🔸 *Free RAM:* ${formatSize(freeRam)}\n` +
+    `🔸 *Process Memory:* ${heapUsed} / ${heapTotal}\n` +
+    `🔸 *Disk Usage:* ${disk.size} / ${disk.free}\n` +
+    `🔸 *Platform:* ${os.platform()}\n` +
+    `🔸 *NodeJS:* ${process.version}\n` +
+    `🔸 *CPU:* ${os.cpus()[0].model}\n` +
+    `🔸 *Downloaded:* ${download}\n` +
+    `🔸 *Uploaded:* ${upload}`;
+
+  await reply(status);
+});
+
+
