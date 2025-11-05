@@ -22,7 +22,7 @@ keith({
   pattern: "take",
   aliases: ["restick", "grabsticker"],
   description: "Quote a sticker and resend it with your packname and author",
-  category: "Utility",
+  category: "Sticker",
   filename: __filename
 }, async (from, client, conText) => {
   const { quotedMsg, pushName, author, mek, reply } = conText;
