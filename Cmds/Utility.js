@@ -17,6 +17,45 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "tomp3",
+  aliases: ["toaudio", "audioextract"],
+  description: "Convert quoted audio or video to MP3",
+  category: "Utility",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, mek, reply, keithRandom } = conText;
+
+  const mediaType = quotedMsg?.videoMessage || quotedMsg?.audioMessage;
+  if (!mediaType) {
+    return reply("❌ Quote an audio or video to convert to MP3.");
+  }
+
+  try {
+    const media = await client.downloadAndSaveMediaMessage(mediaType);
+    const output = await keithRandom(".mp3");
+
+    exec(`ffmpeg -i ${media} -q:a 0 -map a ${output}`, async (err) => {
+      fs.unlinkSync(media);
+      if (err) {
+        console.error("ffmpeg error:", err);
+        return reply("❌ Conversion failed.");
+      }
+
+      const buffer = fs.readFileSync(output);
+      await client.sendMessage(from, {
+        audio: buffer,
+        mimetype: "audio/mpeg"
+      }, { quoted: mek });
+
+      fs.unlinkSync(output);
+    });
+  } catch (error) {
+    console.error("tomp3 error:", error);
+    await reply("❌ An error occurred while converting the media.");
+  }
+});
 //========================================================================================================================
 
 
@@ -104,3 +143,4 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
