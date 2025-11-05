@@ -123,7 +123,7 @@ async (from, client, conText) => {
   const { reply, q, isGroup, isBotAdmin } = conText;
 
   if (!isGroup) return reply("This command only works in groups!");
-  if (!isBotAdmin) return reply("Bot is not an admin");
+//  if (!isBotAdmin) return reply("Bot is not an admin");
 
   const metadata = await client.groupMetadata(from);
   const members = metadata.participants.map(p => p.id);
@@ -749,3 +749,4 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
