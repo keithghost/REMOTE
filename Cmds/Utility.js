@@ -15,6 +15,55 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "trim",
+  description: "Trim quoted audio or video using start and end time",
+  category: "Utility",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, q, mek, reply, keithRandom } = conText;
+
+  if (!quotedMsg) {
+    return reply("❌ Reply to an audio or video file with start and end time.\n\nExample: `trim 0:10 0:30`");
+  }
+
+  const [startTime, endTime] = q.split(" ").map(t => t.trim());
+  if (!startTime || !endTime) {
+    return reply("⚠️ Invalid format.\n\nExample: `trim 0:10 0:30`");
+  }
+
+  const mediaType = quotedMsg.audioMessage || quotedMsg.videoMessage;
+  if (!mediaType) {
+    return reply("❌ Unsupported media type. Quote an audio or video file.");
+  }
+
+  try {
+    const mediaPath = await client.downloadAndSaveMediaMessage(mediaType);
+    const isAudio = !!quotedMsg.audioMessage;
+    const outputExt = isAudio ? ".mp3" : ".mp4";
+    const outputPath = await keithRandom(outputExt);
+
+    exec(`ffmpeg -i ${mediaPath} -ss ${startTime} -to ${endTime} -c copy ${outputPath}`, async (err) => {
+      fs.unlinkSync(mediaPath);
+      if (err) {
+        console.error("ffmpeg error:", err);
+        return reply("❌ Trimming failed.");
+      }
+
+      const buffer = fs.readFileSync(outputPath);
+      const message = isAudio
+        ? { audio: buffer, mimetype: "audio/mpeg" }
+        : { video: buffer, mimetype: "video/mp4" };
+
+      await client.sendMessage(from, message, { quoted: mek });
+      fs.unlinkSync(outputPath);
+    });
+  } catch (error) {
+    console.error("trim error:", error);
+    await reply("❌ An error occurred while processing the media.");
+  }
+});
 //========================================================================================================================
 
 keith({
@@ -187,5 +236,6 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
