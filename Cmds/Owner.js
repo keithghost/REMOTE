@@ -35,8 +35,111 @@ const fs = require('fs/promises');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "save",
+  aliases: ["savestatus", "statussave"],
+  description: "Retrieve quoted media (image, video, audio)",
+  category: "Owner",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to a status message to save.");
+
+  try {
+    if (quoted?.imageMessage) {
+      const caption = quoted.imageMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+      await client.sendMessage(from, { image: { url: filePath }, caption }, { quoted: mek });
+    }
+
+    if (quoted?.videoMessage) {
+      const caption = quoted.videoMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.videoMessage);
+      await client.sendMessage(from, { video: { url: filePath }, caption }, { quoted: mek });
+    }
+
+    if (quoted?.audioMessage) {
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.audioMessage);
+      await client.sendMessage(from, { audio: { url: filePath }, mimetype: 'audio/mpeg' }, { quoted: mek });
+    }
+
+  } catch (err) {
+    console.error("vv command error:", err);
+    reply("❌ Failed to retrieve media. Try again.");
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "vv2",
+  aliases: ["amazing", "lovely"],
+  description: "Retrieve quoted media and send privately to sender",
+  category: "Owner",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply, sender } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to a media message to retrieve it.");
+
+  try {
+    if (quoted?.imageMessage) {
+      const caption = quoted.imageMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+      await client.sendMessage(sender, { image: { url: filePath }, caption }, { quoted: mek });
+    }
+
+    if (quoted?.videoMessage) {
+      const caption = quoted.videoMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.videoMessage);
+      await client.sendMessage(sender, { video: { url: filePath }, caption }, { quoted: mek });
+    }
+
+    if (quoted?.audioMessage) {
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.audioMessage);
+      await client.sendMessage(sender, { audio: { url: filePath }, mimetype: 'audio/mpeg' }, { quoted: mek });
+    }
+
+  } catch (err) {
+    console.error("vv2 command error:", err);
+    reply("❌ Failed to retrieve media. Try again.");
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "vv",
+  aliases: ["wow", "retrieve"],
+  description: "Retrieve quoted media (image, video, audio)",
+  category: "Owner",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to a media message to retrieve it.");
+
+  try {
+    if (quoted?.imageMessage) {
+      const caption = quoted.imageMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+      await client.sendMessage(from, { image: { url: filePath }, caption }, { quoted: mek });
+    }
+
+    if (quoted?.videoMessage) {
+      const caption = quoted.videoMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.videoMessage);
+      await client.sendMessage(from, { video: { url: filePath }, caption }, { quoted: mek });
+    }
+
+    if (quoted?.audioMessage) {
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.audioMessage);
+      await client.sendMessage(from, { audio: { url: filePath }, mimetype: 'audio/mpeg' }, { quoted: mek });
+    }
+
+  } catch (err) {
+    console.error("vv command error:", err);
+    reply("❌ Failed to retrieve media. Try again.");
+  }
+});
 //========================================================================================================================
 
 
