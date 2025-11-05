@@ -70,14 +70,87 @@ async function uploadToUguu(filePath) {
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
+keith({
+  pattern: "vision",
+  alias: ["imgai", "describe", "gemini"],
+  description: "Analyze quoted image using Gemini Vision AI",
+  category: "search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply, q } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to analyze it");
+  if (!q || typeof q !== "string") return reply("❌ Missing query. Use q='your question'");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+    const imageUrl = await uploadToUguu(filePath);
+
+    const { data: result } = await axios.get(`https://apiskeith.vercel.app/ai/gemini-vision?image=${encodeURIComponent(imageUrl)}&q=${encodeURIComponent(q)}`);
+    if (!result?.status || !result?.result) return reply("❌ No response from Vision AI");
+
+    await client.sendMessage(from, { text: result.result }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Vision AI error:", err);
+    await reply("❌ Failed to analyze image. Try a different one.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
+  //========================================================================================================================
+keith({
+  pattern: "transcribe",
+  alias: ["speech", "audio2text", "whisper"],
+  desc: "Transcribe quoted audio or video to text",
+  category: "search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an audio or video message to transcribe it");
+
+  const type = getMediaType(quotedMsg);
+  if (type === "unknown") return reply("❌ Unsupported media type");
+
+  const mediaNode = quoted?.[`${type}Message`];
+  if (!mediaNode) return reply("❌ Could not extract media content");
+
+  let filePath;
+  try {
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+    const mediaUrl = await uploadToUguu(filePath);
+
+    const { data: result } = await axios.get(`https://apiskeith.vercel.app/ai/transcribe?q=${encodeURIComponent(mediaUrl)}`);
+    if (!result?.status || !result?.result?.text) return reply("❌ No transcription found");
+
+    await client.sendMessage(from, { text: result.result.text }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Transcription error:", err);
+    await reply("❌ Failed to transcribe. Try a shorter or clearer clip.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
+  //========================================================================================================================
 //
 keith({
   pattern: "shazam",
   alias: ["identify", "whatmusic", "whatsong"],
   desc: "Identify music from quoted audio or video",
-  category: "search",
+  category: "Ai",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, quoted, quotedMsg, reply, botname } = conText;
@@ -117,3 +190,4 @@ keith({
     }
   }
 });
+//========================================================================================================================
