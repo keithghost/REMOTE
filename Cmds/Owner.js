@@ -34,6 +34,33 @@ const fs = require('fs/promises');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "chunk",
+  aliases: ["details", "det", "ret"],
+  description: "Displays raw quoted message in JSON format",
+  category: "Owner",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, react, quotedMsg, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Superuser only command.");
+  if (!quotedMsg) return reply("❌ Please reply to a message to inspect it.");
+
+  try {
+    const json = JSON.stringify(quotedMsg, null, 2);
+    const chunks = json.match(/[\s\S]{1,100000}/g) || [];
+
+    for (const chunk of chunks) {
+      const formatted = "```json\n" + chunk + "\n```";
+      await client.sendMessage(from, { text: formatted }, { quoted: mek });
+      //await react("✅");
+    }
+  } catch (err) {
+    console.error("Error dumping message:", err);
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "save",
