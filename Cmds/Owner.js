@@ -41,7 +41,7 @@ keith({
   pattern: "shell",
   aliases: ["sh", "exec"],
   description: "Execute shell commands",
-  category: "Coding",
+  category: "Owner",
   filename: __filename
 }, async (from, client, conText) => {
   const { q, reply, isSuperUser } = conText;
