@@ -10,6 +10,33 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "restart",
+  aliases: ["reboot", "startbot"],
+  description: "Bot restart",
+  category: "System",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+
+  if (!isSuperUser) {
+    return reply("❌ You need superuser privileges to execute this command.");
+  }
+
+  try {
+    await reply("*Restarting...*");
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    await sleep(3000);
+
+    process.exit(0);
+  } catch (err) {
+    console.error("Restart error:", err);
+    reply("❌ Failed to restart. Check logs for details.");
+  }
+});
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
@@ -100,3 +127,4 @@ keith(
     }
   }
 );
+
