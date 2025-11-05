@@ -37,6 +37,28 @@ const { getBinaryNodeChild, getBinaryNodeChildren } = require('@whiskeysockets/b
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "hidetag",
+  aliases: ["silenttag", "ghosttag"],
+  description: "Send a message tagging all members without visible mentions",
+  category: "group",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, mek, isGroup, reply, participants } = conText;
+
+  if (!isGroup) return reply("⚠️ This command can only be used in groups.");
+
+  if (!participants || participants.length === 0) {
+    return reply("⚠️ No members found in this group.");
+  }
+
+  await client.sendMessage(from, {
+    text: q || "",
+    mentions: participants.map(p => p.id)
+  }, { quoted: mek });
+});
 //========================================================================================================================
 
 keith({
@@ -749,4 +771,5 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
 
