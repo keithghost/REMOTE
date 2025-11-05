@@ -115,7 +115,7 @@ keith({
 keith({
   pattern: "events",
   aliases: ["gevents", "groupevents"],
-  category: "owner",
+  category: "Settings",
   description: "Manage group welcome/leave events"
 },
 async (from, client, conText) => {
