@@ -1,6 +1,7 @@
 const { keith } = require('../commandHandler');
 const fs = require('fs');
 const path = require('path');
+const now = require('performance-now');
 
 //========================================================================================================================
 //========================================================================================================================
@@ -11,6 +12,42 @@ const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "ping",
+  aliases: ["speed", "latency"],
+  description: "To check bot speed",
+  category: "System",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { botname, author, sender } = conText;
+
+  try {
+    const startTime = now();
+
+    const contactMessage = {
+      key: { fromMe: false, participant: "0@s.whatsapp.net", remoteJid: "status@broadcast" },
+      message: {
+        contactMessage: {
+          displayName: author,
+          vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${sender?.split('@')[0] ?? 'unknown'}:${sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`,
+        },
+      },
+    };
+
+    const pingSpeed = now() - startTime;
+
+    await client.sendMessage(from, {
+      text: `${botname} speed\n\n *${pingSpeed.toFixed(4)} ms*`
+    }, { quoted: contactMessage });
+
+  } catch (err) {
+    console.error("Ping error:", err);
+  }
+}); 
+
+
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
@@ -91,7 +128,7 @@ keith(
     description: "Show bot runtime",
   },
   async (from, client, conText) => {
-    const { reply, botname, pushName, author } = conText;
+    const { reply, botname, pushName, author, sender } = conText;
 
     try {
       const contactMessage = {
@@ -103,8 +140,8 @@ keith(
         message: {
           contactMessage: {
             displayName: author,
-            vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${pushName}:${pushName}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`,
-          },
+            vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=${sender?.split('@')[0] ?? 'unknown'}:${sender?.split('@')[0] ?? 'unknown'}\nitem1.X-ABLabel:Ponsel\nEND:VCARD`,
+        },
         },
       };
 
@@ -118,42 +155,5 @@ keith(
 );
 //========================================================================================================================
 
-//const { keith } = require('../commandHandler');
-
-keith(
-  {
-    pattern: "ping",
-    aliases: ["speed", "latency"],
-    category: "System",
-    description: "Show bot speed",
-  },
-  async (from, client, conText) => {
-    const { botname, author } = conText;
-
-    try {
-      const start = performance.now();
-
-      const contactMessage = {
-        key: {
-          fromMe: false,
-          participant: "0@s.whatsapp.net",
-          remoteJid: "status@broadcast",
-        },
-        message: {
-          contactMessage: {
-            displayName: author,
-            vcard: `BEGIN:VCARD\nVERSION:3.0\nN:;${author};;;;\nFN:${author}\nitem1.TEL;waid=1234567890:1234567890\nitem1.X-ABLabel:Ponsel\nEND:VCARD`,
-          },
-        },
-      };
-
-      const latencyText = `${botname} speed: *${Math.round(performance.now() - start)}ms*`;
-
-      await client.sendMessage(from, { text: latencyText }, { quoted: contactMessage });
-    } catch (error) {
-      console.error("Error sending ping message:", error);
-    }
-  }
-);
 
 
