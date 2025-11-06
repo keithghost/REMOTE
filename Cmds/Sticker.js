@@ -17,6 +17,50 @@ const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "stickersearch",
+  aliases: ["ssearch"],
+  description: "Search Tenor and send animated stickers",
+  category: "Sticker",
+  filename: __filename
+  
+}, async (from, client, conText) => {
+  const { q, reply, pushName, author, mek } = conText;
+
+  if (!q) return reply("❌ Where is the request?\n\nExample: stickersearch happy dance");
+
+  const tenorApiKey = "AIzaSyCyouca1_KKy4W_MG1xsPzuku5oa8W358c";
+  const searchTerm = encodeURIComponent(q);
+
+  try {
+    for (let i = 0; i < 5; i++) {
+      const res = await axios.get(
+        `https://tenor.googleapis.com/v2/search?q=${searchTerm}&key=${tenorApiKey}&client_key=keith-md&limit=8&media_filter=gif`
+      );
+
+      const gifUrl = res.data.results[i]?.media_formats?.gif?.url;
+      if (!gifUrl) continue;
+
+      const sticker = new Sticker(gifUrl, {
+        pack: pushName,
+        author: author,
+        type: StickerTypes.FULL,
+        categories: ["🤩", "🎉"],
+        id: "keith-md",
+        quality: 60,
+        background: "transparent"
+      });
+
+      const buffer = await sticker.toBuffer();
+      await client.sendMessage(from, { sticker: buffer }, { quoted: mek });
+    }
+  } catch (err) {
+    console.error("stickersearch error:", err);
+    reply("❌ Error while searching for stickers.");
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "take",
