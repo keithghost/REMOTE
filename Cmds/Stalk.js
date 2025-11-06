@@ -17,8 +17,147 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "npmstalk",
+  aliases: ["npm", "pkg"],
+  description: "Stalk an NPM package using its name",
+  category: "stalker",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("❌ Provide an NPM package name.\n\nExample: npmstalk baileys");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/stalker/npm?q=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !data.result?.metadata) {
+      return reply("❌ Failed to fetch NPM package data. Make sure the package name is correct.");
+    }
+
+    const { metadata, versions, dependencies, maintainers, repository } = data.result;
+    const npmLink = `https://www.npmjs.com/package/${q}`;
+    const caption = `📦 *NPM Package: ${metadata.name}*\n\n` +
+      `📝 Description: ${metadata.description || "—"}\n` +
+      `🔗 NPM Link: ${npmLink}\n` +
+      `📄 License: ${metadata.license || "—"}\n` +
+      `🏷️ Keywords: ${metadata.keywords.join(", ")}\n` +
+      `📅 Last Updated: ${new Date(metadata.lastUpdated).toDateString()}\n\n` +
+      `📊 *Versions*\n` +
+      `📍 Latest: ${versions.latest}\n` +
+      `📍 First: ${versions.first}\n` +
+      `🔢 Total: ${versions.count}\n` +
+      `📅 Published: ${new Date(versions.latestPublishTime).toDateString()}\n` +
+      `📅 Created: ${new Date(versions.initialPublishTime).toDateString()}\n\n` +
+      `📦 *Dependencies*\n` +
+      `🔢 Latest: ${dependencies.latestCount}\n` +
+      `🔢 Initial: ${dependencies.initialCount}\n\n` +
+      `👥 *Maintainers*: ${maintainers.join(", ")}\n` +
+      `📁 Repo: ${repository}`;
+
+    await client.sendMessage(from, {
+      text: caption
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("npmstalk error:", err);
+    reply("❌ Error fetching NPM package data: " + err.message);
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "countrystalk",
+  aliases: ["country", "nation"],
+  description: "Stalk country info using region name",
+  category: "stalker",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("❌ Provide a country or region name.\n\nExample: countrystalk Kenya");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/stalker/country?region=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !data.result?.basicInfo) {
+      return reply("❌ Failed to fetch country data. Make sure the region name is correct.");
+    }
+
+    const { basicInfo, geography, culture, government, isoCodes } = data.result;
+    const caption = `🌍 *Country: ${basicInfo.name}*\n\n` +
+      `🏛️ Capital: ${basicInfo.capital}\n` +
+      `📞 Phone Code: ${basicInfo.phoneCode}\n` +
+      `🗺️ Google Maps: ${basicInfo.googleMaps}\n` +
+      `🌐 Internet TLD: ${basicInfo.internetTLD}\n\n` +
+      `📌 *Geography*\n` +
+      `🌍 Continent: ${geography.continent.name}\n` +
+      `📍 Coordinates: ${geography.coordinates.latitude}, ${geography.coordinates.longitude}\n` +
+      `📐 Area: ${geography.area.sqKm} km² (${geography.area.sqMiles} mi²)\n` +
+      `🚫 Landlocked: ${geography.landlocked ? "Yes" : "No"}\n\n` +
+      `🗣️ *Culture*\n` +
+      `🗨️ Languages: ${culture.languages.native.join(", ")}\n` +
+      `🎯 Famous For: ${culture.famousFor}\n` +
+      `🚗 Driving Side: ${culture.drivingSide}\n` +
+      `🍷 Alcohol Policy: ${culture.alcoholPolicy}\n\n` +
+      `🏛️ *Government*\n` +
+      `📜 Form: ${government.constitutionalForm}\n` +
+      `💰 Currency: ${government.currency}\n\n` +
+      `🔢 *ISO Codes*\n` +
+      `• Numeric: ${isoCodes.numeric}\n` +
+      `• Alpha-2: ${isoCodes.alpha2}\n` +
+      `• Alpha-3: ${isoCodes.alpha3}`;
+
+    await client.sendMessage(from, {
+      image: { url: basicInfo.flag },
+      caption
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("countrystalk error:", err);
+    reply("❌ Error fetching country data: " + err.message);
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "wachannel",
+  aliases: ["wastalk", "whatsappchannel"],
+  description: "Stalk a WhatsApp channel using its link",
+  category: "stalker",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q || !q.includes("whatsapp.com/channel/")) {
+    return reply("❌ Provide a valid WhatsApp channel link.\n\nExample: wachannel https://whatsapp.com/channel/0029Vaan9TF9Bb62l8wpoD47");
+  }
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/stalker/wachannel2?url=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !data.result?.status || !data.result?.data) {
+      return reply("❌ Failed to fetch WhatsApp channel data. Make sure the link is correct.");
+    }
+
+    const { title, description, followers, imageUrl } = data.result.data;
+    const caption = `📢 *WhatsApp Channel*\n\n` +
+      `📛 Title: ${title}\n` +
+      `📄 Description: ${description || "—"}\n` +
+      `👥 Followers: ${followers}`;
+
+    await client.sendMessage(from, {
+      image: { url: imageUrl },
+      caption
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("wachannel error:", err);
+    reply("❌ Error fetching WhatsApp channel data: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
