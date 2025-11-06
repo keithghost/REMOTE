@@ -21,6 +21,94 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "upcomingmatches",
+  aliases: ["fixtures", "upcoming", "nextgames"],
+  description: "View upcoming matches across major football leagues",
+  category: "sports",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply } = conText;
+
+  const caption = `╭═════════════════⊷
+║  📅 *Upcoming Matches* 📅
+║━━━━━━━━━━━━━━━━━
+║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗟𝗘𝗔𝗚𝗨𝗘 𝗡𝗨𝗠𝗕𝗘𝗥
+║ 1. Premier League
+║ 2. Bundesliga
+║ 3. La Liga
+║ 4. Ligue 1
+║ 5. Serie A
+║ 6. UEFA Champions League
+║ 7. FIFA International
+║ 8. UEFA Euro
+╰═════════════════⊷`;
+
+  const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+  const messageId = sent.key.id;
+
+  client.ev.on("messages.upsert", async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message) return;
+
+    const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+    const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+    const chatId = msg.key.remoteJid;
+
+    if (!isReply) return;
+
+    const leagueMap = {
+      "1": { name: "Premier League", url: "https://apiskeith.vercel.app/epl/upcomingmatches" },
+      "2": { name: "Bundesliga", url: "https://apiskeith.vercel.app/bundesliga/upcomingmatches" },
+      "3": { name: "La Liga", url: "https://apiskeith.vercel.app/laliga/upcomingmatches" },
+      "4": { name: "Ligue 1", url: "https://apiskeith.vercel.app/ligue1/upcomingmatches" },
+      "5": { name: "Serie A", url: "https://apiskeith.vercel.app/seriea/upcomingmatches" },
+      "6": { name: "UEFA Champions League", url: "https://apiskeith.vercel.app/ucl/upcomingmatches" },
+      "7": { name: "FIFA International", url: "https://apiskeith.vercel.app/fifa/upcomingmatches" },
+      "8": { name: "UEFA Euro", url: "https://apiskeith.vercel.app/euros/upcomingmatches" }
+    };
+
+    const selected = leagueMap[responseText.trim()];
+    if (!selected) {
+      return client.sendMessage(chatId, {
+        text: "❌ Invalid league number. Reply with a number between 1 and 8.",
+        quoted: msg
+      });
+    }
+
+    try {
+      await client.sendMessage(chatId, { react: { text: "📅", key: msg.key } });
+
+      const res = await axios.get(selected.url);
+      const data = res.data;
+
+      if (!data.status || !Array.isArray(data.result?.upcomingMatches)) {
+        return client.sendMessage(chatId, {
+          text: `❌ Failed to fetch ${selected.name} fixtures.`,
+          quoted: msg
+        });
+      }
+
+      const fixtures = data.result.upcomingMatches.map(match =>
+        `📅 *Matchday ${match.matchday}*\n🕒 ${match.date}\n🏟️ ${match.homeTeam} vs ${match.awayTeam}`
+      ).join("\n\n");
+
+      const caption = `🏆 *Upcoming ${selected.name} Matches*\n\n${fixtures}`;
+
+      await client.sendMessage(chatId, { text: caption }, { quoted: msg });
+    } catch (err) {
+      console.error("upcomingmatches error:", err);
+      await client.sendMessage(chatId, {
+        text: `❌ Error fetching ${selected.name} schedule: ${err.message}`,
+        quoted: msg
+      });
+    }
+  });
+});
+
+
+      
 //========================================================================================================================
 
 keith({
