@@ -20,6 +20,98 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "standings",
+  aliases: ["leaguetable", "league"],
+  description: "View current league standings across major competitions",
+  category: "sports",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply } = conText;
+
+  const caption = `╭═════════════════⊷
+║  📊 *League Standings* 📊
+║━━━━━━━━━━━━━━━━━
+║ 𝗥𝗘𝗣𝗟𝗬 𝗪𝗜𝗧𝗛 𝗟𝗘𝗔𝗚𝗨𝗘 𝗡𝗨𝗠𝗕𝗘𝗥
+║ 1. Premier League
+║ 2. Bundesliga
+║ 3. La Liga
+║ 4. Ligue 1
+║ 5. Serie A
+║ 6. UEFA Champions League
+║ 7. FIFA International
+║ 8. UEFA Euro
+╰═════════════════⊷`;
+
+  const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+  const messageId = sent.key.id;
+
+  client.ev.on("messages.upsert", async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message) return;
+
+    const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+    const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+    const chatId = msg.key.remoteJid;
+
+    if (!isReply) return;
+
+    const leagueMap = {
+      "1": { name: "Premier League", url: "https://apiskeith.vercel.app/epl/standings" },
+      "2": { name: "Bundesliga", url: "https://apiskeith.vercel.app/bundesliga/standings" },
+      "3": { name: "La Liga", url: "https://apiskeith.vercel.app/laliga/standings" },
+      "4": { name: "Ligue 1", url: "https://apiskeith.vercel.app/ligue1/standings" },
+      "5": { name: "Serie A", url: "https://apiskeith.vercel.app/seriea/standings" },
+      "6": { name: "UEFA Champions League", url: "https://apiskeith.vercel.app/ucl/standings" },
+      "7": { name: "FIFA International", url: "https://apiskeith.vercel.app/fifa/standings" },
+      "8": { name: "UEFA Euro", url: "https://apiskeith.vercel.app/euros/standings" }
+    };
+
+    const selected = leagueMap[responseText.trim()];
+    if (!selected) {
+      return client.sendMessage(chatId, {
+        text: "❌ Invalid league number. Reply with a number between 1 and 8.",
+        quoted: msg
+      });
+    }
+
+    try {
+      await client.sendMessage(chatId, { react: { text: "📊", key: msg.key } });
+
+      const res = await axios.get(selected.url);
+      const data = res.data;
+
+      if (!data.status || !Array.isArray(data.result?.standings)) {
+        return client.sendMessage(chatId, {
+          text: `❌ Failed to fetch ${selected.name} standings.`,
+          quoted: msg
+        });
+      }
+
+      const standings = data.result.standings.map(team => {
+        let tag = "🧱"; // mid-table default
+        if (team.position <= 4) tag = "🏆"; // Champions League
+        else if (team.position === 5 || team.position === 6) tag = "🥈"; // Europa League
+        else if (team.position >= 18) tag = "⚠️"; // Relegation
+
+        return `${tag} *${team.position}. ${team.team}*\n` +
+               `Played: ${team.played} | W:${team.won} D:${team.draw} L:${team.lost}\n` +
+               `Points: ${team.points} | GD: ${team.goalDifference}`;
+      }).join("\n\n");
+
+      const caption = `📊 *${data.result.competition} Standings*\n\n${standings}`;
+
+      await client.sendMessage(chatId, { text: caption }, { quoted: msg });
+    } catch (err) {
+      console.error("standings error:", err);
+      await client.sendMessage(chatId, {
+        text: `❌ Error fetching ${selected.name} standings: ${err.message}`,
+        quoted: msg
+      });
+    }
+  });
+});
 //========================================================================================================================
 
 keith({
