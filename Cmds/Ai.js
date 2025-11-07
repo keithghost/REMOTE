@@ -21,14 +21,12 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
-//==============================================================================
-
 
 keith({
   pattern: "bibleai",
-  aliases: ["bible", "scripture"],
+  aliases: ["aibible", "scripture"],
   description: "Ask Bible-based questions and get answers with references",
-  category: "Ai",
+  category: "search",
   filename: __filename
 }, async (from, client, conText) => {
   const { q, reply, mek } = conText;
@@ -40,7 +38,7 @@ keith({
     const data = res.data;
 
     if (!data.status || !data.result?.results?.data?.answer) {
-      return reply("❌ No Bible answer found for that query.");
+      return reply("❌ No Bible answer found.");
     }
 
     const answer = data.result.results.data.answer;
@@ -70,7 +68,7 @@ keith({
 
       if (!selected) {
         return client.sendMessage(chatId, {
-          text: "❌ Invalid number. Please reply with a valid source number.",
+          text: "❌ Invalid number. Reply with a valid source number.",
           quoted: msg
         });
       }
@@ -78,10 +76,30 @@ keith({
       await client.sendMessage(chatId, { react: { text: "📖", key: msg.key } });
 
       if (selected.type === "verse") {
-        await client.sendMessage(chatId, {
-          text: `📜 *${selected.text}*\nReference: ${selected.bcv.referenceLong}`,
-          quoted: msg
-        });
+        const ref = selected.bcv.referenceLong.replace(/\s+/g, "").replace(":", ":");
+        try {
+          const verseRes = await axios.get(`https://apiskeith.vercel.app/search/bible?q=${encodeURIComponent(ref)}`);
+          const verseData = verseRes.data;
+
+          if (!verseData.status || !verseData.result?.verses) {
+            return client.sendMessage(chatId, {
+              text: `❌ Couldn't fetch verse: ${selected.text}`,
+              quoted: msg
+            });
+          }
+
+          const verses = verseData.result.verses.map(v =>
+            `📖 *${v.book} ${v.chapter}:${v.verse}*\n${v.text}`
+          ).join("\n\n");
+
+          await client.sendMessage(chatId, { text: verses }, { quoted: msg });
+        } catch (err) {
+          console.error("Verse fetch error:", err);
+          await client.sendMessage(chatId, {
+            text: "❌ Error fetching verse text.",
+            quoted: msg
+          });
+        }
       } else if (selected.type === "article") {
         await client.sendMessage(chatId, {
           image: { url: selected.image },
@@ -94,6 +112,7 @@ keith({
     reply("❌ Error fetching Bible answer: " + err.message);
   }
 });
+//==============================================================================
 
 
 
