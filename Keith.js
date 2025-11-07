@@ -1679,7 +1679,7 @@ client.ev.on("connection.update", async (update) => {
     ╭═『 ${currentBotName}══⊷ 
     ║ ᴍᴏᴅᴇ ${currentMode}
     ║ ᴘʀᴇғɪx [ ${currentPrefix} ] 
-    ║ more plugins are coming 
+    ║ 💔🥺
     ╰═════════════⊷
 `;
 
