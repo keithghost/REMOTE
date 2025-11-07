@@ -287,7 +287,7 @@ async (from, client, conText) => {
 
 keith({
   pattern: "instagram",
-  aliases: ["insta", "igdl"],
+  aliases: ["insta", "igdl", "ig"],
   category: "Downloader",
   description: "Download Instagram video"
 },
