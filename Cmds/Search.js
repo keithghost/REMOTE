@@ -14,6 +14,35 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "lyrics",
+  aliases: ["lyric", "song"],
+  description: "Search for song lyrics by title or phrase",
+  category: "Search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("🎵 Type a song title or lyric line.\n\nExample: lyrics what shall I render to Jehovah");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/search/lyrics2?query=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !data.result) {
+      return reply("❌ No lyrics found.");
+    }
+
+    const caption = `🎶 ${data.result}`;
+
+    await client.sendMessage(from, { text: caption }, { quoted: mek });
+  } catch (err) {
+    console.error("lyrics error:", err);
+    reply("❌ Error fetching lyrics: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
