@@ -13,7 +13,6 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 
-
 keith({
   pattern: "brave",
   aliases: ["bravesearch", "searchbrave"],
@@ -33,42 +32,26 @@ keith({
       return reply("❌ No results found.");
     }
 
-    const results = data.result.results.slice(0, 10); // max 10
-    const list = results.map((r, i) => `${i + 1}. ${r.title} (${r.siteName})`).join("\n");
-    const caption = `🦁 *Brave Search: ${q}*\n\n${list}\n\n📌 Reply with a number to preview the link.`;
+    const { totalResults, searchQuery, timestamp } = data.result.metadata;
+    const results = data.result.results.slice(0, 10);
 
-    const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
-    const messageId = sent.key.id;
+    const list = results.map((r, i) =>
+      `🔹 *${i + 1}. ${r.title}*\n${r.description || "No description"}\n🌐 ${r.url || r.siteName}`
+    ).join("\n\n");
 
-    client.ev.on("messages.upsert", async (update) => {
-      const msg = update.messages[0];
-      if (!msg.message) return;
+    const caption = `🦁 *Brave Search: ${searchQuery}*\n📄 Results: ${totalResults}\n🕒 ${new Date(timestamp).toLocaleString()}\n\n${list}`;
 
-      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
-      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
-      const chatId = msg.key.remoteJid;
-
-      if (!isReply) return;
-
-      const index = parseInt(responseText.trim()) - 1;
-      const selected = results[index];
-
-      if (!selected || !selected.title || !selected.url) {
-        return client.sendMessage(chatId, {
-          text: "❌ Invalid number. Reply with a valid result number.",
-          quoted: msg
-        });
-      }
-
-      const preview = `🔗 *${selected.title}*\n${selected.description || "No description"}\n\n🌐 ${selected.url}`;
-      await client.sendMessage(chatId, { text: preview }, { quoted: msg });
-    });
+    await client.sendMessage(from, { text: caption }, { quoted: mek });
   } catch (err) {
     console.error("brave error:", err);
     reply("❌ Error fetching Brave results: " + err.message);
   }
 });
+
 //========================================================================================================================
+
+const { keith } = require('../commandHandler');
+const axios = require('axios');
 
 keith({
   pattern: "wagroup",
@@ -133,20 +116,10 @@ keith({
           const match = line.match(/Link - (https:\/\/chat\.whatsapp\.com\/invite\/\S+)/);
           if (!match) continue;
 
-          const url = match[1];
-          const title = line.split("–")[0].replace(/^\d+\)\s*/, "").trim();
-
           await client.sendMessage(chatId, {
-            text: title,
-            contextInfo: {
-              externalAdReply: {
-                title: title,
-                body: "WhatsApp Group Invite",
-                mediaType: 1,
-                sourceUrl: url
-              }
-            }
-          }, { quoted: msg });
+            text: match[1],
+            quoted: msg
+          });
         }
       } catch (err) {
         console.error("wagroup fetch error:", err);
@@ -173,7 +146,7 @@ keith({
 }, async (from, client, conText) => {
   const { q, reply, mek } = conText;
 
-  if (!q) return reply("🎵 Type a song title or lyric line.\n\nExample: lyrics what shall I render to Jehovah");
+  if (!q) return reply("🎵 Type a song title or lyric linen\nExample: lyrics what shall I render to Jehovah");
 
   try {
     const res = await axios.get(`https://apiskeith.vercel.app/search/lyrics2?query=${encodeURIComponent(q)}`);
