@@ -12,6 +12,62 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "brave",
+  aliases: ["bravesearch", "searchbrave"],
+  description: "Search Brave results and preview links",
+  category: "search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("🔍 Type a keyword to search Brave.\n\nExample: brave Kenya");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/search/brave?q=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !Array.isArray(data.result?.results) || data.result.results.length === 0) {
+      return reply("❌ No results found.");
+    }
+
+    const results = data.result.results.slice(0, 10); // max 10
+    const list = results.map((r, i) => `${i + 1}. ${r.title} (${r.siteName})`).join("\n");
+    const caption = `🦁 *Brave Search: ${q}*\n\n${list}\n\n📌 Reply with a number to preview the link.`;
+
+    const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+    const messageId = sent.key.id;
+
+    client.ev.on("messages.upsert", async (update) => {
+      const msg = update.messages[0];
+      if (!msg.message) return;
+
+      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      const chatId = msg.key.remoteJid;
+
+      if (!isReply) return;
+
+      const index = parseInt(responseText.trim()) - 1;
+      const selected = results[index];
+
+      if (!selected || !selected.title || !selected.url) {
+        return client.sendMessage(chatId, {
+          text: "❌ Invalid number. Reply with a valid result number.",
+          quoted: msg
+        });
+      }
+
+      const preview = `🔗 *${selected.title}*\n${selected.description || "No description"}\n\n🌐 ${selected.url}`;
+      await client.sendMessage(chatId, { text: preview }, { quoted: msg });
+    });
+  } catch (err) {
+    console.error("brave error:", err);
+    reply("❌ Error fetching Brave results: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
