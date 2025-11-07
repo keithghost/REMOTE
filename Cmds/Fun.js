@@ -16,6 +16,27 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "inspirobot",
+  aliases: ["inspireimg", "quoteimage"],
+  description: "Send a surreal inspirobot image",
+  category: "fun",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek } = conText;
+
+  try {
+    const imageUrl = (await axios.get("https://apiskeith.vercel.app/random/inspirobot")).data;
+    if (!imageUrl) return;
+
+    await client.sendMessage(from, {
+      image: { url: imageUrl }
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("inspirobot error:", err);
+  }
+});
 //========================================================================================================================
 
 
