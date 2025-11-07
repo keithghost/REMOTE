@@ -5,6 +5,98 @@ const path = require('path');
 const FormData = require('form-data');
 const mime = require('mime-types');
 
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//==============================================================================
+
+
+keith({
+  pattern: "bibleai",
+  aliases: ["bible", "scripture"],
+  description: "Ask Bible-based questions and get answers with references",
+  category: "Ai",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("📖 Ask a Bible question.\n\nExample: bibleai what is faith");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/bible?q=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !data.result?.results?.data?.answer) {
+      return reply("❌ No Bible answer found for that query.");
+    }
+
+    const answer = data.result.results.data.answer;
+    const sources = data.result.results.data.sources;
+
+    const caption = `📖 *${q}*\n\n${answer}\n\n📌 *Sources:* Reply with a number to view\n` +
+      sources.map((src, i) => {
+        if (src.type === "verse") return `${i + 1}. 📜 ${src.text}`;
+        if (src.type === "article") return `${i + 1}. 📘 ${src.title}`;
+      }).join("\n");
+
+    const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+    const messageId = sent.key.id;
+
+    client.ev.on("messages.upsert", async (update) => {
+      const msg = update.messages[0];
+      if (!msg.message) return;
+
+      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      const chatId = msg.key.remoteJid;
+
+      if (!isReply) return;
+
+      const index = parseInt(responseText.trim()) - 1;
+      const selected = sources[index];
+
+      if (!selected) {
+        return client.sendMessage(chatId, {
+          text: "❌ Invalid number. Please reply with a valid source number.",
+          quoted: msg
+        });
+      }
+
+      await client.sendMessage(chatId, { react: { text: "📖", key: msg.key } });
+
+      if (selected.type === "verse") {
+        await client.sendMessage(chatId, {
+          text: `📜 *${selected.text}*\nReference: ${selected.bcv.referenceLong}`,
+          quoted: msg
+        });
+      } else if (selected.type === "article") {
+        await client.sendMessage(chatId, {
+          image: { url: selected.image },
+          caption: `📘 *${selected.title}*\n\n${selected.text}\n\n🔗 ${selected.url}`
+        }, { quoted: msg });
+      }
+    });
+  } catch (err) {
+    console.error("bibleai error:", err);
+    reply("❌ Error fetching Bible answer: " + err.message);
+  }
+});
+
+
+
 function getMediaType(quoted) {
   if (quoted.imageMessage) return "image";
   if (quoted.videoMessage) return "video";
