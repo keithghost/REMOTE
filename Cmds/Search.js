@@ -11,6 +11,41 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "google",
+  aliases: ["googlesearch", "searchgoogle"],
+  description: "Search Google results and preview links",
+  category: "search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("🔍 Type a keyword to search Google.\n\nExample: google cat");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/search/google?q=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !Array.isArray(data.result?.items) || data.result.items.length === 0) {
+      return reply("❌ No results found.");
+    }
+
+    const { formattedTotalResults, formattedSearchTime } = data.result.searchInformation;
+    const results = data.result.items.slice(0, 10);
+
+    const list = results.map((r, i) =>
+      `🔹 *${i + 1}. ${r.title}*\n${r.snippet || "No description"}\n🌐 ${r.link}`
+    ).join("\n\n");
+
+    const caption = `🔎 *Google Search: ${q}*\n📄 Results: ${formattedTotalResults}\n⏱️ Time: ${formattedSearchTime} seconds\n\n${list}`;
+
+    await client.sendMessage(from, { text: caption }, { quoted: mek });
+  } catch (err) {
+    console.error("google error:", err);
+    reply("❌ Error fetching Google results: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
@@ -50,8 +85,6 @@ keith({
 
 //========================================================================================================================
 
-const { keith } = require('../commandHandler');
-const axios = require('axios');
 
 keith({
   pattern: "wagroup",
