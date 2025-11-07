@@ -16,6 +16,50 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "pintereststalk",
+  aliases: ["pinstalk", "pinuser"],
+  description: "Stalk Pinterest user profile by username",
+  category: "stalker",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("❌ Provide a Pinterest username.\n\nExample: pinterest keithkeizzah");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/stalker/pinterest?q=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !data.result?.data) {
+      return reply("❌ Failed to fetch Pinterest profile. Make sure the username is correct.");
+    }
+
+    const user = data.result.data;
+    const caption = `📌 *Pinterest Profile: ${user.username}*\n\n` +
+      `👤 Name: ${user.full_name || "—"}\n` +
+      `📝 Bio: ${user.bio || "—"}\n` +
+      `🔗 Profile: ${user.profile_url}\n` +
+      `🌐 Website: ${user.website || "—"}\n` +
+      `📅 Created: ${user.created_at}\n\n` +
+      `📊 *Stats*\n` +
+      `📌 Pins: ${user.stats.pins}\n` +
+      `📁 Boards: ${user.stats.boards}\n` +
+      `❤️ Likes: ${user.stats.likes}\n` +
+      `💾 Saves: ${user.stats.saves}\n` +
+      `👥 Followers: ${user.stats.followers}\n` +
+      `➡️ Following: ${user.stats.following}`;
+
+    await client.sendMessage(from, {
+      image: { url: user.image.original },
+      caption
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("pinterest error:", err);
+    reply("❌ Error fetching Pinterest data: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
