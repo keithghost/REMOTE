@@ -13,6 +13,98 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "wagroup",
+  aliases: ["groupsearch", "whatsappgroup"],
+  description: "Search and join WhatsApp groups by category",
+  category: "search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("🔍 Type a keyword to search WhatsApp groups.\n\nExample: wagroup football");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/search/whatsappgroup?q=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.success || !Array.isArray(data.results) || data.results.length === 0) {
+      return reply("❌ No group categories found.");
+    }
+
+    const list = data.results.map((g, i) => `${i + 1}. ${g.title}`).join("\n");
+    const caption = `📱 *Group Categories for:* _${q}_\n\n${list}\n\n📌 Reply with a number to view group links.`;
+
+    const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+    const messageId = sent.key.id;
+
+    client.ev.on("messages.upsert", async (update) => {
+      const msg = update.messages[0];
+      if (!msg.message) return;
+
+      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      const chatId = msg.key.remoteJid;
+
+      if (!isReply) return;
+
+      const index = parseInt(responseText.trim()) - 1;
+      const selected = data.results[index];
+
+      if (!selected) {
+        return client.sendMessage(chatId, {
+          text: "❌ Invalid number. Reply with a valid group category number.",
+          quoted: msg
+        });
+      }
+
+      await client.sendMessage(chatId, { react: { text: "📥", key: msg.key } });
+
+      try {
+        const linkRes = await axios.get(`https://apiskeith.vercel.app/fetch/wagrouplink?url=${encodeURIComponent(selected.url)}`);
+        const linkData = linkRes.data;
+
+        if (!linkData.success || !linkData.result) {
+          return client.sendMessage(chatId, {
+            text: `❌ Couldn't fetch group links for ${selected.title}.`,
+            quoted: msg
+          });
+        }
+
+        const lines = linkData.result.split("\n").slice(0, 10); // max 10 links
+        for (const line of lines) {
+          const match = line.match(/Link - (https:\/\/chat\.whatsapp\.com\/invite\/\S+)/);
+          if (!match) continue;
+
+          const url = match[1];
+          const title = line.split("–")[0].replace(/^\d+\)\s*/, "").trim();
+
+          await client.sendMessage(chatId, {
+            text: title,
+            contextInfo: {
+              externalAdReply: {
+                title: title,
+                body: "WhatsApp Group Invite",
+                mediaType: 1,
+                sourceUrl: url
+              }
+            }
+          }, { quoted: msg });
+        }
+      } catch (err) {
+        console.error("wagroup fetch error:", err);
+        await client.sendMessage(chatId, {
+          text: "❌ Error fetching group links: " + err.message,
+          quoted: msg
+        });
+      }
+    });
+  } catch (err) {
+    console.error("wagroup search error:", err);
+    reply("❌ Error searching group categories: " + err.message);
+  }
+});
 //========================================================================================================================
 
 
