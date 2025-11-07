@@ -10,6 +10,38 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "news",
+  aliases: ["headlines", "latestnews"],
+  description: "Get the latest news headlines for any topic",
+  category: "search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("📰 Type a topic to get the latest news.\n\nExample: .news Kenya");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/search/google?q=${encodeURIComponent(q + " latest news")}`);
+    const data = res.data;
+
+    if (!data.status || !Array.isArray(data.result?.items) || data.result.items.length === 0) {
+      return reply("❌ No recent news found.");
+    }
+
+    const results = data.result.items.slice(0, 10);
+    const list = results.map((r, i) =>
+      `🗞️ *${i + 1}. ${r.title}*\n${r.snippet || "No summary"}\n🌐 ${r.link}`
+    ).join("\n\n");
+
+    const caption = `📰 *Latest News: ${q}*\n\n${list}`;
+    await client.sendMessage(from, { text: caption }, { quoted: mek });
+  } catch (err) {
+    console.error("news error:", err);
+    reply("❌ Error fetching news: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
