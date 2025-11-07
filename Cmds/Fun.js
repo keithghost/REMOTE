@@ -17,6 +17,31 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "neverhaveiever",
+  aliases: ["nhie", "neverever"],
+  description: "Get a random 'Never Have I Ever' prompt",
+  category: "fun",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply } = conText;
+
+  try {
+    const res = await axios.get("https://apiskeith.vercel.app/fun/never-have-i-ever");
+    const data = res.data;
+
+    if (!data.status || !data.result) {
+      return reply("❌ Failed to fetch a prompt.");
+    }
+
+    reply(data.result);
+  } catch (err) {
+    console.error("neverhaveiever error:", err);
+    reply("❌ Error fetching prompt: " + err.message);
+  }
+});
 //========================================================================================================================
 
 
