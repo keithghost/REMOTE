@@ -1,6 +1,5 @@
-
 const { keith } = require('../commandHandler');
-const { generateWAMessageFromContent, generateWAMessageContent, proto } = require('gifted-btns');
+const { generateWAMessageFromContent, generateWAMessageContent, proto } = require('@whiskeysockets/baileys');
 
 keith({
   pattern: "catalogbtn",
