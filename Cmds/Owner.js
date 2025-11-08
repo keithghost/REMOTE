@@ -33,7 +33,30 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
-//========================================================================================================================
+//=====================================my===================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "clear",
+  aliases: [],
+  description: "Clear the last message (mods only)",
+  category: "Mods",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("You do not have permission for this command");
+
+  await client.chatModify({
+    delete: true,
+    lastMessages: [{
+      key: mek.key,
+      messageTimestamp: mek.messageTimestamp
+    }]
+  }, from);
+
+  reply("The chat has been cleared.");
+});
 //========================================================================================================================
 
 
