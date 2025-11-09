@@ -297,6 +297,229 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
+  pattern: "botname",
+  aliases: ["setbotname"],
+  category: "Settings",
+  description: "Change bot display name"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newName = q?.trim();
+
+  if (!newName) {
+    const settings = await getSettings();
+    return reply(
+      `🤖 Bot Name\n\n` +
+      `🔹 Current Name: ${settings.botname}\n\n` +
+      `Usage: ${settings.prefix}botname <new_name>`
+    );
+  }
+
+  if (newName.length > 50) {
+    return reply("❌ Bot name must be less than 50 characters!");
+  }
+
+  try {
+    await updateSettings({ botname: newName });
+    conText.botSettings.botname = newName;
+    return reply(`✅ Bot name changed to: ${newName}`);
+  } catch (error) {
+    return reply("❌ Failed to update bot name!");
+  }
+});
+//========================================================================================================================
+
+keith({
+  pattern: "author",
+  aliases: ["setauthor"],
+  category: "Settings",
+  description: "Change bot author name"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newAuthor = q?.trim();
+
+  if (!newAuthor) {
+    const settings = await getSettings();
+    return reply(
+      `👤 Bot Author\n\n` +
+      `🔹 Current Author: ${settings.author}\n\n` +
+      `Usage: ${settings.prefix}author <new_author>`
+    );
+  }
+
+  if (newAuthor.length > 30) {
+    return reply("❌ Author name must be less than 30 characters!");
+  }
+
+  try {
+    await updateSettings({ author: newAuthor });
+    conText.botSettings.author = newAuthor;
+    return reply(`✅ Author changed to: ${newAuthor}`);
+  } catch (error) {
+    return reply("❌ Failed to update author!");
+  }
+});
+//========================================================================================================================
+
+keith({
+  pattern: "packname",
+  aliases: ["setpackname"],
+  category: "Settings",
+  description: "Change sticker pack name"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newPackname = q?.trim();
+
+  if (!newPackname) {
+    const settings = await getSettings();
+    return reply(
+      `🖼️ Sticker Pack Name\n\n` +
+      `🔹 Current Packname: ${settings.packname}\n\n` +
+      `Usage: ${settings.prefix}packname <new_packname>`
+    );
+  }
+
+  if (newPackname.length > 30) {
+    return reply("❌ Packname must be less than 30 characters!");
+  }
+
+  try {
+    await updateSettings({ packname: newPackname });
+    conText.botSettings.packname = newPackname;
+    return reply(`✅ Packname changed to: ${newPackname}`);
+  } catch (error) {
+    return reply("❌ Failed to update packname!");
+  }
+});
+//========================================================================================================================
+
+keith({
+  pattern: "timezone",
+  aliases: ["settimezone"],
+  category: "Settings",
+  description: "Change bot timezone"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newTimezone = q?.trim();
+
+  if (!newTimezone) {
+    const settings = await getSettings();
+    return reply(
+      `🌍 Bot Timezone\n\n` +
+      `🔹 Current Timezone: ${settings.timezone}\n\n` +
+      `Usage: ${settings.prefix}timezone <new_timezone>\n\n` +
+      `Example: ${settings.prefix}timezone Africa/Nairobi`
+    );
+  }
+
+  // Basic timezone validation
+  try {
+    new Date().toLocaleString("en-US", { timeZone: newTimezone });
+  } catch (error) {
+    return reply("❌ Invalid timezone! Please use a valid IANA timezone.");
+  }
+
+  try {
+    await updateSettings({ timezone: newTimezone });
+    conText.botSettings.timezone = newTimezone;
+    return reply(`✅ Timezone changed to: ${newTimezone}`);
+  } catch (error) {
+    return reply("❌ Failed to update timezone!");
+  }
+});
+//========================================================================================================================
+
+keith({
+  pattern: "botpic",
+  aliases: ["boturl", "botprofile"],
+  category: "Settings",
+  description: "Change bot profile picture URL"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newUrl = q?.trim();
+
+  if (!newUrl) {
+    const settings = await getSettings();
+    return reply(
+      `🖼️ Bot Picture URL\n\n` +
+      `🔹 Current URL: ${settings.url || 'Not Set'}\n\n` +
+      `Usage: ${settings.prefix}url <image_url>`
+    );
+  }
+
+  // Basic URL validation
+  if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+    return reply("❌ Invalid URL! Must start with http:// or https://");
+  }
+
+  try {
+    await updateSettings({ url: newUrl });
+    conText.botSettings.url = newUrl;
+    return reply(`✅ Profile picture URL updated!`);
+  } catch (error) {
+    return reply("❌ Failed to update URL!");
+  }
+});
+//========================================================================================================================
+
+keith({
+  pattern: "boturl",
+  aliases: ["setboturl", "seturl"],
+  category: "Settings",
+  description: "Change bot GitHub/repo URL"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  const newGurl = q?.trim();
+
+  if (!newGurl) {
+    const settings = await getSettings();
+    return reply(
+      `🔗 Bot URL\n\n` +
+      `🔹 Current URL: ${settings.gurl || 'Not Set'}\n\n` +
+      `Usage: ${settings.prefix}gurl <github_repo_url>`
+    );
+  }
+
+  // Basic URL validation
+  if (!newGurl.startsWith('http://') && !newGurl.startsWith('https://')) {
+    return reply("❌ Invalid URL! Must start with http:// or https://");
+  }
+
+  try {
+    await updateSettings({ gurl: newGurl });
+    conText.botSettings.gurl = newGurl;
+    return reply(`✅ GitHub/Repo URL updated!`);
+  } catch (error) {
+    return reply("❌ Failed to update GitHub URL!");
+  }
+});
+//========================================================================================================================
+      
+//========================================================================================================================
+keith({
   pattern: "mode",
   aliases: ["setmode"],
   category: "Settings",
