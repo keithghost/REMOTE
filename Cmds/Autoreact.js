@@ -17,6 +17,47 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "fruit",
+  aliases: ["fruitinfo", "nutrition"],
+  description: "🍋 Get nutritional and botanical info about a fruit",
+  category: "Education",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) {
+    return reply("🍎 Type a fruit name to look up.\n\nExample: fruit lemon");
+  }
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/education/fruit?q=${encodeURIComponent(q)}`);
+    const data = res.data;
+
+    if (!data.status || !data.result) {
+      return reply("❌ No fruit data found.");
+    }
+
+    const { name, family, genus, order, nutritions } = data.result;
+
+    const caption = `🍇 *${name}*\n` +
+      `🌿 Family: ${family}\n` +
+      `🌱 Genus: ${genus}\n` +
+      `🌾 Order: ${order}\n\n` +
+      `🥗 *Nutrition per 100g:*\n` +
+      `• Calories: ${nutritions.calories} kcal\n` +
+      `• Fat: ${nutritions.fat} g\n` +
+      `• Sugar: ${nutritions.sugar} g\n` +
+      `• Carbs: ${nutritions.carbohydrates} g\n` +
+      `• Protein: ${nutritions.protein} g`;
+
+    reply(caption);
+  } catch (err) {
+    console.error("fruit error:", err);
+    reply("❌ Error fetching fruit info: " + err.message);
+  }
+});
 //========================================================================================================================
 
 
