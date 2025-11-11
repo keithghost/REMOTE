@@ -18,6 +18,74 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+const examples = {
+  simplify: "math simplify 2^2+2(2)",
+  factor: "math factor x^2-1",
+  derive: "math derive x^2+2x",
+  integrate: "math integrate x^2+2x",
+  zeroes: "math zeroes x^2+2x",
+  tangent: "math tangent 2|x^3",
+  area: "math area x^3|2|4",
+  cos: "math cos pi",
+  sin: "math sin 0",
+  tan: "math tan 0",
+  arccos: "math arccos 1",
+  arcsin: "math arcsin 0",
+  arctan: "math arctan 0",
+  abs: "math abs -1",
+  log: "math log 2|8"
+};
+
+const validOps = Object.keys(examples);
+
+keith({
+  pattern: "math",
+  aliases: ["calc", "solve"],
+  description: "🧮 Perform math operations like simplify, derive, factor, etc.",
+  category: "Education",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) {
+    const usage = Object.entries(examples)
+      .map(([op, ex]) => `🔹 ${op} → _${ex}_`)
+      .join("\n");
+
+    return reply(
+      `📚 Provide an operation and expression.\n\n` +
+      `Example usage:\n${usage}`
+    );
+  }
+
+  const [op, ...exprParts] = q.split(" ");
+  const expr = exprParts.join(" ");
+
+  if (!validOps.includes(op)) {
+    return reply(`❌ Invalid operation: *${op}*\n\nValid options:\n${validOps.join(", ")}`);
+  }
+
+  if (!expr) {
+    return reply(`✏️ Provide an expression to ${op}.\n\nExample:\n${examples[op]}`);
+  }
+
+  try {
+    const url = `https://apiskeith.vercel.app/math/${op}?expr=${encodeURIComponent(expr)}`;
+    const res = await axios.get(url);
+    const data = res.data;
+
+    if (!data.status || !data.result) {
+      return reply(`❌ Failed to ${op} expression.`);
+    }
+
+    reply(`🧮 *${op.toUpperCase()}*\n📥 Expression: ${data.expression}\n📤 Result: ${data.result}`);
+  } catch (err) {
+    console.error("math error:", err);
+    reply("❌ Error: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
