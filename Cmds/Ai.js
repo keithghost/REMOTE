@@ -20,13 +20,42 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "wormgpt",
+  aliases: ["wgpt", "evilgpt"],
+  category: "ai",
+  description: "Interact with WormGPT API"
+},
+async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query, e.g. .wormgpt hi");
+
+  try {
+    // Call WormGPT API
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/wormgpt?q=${encodeURIComponent(q)}`);
+
+    if (!res.data || !res.data.status) {
+      return reply("❌ WormGPT API returned an invalid response.");
+    }
+
+    const output = res.data.result;
+
+    // Reply with the result
+    reply(output);
+  } catch (err) {
+    console.error("wormgpt Error:", err);
+    reply("❌ Failed to fetch WormGPT response: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
   pattern: "bibleai",
   aliases: ["aibible", "scripture"],
   description: "Ask Bible-based questions and get answers with references",
-  category: "search",
+  category: "ai",
   filename: __filename
 }, async (from, client, conText) => {
   const { q, reply, mek } = conText;
