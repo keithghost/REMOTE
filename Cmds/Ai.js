@@ -18,7 +18,93 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "speechwriter",
+  aliases: ["speech", "writer"],
+  category: "ai",
+  description: "Generate a speech using the Speechwriter API"
+},
+async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) {
+    return reply("❌ Provide parameters, e.g. .speechwriter topic=how to pass examination length=short type=dedication tone=serious");
+  }
+
+  try {
+    // Parse query string into params
+    const params = {};
+    q.split(" ").forEach(part => {
+      const [key, ...rest] = part.split("=");
+      if (key && rest.length) {
+        params[key.toLowerCase()] = rest.join("=");
+      }
+    });
+
+    if (!params.topic) return reply("❌ Missing 'topic' parameter.");
+    if (!params.length) params.length = "short";
+    if (!params.type) params.type = "dedication";
+    if (!params.tone) params.tone = "serious";
+
+    // Build API URL
+    const url = `https://apiskeith.vercel.app/ai/speechwriter?topic=${encodeURIComponent(params.topic)}&length=${params.length}&type=${params.type}&tone=${params.tone}`;
+
+    // Call API
+    const res = await axios.get(url);
+
+    if (!res.data || !res.data.status || !res.data.result?.data?.data?.speech) {
+      return reply("❌ Speechwriter API returned an invalid response.");
+    }
+
+    const speech = res.data.result.data.data.speech;
+
+    // Reply with the speech
+    reply(speech);
+  } catch (err) {
+    console.error("speechwriter Error:", err);
+    reply("❌ Failed to fetch speech: " + err.message);
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "muslimai",
+  aliases: ["muslim", "quranai"],
+  category: "ai",
+  description: "Query MuslimAI API for Qur'anic references"
+},
+async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query, e.g. .muslimai who is Allah");
+
+  try {
+    // Call MuslimAI API
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/muslim?q=${encodeURIComponent(q)}`);
+
+    if (!res.data || !res.data.status || !res.data.result) {
+      return reply("❌ MuslimAI API returned an invalid response.");
+    }
+
+    const results = res.data.result.results;
+
+    if (!results || results.length === 0) {
+      return reply("ℹ️ No relevant verses found.");
+    }
+
+    // Format top 3 results
+    let output = `📖 *MuslimAI Results for:* ${res.data.result.query}\n\n`;
+    results.slice(0, 3).forEach((r, i) => {
+      output += `*${i + 1}. Surah ${r.surah_title}*\n${r.content.trim()}\n🔗 ${r.surah_url}\n\n`;
+    });
+
+    reply(output.trim());
+  } catch (err) {
+    console.error("muslimai Error:", err);
+    reply("❌ Failed to fetch MuslimAI response: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
