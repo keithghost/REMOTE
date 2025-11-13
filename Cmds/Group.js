@@ -35,6 +35,11 @@ const fs = require('fs');
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
+
+//========================================================================================================================
+
+//const { keith } = require('../commandHandler');
+
 keith({
   pattern: "gcdesc",
   aliases: ["setdesc", "groupdesc", "gcdescription"],
@@ -42,27 +47,23 @@ keith({
   description: "Update group description"
 },
 async (from, client, conText) => {
-  const { reply, isSuperUser, isGroup, isBotAdmin, args } = conText;
+  const { q, reply, isSuperUser, isGroup, isBotAdmin } = conText;
 
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return reply("❌ This command only works in groups!");
   if (!isBotAdmin) return reply("❌ Bot must be admin to update group description.");
+  if (!q) return reply("✏️ Provide a new description text after the command.");
 
   try {
-    // Ensure description text is provided
-    const newDescription = args.join(" ");
-    if (!newDescription) return reply("✏️ Provide a new description text.");
-
-    // Update group description
-    await client.groupUpdateDescription(from, newDescription);
-
-    reply(`✅ Group description updated to:\n${newDescription}`);
+    await client.groupUpdateDescription(from, q.trim());
+    reply(`✅ Group description updated to:\n${q.trim()}`);
   } catch (err) {
     console.error("gcdesc Error:", err);
     reply("❌ Failed to update group description: " + err.message);
   }
 });
 //========================================================================================================================
+
 
 keith({
   pattern: "groupname",
@@ -71,67 +72,19 @@ keith({
   description: "Update group subject/title"
 },
 async (from, client, conText) => {
-  const { reply, isSuperUser, isGroup, isBotAdmin, args } = conText;
+  const { q, reply, isSuperUser, isGroup, isBotAdmin } = conText;
 
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return reply("❌ This command only works in groups!");
   if (!isBotAdmin) return reply("❌ Bot must be admin to update group subject.");
+  if (!q) return reply("✏️ Provide a new subject text after the command.");
 
   try {
-    // Ensure subject text is provided
-    const newSubject = args.join(" ");
-    if (!newSubject) return reply("✏️ Provide a new subject text.");
-
-    // Update group subject
-    await client.groupUpdateSubject(from, newSubject);
-
-    reply(`✅ Group subject updated to: *${newSubject}*`);
+    await client.groupUpdateSubject(from, q.trim());
+    reply(`✅ Group subject updated to: *${q.trim()}*`);
   } catch (err) {
     console.error("gcsubject Error:", err);
     reply("❌ Failed to update group subject: " + err.message);
-  }
-});
-//========================================================================================================================
-
-keith({
-  pattern: "promoteall",
-  aliases: ["makeadmins", "elevateall"],
-  category: "group",
-  description: "Promote all group participants to admin"
-},
-async (from, client, conText) => {
-  const { reply, isSuperUser, isGroup, isBotAdmin, isSuperAdmin, mek } = conText;
-
-  if (!isSuperUser) return reply("❌ Owner Only Command!");
-  if (!isGroup) return reply("❌ This command only works in groups!");
-  if (!isBotAdmin) return reply("❌ Bot must be admin to promote others.");
-
-  try {
-    // Fetch group metadata
-    const metadata = await client.groupMetadata(from);
-
-    // Collect all participants
-    const participants = metadata.participants.map(p => p.id);
-
-    // Filter out super admin and bot itself
-    const promoteIds = participants.filter(id => id !== isSuperAdmin && !id.includes(client.user.id));
-
-    if (promoteIds.length === 0) {
-      return reply("ℹ️ No participants found to promote.");
-    }
-
-    // Promote all in one batch
-    await client.groupParticipantsUpdate(from, promoteIds, 'promote');
-
-    // Confirmation message
-    await client.sendMessage(from, {
-      text: `🔺 All participants have been promoted to admin (${promoteIds.length}).`,
-      mentions: promoteIds
-    }, { quoted: mek });
-
-  } catch (err) {
-    console.error("PromoteAll Error:", err);
-    reply("❌ Failed to promote participants: " + err.message);
   }
 });
 //========================================================================================================================
@@ -1033,6 +986,7 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
 
 
 
