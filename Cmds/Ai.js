@@ -17,6 +17,39 @@ const mime = require('mime-types');
 //========================================================================================================================
 
 
+keith({
+  pattern: "sora",
+  aliases: ["text2video", "t2v"],
+  category: "AI",
+  description: "Generate video from text using Sora API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("❌ Provide a query, e.g. .sora monkey running");
+  }
+
+  try {
+    const apiUrl = `https://apiskeith.vercel.app/text2video?q=${encodeURIComponent(q)}`;
+    const response = await axios.get(apiUrl, { timeout: 120000 });
+    const result = response.data?.results;
+
+    if (!result) {
+      return reply("❌ No video result found.");
+    }
+
+    await client.sendMessage(from, {
+      video: { url: result },
+      mimetype: "video/mp4",
+      caption: `result for: ${q}`
+    }, { quoted: mek });
+
+  } catch (error) {
+    console.error("Sora error:", error);
+    reply("❌ Failed to fetch Sora video: " + error.message);
+  }
+});
 
 //========================================================================================================================
 
