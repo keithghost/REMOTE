@@ -15,6 +15,36 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "sora",
+  aliases: ["text2video", "t2v"],
+  category: "ai",
+  description: "Generate a video using Sora text-to-video API"
+},
+async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query, e.g. .sora monkey running");
+
+  try {
+    // Call Sora API
+    const res = await axios.get(`https://apiskeith.vercel.app/text2video?q=${encodeURIComponent(q)}`);
+
+    if (!res.data || !res.data.success || !res.data.results) {
+      return reply("❌ Sora API returned an invalid response.");
+    }
+
+    const videoUrl = res.data.results;
+
+    // Reply with video link
+    reply(`🎬 *Sora Result for:* ${q}\n${videoUrl}`);
+  } catch (err) {
+    console.error("sora Error:", err);
+    reply("❌ Failed to fetch Sora video: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
