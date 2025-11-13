@@ -29,22 +29,8 @@ const fetchLogoUrl = async (url, name) => {
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
-//========================================================================================================================
 keith({
-  pattern: "lighteffect",
+  pattern: "blackpink",
   category: "ephoto",
   description: "Generate text logo using Ephoto API"
 },
@@ -57,7 +43,442 @@ async (from, client, conText) => {
 
   try {
     const logoUrl = await fetchLogoUrl(
-      "https://en.ephoto360.com/light-text-effect-futuristic-technology-style-648.html",
+      "https://en.ephoto360.com/online-blackpink-style-logo-maker-effect-711.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "1917",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/1917-style-text-effect-523.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "advancedglow",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/advanced-glow-effects-74.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "cartoonstyle",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-a-cartoon-style-graffiti-text-effect-online-668.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "deletetext",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-eraser-deleting-text-effect-online-717.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "dragonball",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-dragon-ball-style-text-effects-online-809.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "cloudeffect",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/write-text-effect-clouds-in-the-sky-online-619.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "galaxy",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-galaxy-style-free-name-logo-438.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "galaxywallpaper",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-galaxy-wallpaper-mobile-online-528.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "glitch",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-digital-glitch-text-effects-online-767.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+
+//========================================================================================================================
+keith({
+  pattern: "glowingtext",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-glowing-text-effects-online-706.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "gradient",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-3d-gradient-text-effect-online-600.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "graffitipaint",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/cute-girl-painting-graffiti-text-effect-667.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "greenneon",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-light-effects-green-neon-online-429.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        image: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "hologram",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/free-create-a-3d-hologram-text-effect-441.html",
       q
     );
 
