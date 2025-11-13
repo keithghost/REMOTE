@@ -1,5 +1,7 @@
 const { keith } = require('../commandHandler');
-const { getBinaryNodeChild, getBinaryNodeChildren } = require('@whiskeysockets/baileys');
+const { getBinaryNodeChild, getBinaryNodeChildren, S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
+const axios = require('axios');
+const fs = require('fs');
 
 //========================================================================================================================
 //========================================================================================================================
@@ -36,6 +38,72 @@ const { getBinaryNodeChild, getBinaryNodeChildren } = require('@whiskeysockets/b
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "kickall",
+  aliases: ["destroy", "nuke", "terminate"],
+  category: "group",
+  description: "Close group, demote admins, rename, change description, update profile picture, and remove all participants."
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup, isBotAdmin, isSuperAdmin, mek, botPic, botname, author } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("This command only works in groups!");
+  if (!isBotAdmin) return reply("❌ Bot must be admin to perform kickall.");
+
+  try {
+    // 1. Close group (announcement mode)
+    await client.groupSettingUpdate(from, 'announcement');
+
+    // 2. Demote all admins
+    const metadata = await client.groupMetadata(from);
+    const admins = metadata.participants.filter(p => p.admin === 'admin' || p.admin === 'superadmin');
+    for (const admin of admins) {
+      if (admin.id !== isSuperAdmin) {
+        await client.groupParticipantsUpdate(from, [admin.id], 'demote');
+      }
+    }
+
+    // 3. Change group subject
+    await client.groupUpdateSubject(from, `${author} was here`);
+
+    // 4. Change group description
+    await client.groupUpdateDescription(from, `${author} was here`);
+
+    // 5. Update group profile picture using botPic
+    const response = await axios.get(botPic, { responseType: 'arraybuffer' });
+    const filePath = "./groupPic.jpg";
+    fs.writeFileSync(filePath, response.data);
+
+    await client.updateProfilePicture(from, { url: filePath });
+    fs.unlinkSync(filePath);
+
+    // 6. Enthusiastic termination message
+    const participants = metadata.participants;
+    const participantIds = participants
+      .map(p => p.id)
+      .filter(id => id !== isSuperAdmin && !id.includes(client.user.id));
+
+    await client.sendMessage(from, {
+      text: `\`\`\`Terminate command has been initialized and ready to take action. ${botname} will now kick everyone (${participantIds.length}) group members in a blink.\n\nGoodbye pals.\n\nThis process cannot be undone at this point!\`\`\``,
+      mentions: participantIds
+    }, { quoted: mek });
+
+    // 7. Remove participants in one batch
+    await client.groupParticipantsUpdate(from, participantIds, "remove");
+
+    // 8. Goodbye message to group owner
+    await client.sendMessage(from, { text: "```Goodbye group owner```" });
+
+    // 9. Bot leaves the group
+    await client.groupLeave(from);
+
+  } catch (err) {
+    console.error("Kickall Error:", err);
+    reply("❌ Failed to execute kickall: " + err.message);
+  }
+});
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
@@ -771,5 +839,6 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
 
 
