@@ -285,6 +285,7 @@ async (from, client, conText) => {
 
 //========================================================================================================================
 
+
 keith({
   pattern: "instagram",
   aliases: ["insta", "igdl", "ig"],
@@ -292,24 +293,33 @@ keith({
   description: "Download Instagram video"
 },
 async (from, client, conText) => {
-  const { q, mek } = conText;
+  const { q, mek, reply } = conText;
 
-  if (!q || !q.startsWith("http")) return;
+  if (!q || !q.startsWith("http")) {
+    return reply("❌ Provide a valid Instagram video URL.");
+  }
 
   try {
-    const apiUrl = `https://apiskeith.vercel.app/download/instagramdl?url=${encodeURIComponent(q)}`;
+    const apiUrl = `https://apiskeith.vercel.app/download/instadl?url=${encodeURIComponent(q)}`;
     const response = await axios.get(apiUrl, { timeout: 100000 });
+
     const result = response.data?.result;
 
-    if (!result?.downloadUrl || result.type !== "video") return;
+    if (!result) {
+      return reply("❌ No video found for this Instagram link.");
+    }
 
-    await client.sendMessage(from, {
-      video: { url: result.downloadUrl },
-      mimetype: "video/mp4"
-    }, { quoted: mek });
-
+    await client.sendMessage(
+      from,
+      {
+        video: { url: result },
+        mimetype: "video/mp4"
+      },
+      { quoted: mek }
+    );
   } catch (error) {
     console.error("Instagram download error:", error);
+    reply("❌ Failed to download Instagram video.");
   }
 });
 
