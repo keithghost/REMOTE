@@ -463,8 +463,6 @@ async (from, client, conText) => {
 //========================================================================================================================
 
 
-
-
 keith({
   pattern: "tiktok",
   aliases: ["ttdl", "tt"],
@@ -472,29 +470,39 @@ keith({
   description: "Download video from TikTok"
 },
 async (from, client, conText) => {
-  const { q, mek } = conText;
+  const { q, mek, reply } = conText;
 
-  if (!q || !q.startsWith("http")) return;
+  if (!q || !q.startsWith("http")) {
+    return reply("❌ Provide a valid TikTok URL.");
+  }
 
   try {
-    const apiUrl = `https://apiskeith.vercel.app/download/tiktokdl4?url=${encodeURIComponent(q)}`;
+    const apiUrl = `https://apiskeith.vercel.app/download/tiktokdl3?url=${encodeURIComponent(q)}`;
     const response = await axios.get(apiUrl, { timeout: 100000 });
+
     const result = response.data?.result;
+    const urls = result?.downloadUrls;
 
-    if (!result?.url || !result?.filename) return;
+    if (!urls || !urls.mp4 || !urls.mp4[0]) {
+      return reply("❌ No SD video found for this TikTok link.");
+    }
 
-    const fileName = result.filename.replace(/[^\w\s.-]/gi, '');
+    const videoUrl = urls.mp4[0];
 
-    await client.sendMessage(from, {
-      video: { url: result.url },
-      mimetype: "video/mp4",
-      fileName
-    }, { quoted: mek });
-
+    await client.sendMessage(
+      from,
+      {
+        video: { url: videoUrl },
+        mimetype: "video/mp4"
+      },
+      { quoted: mek }
+    );
   } catch (error) {
     console.error("TikTok download error:", error);
+    reply("❌ Failed to download TikTok video.");
   }
 });
+
 
 
 //========================================================================================================================
