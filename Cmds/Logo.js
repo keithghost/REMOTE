@@ -25,9 +25,129 @@ const fetchLogoUrl = async (url, name) => {
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "tigervideo",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-digital-tiger-logo-video-effect-723.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        video: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "introvideo",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/free-logo-intro-video-maker-online-558.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        video: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "lightningpubg",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/lightning-pubg-video-logo-maker-online-615.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        video: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "lovevideo",
+  category: "ephoto",
+  description: "Generate text logo using Ephoto API"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("_Please provide text to create logo_");
+  }
+
+  try {
+    const logoUrl = await fetchLogoUrl(
+      "https://en.ephoto360.com/create-sweet-love-video-cards-online-734.html",
+      q
+    );
+
+    if (logoUrl) {
+      await client.sendMessage(from, {
+        video: { url: logoUrl }
+      }, { quoted: mek });
+    } else {
+      reply("_Unable to fetch logo. Please try again later._");
+    }
+  } catch (error) {
+    console.error("Thunder logo command error:", error);
+    reply(`❌ An error occurred:\n${error.message}`);
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "blackpink",
