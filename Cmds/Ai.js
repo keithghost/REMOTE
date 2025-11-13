@@ -16,8 +16,40 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "flux",
+  aliases: ["fluxai", "imageai"],
+  category: "ai",
+  description: "Generate an image using Flux API"
+},
+async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query, e.g. .flux dog");
+
+  try {
+    // Call Flux API (returns raw image)
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/flux?q=${encodeURIComponent(q)}`, {
+      responseType: "arraybuffer"
+    });
+
+    // Save temporarily
+    const filePath = "./flux_img.jpg";
+    fs.writeFileSync(filePath, res.data);
+
+    // Send image to chat
+    await client.sendMessage(from, { image: { url: filePath }, caption: `Flux result for: ${q}` });
+
+    // Clean up
+    fs.unlinkSync(filePath);
+  } catch (err) {
+    console.error("flux Error:", err);
+    reply("❌ Failed to fetch Flux image: " + err.message);
+  }
+});
 //========================================================================================================================
-//========================================================================================================================
+
 
 keith({
   pattern: "speechwriter",
@@ -29,26 +61,17 @@ async (from, client, conText) => {
   const { q, reply } = conText;
 
   if (!q) {
-    return reply("❌ Provide parameters, e.g. .speechwriter topic=how to pass examination length=short type=dedication tone=serious");
+    return reply("❌ Provide a topic, e.g. .speechwriter how to pass exam");
   }
 
   try {
-    // Parse query string into params
-    const params = {};
-    q.split(" ").forEach(part => {
-      const [key, ...rest] = part.split("=");
-      if (key && rest.length) {
-        params[key.toLowerCase()] = rest.join("=");
-      }
-    });
+    // Defaults
+    const length = "short";
+    const type = "dedication";
+    const tone = "serious";
 
-    if (!params.topic) return reply("❌ Missing 'topic' parameter.");
-    if (!params.length) params.length = "short";
-    if (!params.type) params.type = "dedication";
-    if (!params.tone) params.tone = "serious";
-
-    // Build API URL
-    const url = `https://apiskeith.vercel.app/ai/speechwriter?topic=${encodeURIComponent(params.topic)}&length=${params.length}&type=${params.type}&tone=${params.tone}`;
+    // Build API URL with defaults
+    const url = `https://apiskeith.vercel.app/ai/speechwriter?topic=${encodeURIComponent(q)}&length=${length}&type=${type}&tone=${tone}`;
 
     // Call API
     const res = await axios.get(url);
@@ -66,6 +89,7 @@ async (from, client, conText) => {
     reply("❌ Failed to fetch speech: " + err.message);
   }
 });
+
 //========================================================================================================================
 
 keith({
