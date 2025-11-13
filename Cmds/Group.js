@@ -33,10 +33,204 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "gcdesc",
+  aliases: ["setdesc", "groupdesc", "gcdescription"],
+  category: "group",
+  description: "Update group description"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup, isBotAdmin, args } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  if (!isBotAdmin) return reply("❌ Bot must be admin to update group description.");
+
+  try {
+    // Ensure description text is provided
+    const newDescription = args.join(" ");
+    if (!newDescription) return reply("✏️ Provide a new description text.");
+
+    // Update group description
+    await client.groupUpdateDescription(from, newDescription);
+
+    reply(`✅ Group description updated to:\n${newDescription}`);
+  } catch (err) {
+    console.error("gcdesc Error:", err);
+    reply("❌ Failed to update group description: " + err.message);
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "groupname",
+  aliases: ["setsubject", "groupsubject"],
+  category: "group",
+  description: "Update group subject/title"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup, isBotAdmin, args } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  if (!isBotAdmin) return reply("❌ Bot must be admin to update group subject.");
+
+  try {
+    // Ensure subject text is provided
+    const newSubject = args.join(" ");
+    if (!newSubject) return reply("✏️ Provide a new subject text.");
+
+    // Update group subject
+    await client.groupUpdateSubject(from, newSubject);
+
+    reply(`✅ Group subject updated to: *${newSubject}*`);
+  } catch (err) {
+    console.error("gcsubject Error:", err);
+    reply("❌ Failed to update group subject: " + err.message);
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "promoteall",
+  aliases: ["makeadmins", "elevateall"],
+  category: "group",
+  description: "Promote all group participants to admin"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup, isBotAdmin, isSuperAdmin, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  if (!isBotAdmin) return reply("❌ Bot must be admin to promote others.");
+
+  try {
+    // Fetch group metadata
+    const metadata = await client.groupMetadata(from);
+
+    // Collect all participants
+    const participants = metadata.participants.map(p => p.id);
+
+    // Filter out super admin and bot itself
+    const promoteIds = participants.filter(id => id !== isSuperAdmin && !id.includes(client.user.id));
+
+    if (promoteIds.length === 0) {
+      return reply("ℹ️ No participants found to promote.");
+    }
+
+    // Promote all in one batch
+    await client.groupParticipantsUpdate(from, promoteIds, 'promote');
+
+    // Confirmation message
+    await client.sendMessage(from, {
+      text: `🔺 All participants have been promoted to admin (${promoteIds.length}).`,
+      mentions: promoteIds
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("PromoteAll Error:", err);
+    reply("❌ Failed to promote participants: " + err.message);
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "demoteall",
+  aliases: ["demoteadmins", "stripadmins"],
+  category: "group",
+  description: "Demote all group admins"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup, isBotAdmin, isSuperAdmin, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  if (!isBotAdmin) return reply("❌ Bot must be admin to demote others.");
+
+  try {
+    // Fetch group metadata
+    const metadata = await client.groupMetadata(from);
+
+    // Collect all admins
+    const admins = metadata.participants.filter(p => p.admin === 'admin' || p.admin === 'superadmin');
+
+    // Filter out super admin and bot itself
+    const demoteIds = admins
+      .map(a => a.id)
+      .filter(id => id !== isSuperAdmin && !id.includes(client.user.id));
+
+    if (demoteIds.length === 0) {
+      return reply("ℹ️ No admins found to demote.");
+    }
+
+    // Demote all in one batch
+    await client.groupParticipantsUpdate(from, demoteIds, 'demote');
+
+    // Confirmation message
+    await client.sendMessage(from, {
+      text: `🔻 All admins have been demoted (${demoteIds.length}).`,
+      mentions: demoteIds
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("DemoteAll Error:", err);
+    reply("❌ Failed to demote admins: " + err.message);
+  }
+});
 //========================================================================================================================
+
+
+
+keith({
+  pattern: "gcpic",
+  aliases: ["setgcpic", "groupfullpp"],
+  category: "group",
+  description: "Set group profile picture from a quoted image"
+},
+async (from, client, conText) => {
+  const { reply, quoted, isSuperUser, isGroup, isBotAdmin } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  if (!isBotAdmin) return reply("❌ Bot must be an admin to update group profile.");
+
+  let tempFilePath;
+
+  try {
+    // Check if quoted message contains an image
+    const quotedImg = quoted?.imageMessage || quoted?.message?.imageMessage;
+    if (!quotedImg) return reply("📸 Quote an image to set as group profile picture.");
+
+    // Download quoted image
+    tempFilePath = await client.downloadAndSaveMediaMessage(quotedImg, 'temp_media');
+
+    // Resize to fit WhatsApp requirements
+    const image = await Jimp.read(tempFilePath);
+    const resized = await image.scaleToFit(720, 720);
+    const buffer = await resized.getBufferAsync(Jimp.MIME_JPEG);
+
+    // Build IQ node for group profile update
+    const iqNode = {
+      tag: "iq",
+      attrs: { to: S_WHATSAPP_NET, type: "set", xmlns: "w:profile:picture", target: from },
+      content: [{ tag: "picture", attrs: { type: "image" }, content: buffer }]
+    };
+
+    await client.query(iqNode);
+
+    // Clean up
+    await fs.unlink(tempFilePath);
+    reply("✅ Group profile picture updated successfully (full image).");
+
+  } catch (err) {
+    console.error("gcpic error:", err);
+    if (tempFilePath) await fs.unlink(tempFilePath).catch(() => {});
+    reply(`❌ Failed to update group profile picture.\nError: ${err.message}`);
+  }
+});
 //========================================================================================================================
 
 keith({
@@ -839,6 +1033,7 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
 
 
 
