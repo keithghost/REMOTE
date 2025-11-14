@@ -59,7 +59,7 @@ async function uploadToUguu(filePath) {
 //========================================================================================================================
 //========================================================================================================================
 keith({
-  pattern: "countryhouse"
+  pattern: "countryhouse",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -108,7 +108,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "musketeers"
+  pattern: "musketeers",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -157,7 +157,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "jedi"
+  pattern: "jedi",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -206,7 +206,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "knight"
+  pattern: "knight",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -255,7 +255,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "halloween"
+  pattern: "halloween",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -304,7 +304,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "admirer"
+  pattern: "admirer",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -353,7 +353,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "magic"
+  pattern: "magic",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -402,7 +402,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "shopping"
+  pattern: "shopping",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -451,7 +451,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "interior"
+  pattern: "interior",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -500,7 +500,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "shredder"
+  pattern: "shredder",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -549,7 +549,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "woods"
+  pattern: "woods",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -598,7 +598,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "beach"
+  pattern: "beach",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -647,7 +647,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "explorer"
+  pattern: "explorer",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -696,7 +696,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "sepia"
+  pattern: "sepia",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -745,7 +745,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 keith({
-  pattern: "christmas"
+  pattern: "christmas",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
@@ -795,7 +795,7 @@ async (from, client, conText) => {
 
 //========================================================================================================================
 keith({
-  pattern: "sketch"
+  pattern: "sketch",
   category: "photofunia",
   description: "Apply sketch effect to quoted image"
 },
