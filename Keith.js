@@ -1719,7 +1719,8 @@ client.ev.on("connection.update", async (update) => {
     ╭═『 ${currentBotName}══⊷ 
     ║ ᴍᴏᴅᴇ ${currentMode}
     ║ ᴘʀᴇғɪx [ ${currentPrefix} ] 
-    ║ 💔🥺
+    ║ join here👇
+    ║ t.me/keithmd
     ╰═════════════⊷
 `;
 
