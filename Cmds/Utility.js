@@ -14,6 +14,41 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "font",
+  aliases: ["fancytext", "style"],
+  category: "Utility",
+  description: "Generate fancy font styles"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) return reply("❌ Provide text to style, e.g. .font hello");
+
+  try {
+    const apiUrl = `https://apiskeith.vercel.app/fancytext/styles?q=${encodeURIComponent(q)}`;
+    const response = await axios.get(apiUrl, { timeout: 100000 });
+    const styles = response.data?.styles;
+
+    if (!styles || styles.length === 0) {
+      return reply("❌ No styles found.");
+    }
+
+    // Build numbered list
+    const list = styles.map((s, i) => `${i + 1}. ${s.name} → ${s.result}`).join("\n");
+
+    await client.sendMessage(from, {
+      text: `📑 Choose a style by replying with its number:\n\n${list}`
+    }, { quoted: mek });
+
+    // Later: handle reply with number → pick styles[number-1].result
+  } catch (error) {
+    console.error("Font style error:", error);
+    reply("❌ Failed to fetch font styles.");
+  }
+});
 //========================================================================================================================
 
 keith({
@@ -236,6 +271,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
