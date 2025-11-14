@@ -335,6 +335,56 @@ async function uploadToUguu(filePath) {
     throw new Error("Uguu upload failed or malformed response");
   }
 }
+//========================================================================================================================
+keith({
+  pattern: "removebg",
+  aliases: ["rmbg", "bgremove"],
+  description: "Remove background from quoted image",
+  category: "Ai",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to remove its background");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call removebg API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/ai/removebg?url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.status || !result?.result?.data?.cutoutUrl) {
+      return reply("❌ No response from RemoveBG API");
+    }
+
+    const cutoutUrl = result.result.data.cutoutUrl;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: cutoutUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("RemoveBG error:", err);
+    await reply("❌ Failed to remove background. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
+
 
 //========================================================================================================================
 
