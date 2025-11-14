@@ -22,7 +22,7 @@ const axios = require('axios');
 //
 keith({
   pattern: "langcodes",
-  aliases: ["languages", "langs"],
+  aliases: ["langcode", "langs"],
   category: "tools",
   description: "List available language codes for translation"
 },
@@ -50,7 +50,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 keith({
   pattern: "translate",
-  aliases: ["tr", "tl"],
+  aliases: ["trt", "tl"],
   category: "tools",
   description: "Translate quoted text into target language"
 },
