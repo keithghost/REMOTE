@@ -58,13 +58,397 @@ async function uploadToUguu(filePath) {
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "countryhouse"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=countryhouse&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "musketeers"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=musketeers&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "jedi"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=jedi&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "knight"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=knight&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "halloween"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=halloween&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "admirer"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=admirer&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "magic"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=magic&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
+keith({
+  pattern: "shopping"
+  category: "photofunia",
+  description: "Apply sketch effect to quoted image"
+},
+async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to apply  effect");
+
+  const type = getMediaType(quotedMsg);
+  if (type !== "image") return reply("❌ Only image messages are supported");
+
+  const mediaNode = quoted?.imageMessage;
+  if (!mediaNode) return reply("❌ Could not extract image content");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+
+    // Upload to Uguu to get a public URL
+    const imageUrl = await uploadToUguu(filePath);
+
+    // Call sketch effect API
+    const { data: result } = await axios.get(
+      `https://apiskeith.vercel.app/effects/apply?effect=shopping&url=${encodeURIComponent(imageUrl)}`
+    );
+
+    if (!result?.results || !Array.isArray(result.results) || result.results.length === 0) {
+      return reply("❌ No response from  API");
+    }
+
+    // Pick Regular size by default
+    const sketchUrl = result.results.find(r => r.size === "Regular")?.url || result.results[0].url;
+
+    // Send back the processed image
+    await client.sendMessage(from, { image: { url: sketchUrl } }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Sketch effect error:", err);
+    await reply("❌ Failed to apply effect. Try a different image.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "interior"
