@@ -1065,7 +1065,47 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         console.error('Error in antidelete handler:', error);
     }
 });
-        
+//========================================================================================================================        
+//========================================================================================================================        
+  function saveUserJid(jid) {
+        try {
+            if (!jid) throw new Error("No JID provided");
+
+            // Normalize JID
+            const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+
+            // Validate JID
+            const blockedSuffixes = ['@g.us', '@newsletter'];
+            if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
+                throw new Error("Cannot save group or newsletter JIDs");
+            }
+
+            // Block broadcast JIDs except for specific patterns like status viewers
+            const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
+            if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
+                throw new Error("Cannot save general broadcast JIDs");
+            }
+
+            // Read existing
+            let userJids = [];
+            try {
+                const data = fs.readFileSync('./jids.json', 'utf-8');
+                userJids = JSON.parse(data);
+            } catch {
+                userJids = [];
+            }
+
+            // Add if new
+            if (!userJids.includes(normalizedJid)) {
+                userJids.push(normalizedJid);
+                fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            throw error;
+        }
+    }      
 
 //========================================================================================================================
 // Greet functionality
