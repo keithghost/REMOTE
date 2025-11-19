@@ -3,133 +3,66 @@ const config = require('./set');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const gradient = require('gradient-string');
 const moment = require('moment');
 
-// File paths
-const chatGroupsFile = path.join(__dirname, 'commands', 'chatGroups.json');
-const messageCountFile = path.join(__dirname, 'commands', 'messageCount.json');
-
-// Constants
-const REMOTE_COMMANDS_REPO = 'keithghost/REMOTE';
-const REMOTE_COMMANDS_DIR = 'lib';
-const REMOTE_CACHE_DIR = path.join(__dirname, 'commands');
-
-// Initialize files
-function initializeFiles() {
-    if (!fs.existsSync(messageCountFile)) {
-        fs.writeFileSync(messageCountFile, JSON.stringify({}), 'utf8');
-    }
-    if (!fs.existsSync(chatGroupsFile)) {
-        fs.writeFileSync(chatGroupsFile, JSON.stringify([]), 'utf8');
-    }
-    if (!fs.existsSync(REMOTE_CACHE_DIR)) {
-        fs.mkdirSync(REMOTE_CACHE_DIR, { recursive: true });
-    }
-}
+// Import command handler and logger
+const { keith, commands, evt } = require('./commandHandler');
+const KeithLogger = require('./logger');
 
 // Initialize bot
 const bot = new TelegramBot(config.token, { polling: true });
-let chatGroups = JSON.parse(fs.readFileSync(chatGroupsFile, 'utf8'));
 let adminOnlyMode = false;
 const cooldowns = new Map();
-let gbanList = [];
 const linkRegex = /(https?:\/\/|www\.)[^\s]+/gi;
 
-// Logger setup
-function createGradientLogger() {
-    const colors = ['blue', 'cyan'];
-    return (message) => {
-        const colorIndex = Math.floor(Math.random() * colors.length);
-        const color1 = colors[colorIndex];
-        const color2 = colors[(colorIndex + 1) % colors.length];
-        const gradientMessage = gradient(color1, color2)(message);
-        console.log(gradientMessage);
-    };
-}
-
-const logger = createGradientLogger();
-
 // Bot banner
-const botName = `                                                                                                         
-
-@@@  @@@  @@@@@@@@  @@@  @@@@@@@  @@@  @@@             @@@@@@@             @@@@@@@    @@@@@@   @@@@@@@  
-@@@  @@@  @@@@@@@@  @@@  @@@@@@@  @@@  @@@             @@@@@@@             @@@@@@@@  @@@@@@@@  @@@@@@@  
-@@!  !@@  @@!       @@!    @@!    @@!  @@@               @@!               @@!  @@@  @@!  @@@    @@!    
-!@!  @!!  !@!       !@!    !@!    !@!  @!@               !@!               !@   @!@  !@!  @!@    !@!    
-@!@@!@!   @!!!:!    !!@    @!!    @!@!@!@!  @!@!@!@!@    @!!    @!@!@!@!@  @!@!@!@   @!@  !@!    @!!    
-!!@!!!    !!!!!:    !!!    !!!    !!!@!!!!  !!!@!@!!!    !!!    !!!@!@!!!  !!!@!!!!  !@!  !!!    !!!    
-!!: :!!   !!:       !!:    !!:    !!:  !!!               !!:               !!:  !!!  !!:  !!!    !!:    
-:!:  !:!  :!:       :!:    :!:    :!:  !:!               :!:               :!:  !:!  :!:  !:!    :!:    
- ::  :::   :: ::::   ::     ::    ::   :::                ::                :: ::::  ::::: ::     ::    
- :   :::  : :: ::   :       :      :   : :                :                :: : ::    : :  :      :     
+const botName = `
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@  @@@  @@@@@@@@  @@@  @@@@@@@  @@@  @@@             @@@@@@@             @@@
+@@@  @@@  @@@@@@@@  @@@  @@@@@@@  @@@  @@@             @@@@@@@             @@@
+@@!  !@@  @@!       @@!    @@!    @@!  @@@               @@!               @@!
+!@!  @!!  !@!       !@!    !@!    !@!  @!@               !@!               !@!
+@!@@!@!   @!!!:!    !!@    @!!    @!@!@!@!               @!!               @!!
+!!@!!!    !!!!!:    !!!    !!!    !!!@!!!!               !!!               !!!
+!!: :!!   !!:       !!:    !!:    !!:  !!!               !!:               !!:
+:!:  !:!  :!:       :!:    :!:    :!:  !:!               :!:               :!:
+::  :::   :: ::::   ::     ::    ::   :::                ::                ::
+:   :::  : :: ::   :       :      :   : :                :                :
 
 `;
 
-// Load commands from GitHub
-async function loadRemoteCommands() {
+// Load commands from local Cmds folder
+function loadLocalCommands() {
     try {
-        logger('[REMOTE] Loading commands from GitHub...');
+        KeithLogger.info('Loading commands from Cmds folder...');
+        const pluginsPath = path.join(__dirname, "Cmds");
         
-        const apiUrl = `https://api.github.com/repos/${REMOTE_COMMANDS_REPO}/contents/${REMOTE_COMMANDS_DIR}`;
-        const response = await axios.get(apiUrl);
+        if (!fs.existsSync(pluginsPath)) {
+            fs.mkdirSync(pluginsPath, { recursive: true });
+            KeithLogger.info('Cmds folder created');
+            return;
+        }
         
-        const commandFiles = response.data.filter(file => 
-            file.name.endsWith('.js') && file.type === 'file'
+        const commandFiles = fs.readdirSync(pluginsPath).filter(file => 
+            path.extname(file).toLowerCase() === ".js"
         );
 
         let loadedCount = 0;
         
-        for (const file of commandFiles) {
+        commandFiles.forEach((fileName) => {
             try {
-                const cachePath = path.join(REMOTE_CACHE_DIR, file.name);
-                let commandCode;
-                
-                if (fs.existsSync(cachePath)) {
-                    const fileStats = fs.statSync(cachePath);
-                    const oneHourAgo = Date.now() - 3600000;
-                    
-                    if (fileStats.mtimeMs < oneHourAgo) {
-                        commandCode = (await axios.get(file.download_url)).data;
-                        fs.writeFileSync(cachePath, commandCode);
-                    } else {
-                        commandCode = fs.readFileSync(cachePath, 'utf8');
-                    }
-                } else {
-                    commandCode = (await axios.get(file.download_url)).data;
-                    fs.writeFileSync(cachePath, commandCode);
-                }
-                
-                const commandModule = eval(`(function() { ${commandCode} \n return module.exports; })()`);
-                
-                if (commandModule && commandModule.config && commandModule.onStart) {
-                    const commandName = commandModule.config.name.toLowerCase();
-                    commandModule.config.role = commandModule.config.role || 0;
-                    commandModule.config.cooldown = commandModule.config.cooldown || 0;
-                    
-                    // Register the command
-                    const prefixPattern = commandModule.config.usePrefix ? 
-                        `^${config.prefix}${commandName}\\b(.*)$` : 
-                        `^${commandName}\\b(.*)$`;
-                    
-                    bot.onText(new RegExp(prefixPattern, 'i'), (msg, match) => {
-                        executeCommand(bot, commandModule, msg, match);
-                    });
-                    
-                    bot.commands = bot.commands || {};
-                    bot.commands[commandName] = commandModule;
-                    logger(`[REMOTE] Loaded command: ${commandName}`);
-                    loadedCount++;
-                }
+                require(path.join(pluginsPath, fileName));
+                loadedCount++;
+                KeithLogger.success(`Loaded: ${fileName}`);
             } catch (error) {
-                logger(`[REMOTE] Error loading ${file.name}:`, error.message);
+                KeithLogger.error(`Error loading ${fileName}: ${error.message}`);
             }
-        }
+        });
         
-        logger(`[REMOTE] Successfully loaded ${loadedCount}/${commandFiles.length} remote commands`);
+        KeithLogger.success(`Successfully loaded ${loadedCount} commands`);
         return loadedCount;
     } catch (error) {
-        logger('[REMOTE] Failed to load remote commands:', error.message);
+        KeithLogger.error('Failed to load commands:', error.message);
         return 0;
     }
 }
@@ -150,7 +83,7 @@ async function getGroupMemberCount(bot, chatId) {
         const chat = await bot.getChat(chatId);
         return chat.members_count || 'N/A';
     } catch (error) {
-        logger('Error getting member count:', error);
+        KeithLogger.error('Error getting member count:', error);
         return 'N/A';
     }
 }
@@ -172,16 +105,14 @@ async function handleNewMemberWelcome(bot, msg) {
             const username = member.username ? `@${member.username}` : fullName;
             
             // Create welcome message
-            const welcomeMessage = `
-🌟 *Welcome to ${groupName}!* 🌟
-👋 *Hello ${username}!* We're excited to have you here.
-📝 *Group Info:*
-- 🏷️ *Name:* ${groupName}
-- 👥 *Total Members:* ${memberCount}
-- 🕒 *You joined at:* ${joinTime}
-📜 *Please read the group description for rules and guidelines.*
-Enjoy your stay! 😊
-            `;
+            const welcomeMessage = `Welcome to ${groupName}!
+Hello ${username}! We're excited to have you here.
+Group Info:
+- Name: ${groupName}
+- Total Members: ${memberCount}
+- You joined at: ${joinTime}
+Please read the group description for rules and guidelines.
+Enjoy your stay!`;
             try {
                 // Get user profile photos
                 const photos = await bot.getUserProfilePhotos(member.id, { limit: 1 });
@@ -208,101 +139,110 @@ Enjoy your stay! 😊
                     try {
                         await bot.sendAnimation(chatId, gifUrl);
                     } catch (error) {
-                        logger("Error sending welcome GIF:", error);
+                        KeithLogger.error("Error sending welcome GIF:", error);
                     }
                 }
             } catch (error) {
-                logger('Error sending profile photo welcome:', error);
+                KeithLogger.error('Error sending profile photo welcome:', error);
                 // Fallback to simple welcome if there's an error
                 await bot.sendMessage(chatId, `Welcome, ${fullName}!`);
                 if (gifUrl) {
                     try {
                         await bot.sendAnimation(chatId, gifUrl);
                     } catch (gifError) {
-                        logger("Error sending fallback GIF:", gifError);
+                        KeithLogger.error("Error sending fallback GIF:", gifError);
                     }
                 }
             }
         }
     } catch (error) {
-        logger('Error in welcome handler:', error);
+        KeithLogger.error('Error in welcome handler:', error);
         // Fallback to simple welcome if there's an error
         newMembers.forEach(member => {
             const fullName = `${member.first_name} ${member.last_name || ''}`.trim();
             bot.sendMessage(chatId, `Welcome, ${fullName}!`);
         });
     }
-    // Update chat groups list
-    if (!chatGroups.includes(chatId)) {
-        chatGroups.push(chatId);
-        fs.writeFileSync(chatGroupsFile, JSON.stringify(chatGroups, null, 2));
-    }
 }
 
-// Command execution
-async function executeCommand(bot, command, msg, match) {
+// Command execution for local commands
+async function executeLocalCommand(bot, command, msg, match) {
     try {
         const chatId = msg.chat.id;
         const userId = msg.from.id;
-        const args = match[1].trim().split(/\s+/);
+        const args = match[1] ? match[1].trim().split(/\s+/) : [];
         const messageReply = msg.reply_to_message;
-        if (gbanList.includes(userId.toString())) {
-            return bot.sendMessage(chatId, "You are globally banned and cannot use commands.");
-        }
 
         const isAdmin = await isUserAdmin(bot, chatId, userId);
         const isBotAdmin = userId.toString() === config.owner_id.toString();
+        
         if (adminOnlyMode && !isBotAdmin) {
             return bot.sendMessage(chatId, "Sorry, only the bot admin can use commands right now.");
         }
-        if (command.config.role === 2 && !isBotAdmin) {
+        
+        if (command.role === 2 && !isBotAdmin) {
             return bot.sendMessage(chatId, "Sorry, only the bot admin can use this command.");
         }
-        if (command.config.role === 1 && !isBotAdmin && !isAdmin) {
+        
+        if (command.role === 1 && !isBotAdmin && !isAdmin) {
             return bot.sendMessage(chatId, "This command is only available to groups admins");
         }
 
         // Cooldown check
-        const cooldownKey = `${command.config.name}-${userId}`;
+        const cooldownKey = `${command.pattern}-${userId}`;
         const now = Date.now();
         if (cooldowns.has(cooldownKey)) {
             const lastUsed = cooldowns.get(cooldownKey);
-            const cooldownAmount = command.config.cooldown * 1000;
+            const cooldownAmount = (command.cooldown || 0) * 1000;
             if (now < lastUsed + cooldownAmount) {
                 const timeLeft = Math.ceil((lastUsed + cooldownAmount - now) / 1000);
-                return bot.sendMessage(chatId, `Please wait ${timeLeft} more seconds before using the ${command.config.name} command again.`);
+                return bot.sendMessage(chatId, `Please wait ${timeLeft} more seconds before using the ${command.pattern} command again.`);
             }
         }
         cooldowns.set(cooldownKey, now);
 
-        // Execute command
-        command.onStart({ 
-            bot, 
-            chatId, 
-            args, 
-            userId, 
-            username: msg.from.username, 
-            firstName: msg.from.first_name, 
-            lastName: msg.from.last_name || '', 
-            messageReply,
-            messageReply_username: messageReply ? messageReply.from.username : null,
-            messageReply_id: messageReply ? messageReply.from.id : null,
-            msg, 
-            match 
-        });
-    } catch (error) {
-        logger(`Error executing command ${command.config.name}: ${error}`);
-        bot.sendMessage(msg.chat.id, 'An error occurred while executing the command.');
-    }
-}
+        // Prepare context object with all config and user info
+        const context = {
+            // Message functions
+            reply: (text, options = {}) => {
+                return bot.sendMessage(chatId, text, {
+                    reply_to_message_id: msg.message_id,
+                    ...options
+                });
+            },
+            sendMessage: (text, options = {}) => {
+                return bot.sendMessage(chatId, text, options);
+            },
+            
+            // User info
+            pushName: `${msg.from.first_name}${msg.from.last_name ? ' ' + msg.from.last_name : ''}`,
+            sender: msg.from.id,
+            owner: config.owner_id,
+            isSuperUser: isBotAdmin,
+            isAdmin: isAdmin,
+            userId: userId,
+            chatId: chatId,
+            
+            // Command info
+            q: args.join(' '),
+            args: args,
+            messageReply: messageReply,
+            
+            // Bot info
+            bot: bot,
+            prefix: config.prefix,
+            botName: config.botName,
+            ownerName: config.ownerName,
+            timezone: config.timezone,
+            sourceUrl: config.sourceUrl
+        };
 
-// GBan list management
-async function fetchGbanList() {
-    try {
-        const response = await axios.get('https://raw.githubusercontent.com/samirxpikachuio/Gban/main/Gban.json');
-        gbanList = response.data.map(user => user.ID);
+        // Execute command
+        await command.function(msg, bot, context);
+        
     } catch (error) {
-        logger('Error fetching gban list:', error);
+        KeithLogger.error(`Error executing command ${command.pattern}: ${error}`);
+        bot.sendMessage(msg.chat.id, 'An error occurred while executing the command.');
     }
 }
 
@@ -321,7 +261,7 @@ async function handleAntiLink(msg) {
             const isAdmin = await isUserAdmin(bot, chatId, userId);
             
             if (!isAdmin && userId.toString() !== config.owner_id.toString()) {
-                const warningMsg = await bot.sendMessage(chatId, "❗ Anti-link message detected ‼️", {
+                const warningMsg = await bot.sendMessage(chatId, "Anti-link message detected", {
                     reply_to_message_id: msg.message_id
                 });
                 
@@ -333,87 +273,91 @@ async function handleAntiLink(msg) {
                             try {
                                 await bot.deleteMessage(chatId, warningMsg.message_id);
                             } catch (error) {
-                                logger("Error deleting warning message:", error);
+                                KeithLogger.error("Error deleting warning message:", error);
                             }
                         }, 5000);
                         
                     } catch (error) {
-                        logger("Error deleting anti-link message:", error);
+                        KeithLogger.error("Error deleting anti-link message:", error);
                         bot.sendMessage(chatId, `@${msg.from.username || msg.from.first_name}, links are not allowed here!`);
                     }
                 }, 2000);
             }
         }
     } catch (error) {
-        logger('Error in anti-link handler:', error);
+        KeithLogger.error('Error in anti-link handler:', error);
     }
 }
 
-// Message handling
+// Register local commands
+function registerLocalCommands() {
+    commands.forEach(command => {
+        const patterns = [command.pattern, ...(command.aliases || [])];
+        
+        patterns.forEach(pattern => {
+            const prefixPattern = `^${config.prefix}${pattern}\\b(.*)$`;
+            
+            bot.onText(new RegExp(prefixPattern, 'i'), (msg, match) => {
+                executeLocalCommand(bot, command, msg, match);
+            });
+        });
+        
+        KeithLogger.success(`Registered command: ${command.pattern}`);
+    });
+}
+
+// Message handling with logging
 bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-    const userId = msg.from.id;
+    // Log all messages
+    KeithLogger.logMessage(msg);
+    
     if (config.antiLink && config.antiLink.enabled) {
         await handleAntiLink(msg);
-    }
-    try {
-        const data = fs.readFileSync(messageCountFile);
-        const messageCount = JSON.parse(data);
-        if (!messageCount[chatId]) messageCount[chatId] = {};
-        if (!messageCount[chatId][userId]) messageCount[chatId][userId] = 0;
-        messageCount[chatId][userId] += 1;
-        fs.writeFileSync(messageCountFile, JSON.stringify(messageCount), 'utf8');
-    } catch (error) {
-        logger('[ERROR]', error);
-    }
-    if (!chatGroups.includes(chatId)) {
-        chatGroups.push(chatId);
-        fs.writeFileSync(chatGroupsFile, JSON.stringify(chatGroups, null, 2));
     }
 });
 
 // New members handling
 bot.on('new_chat_members', (msg) => {
+    KeithLogger.logEvent('new_member', `New member joined ${msg.chat.title}`);
     handleNewMemberWelcome(bot, msg);
 });
 
 // Left member handling
 bot.on('left_chat_member', (msg) => {
-    const chatId = msg.chat.id;
-    if (chatGroups.includes(chatId)) {
-        chatGroups = chatGroups.filter(id => id !== chatId);
-        fs.writeFileSync(chatGroupsFile, JSON.stringify(chatGroups, null, 2));
-    }
+    KeithLogger.logEvent('member_left', `Member left ${msg.chat.title}`);
 });
 
 // Callback query handling
 bot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
     const userId = callbackQuery.from.id;
-    const data = JSON.parse(callbackQuery.data);
-    const commandName = data.command;
-    const command = bot.commands ? bot.commands[commandName] : null;
-    if (command && command.onReply) {
-        command.onReply(bot, chatId, userId, data);
+    try {
+        const data = JSON.parse(callbackQuery.data);
+        const commandName = data.command;
+        const command = commands.find(cmd => cmd.pattern === commandName);
+        if (command && command.onReply) {
+            command.onReply(bot, chatId, userId, data);
+        }
+    } catch (error) {
+        KeithLogger.error('Error handling callback query:', error);
     }
 });
 
 // Error handling
 bot.on('polling_error', (error) => {
-    logger('Polling error:', error);
+    KeithLogger.error('Polling error:', error);
 });
 
 bot.on('polling_started', () => {
-    logger('Bot polling started');
+    KeithLogger.event('Bot polling started');
 });
 
 // Initialize everything
-initializeFiles();
-loadRemoteCommands();
-fetchGbanList();
+loadLocalCommands();
+registerLocalCommands();
 
 // Show bot info
-logger(botName);
-logger('[ Made by keithkeizzah ]');
+KeithLogger.banner(botName);
+KeithLogger.banner('[ Made by keithkeizzah ]');
 
 module.exports = bot;
