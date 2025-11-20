@@ -365,7 +365,7 @@ function isBotDeploymentRequest(text) {
     const keywords = {
         deploy: ['deploy', 'deployment', 'setup', 'install'],
         host: ['host', 'hosting', 'server', 'vps'],
-        need: ['need', 'want', 'looking for', 'searching for'],
+        need: ['need', 'want', 'looking for', 'searching for', 'nataka', 'niekee'],
         bot: ['bot', 'aniekee', 'nataka']
     };
 
