@@ -305,17 +305,89 @@ function registerLocalCommands() {
         KeithLogger.success(`Registered command: ${command.pattern}`);
     });
 }
-
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
 // Message handling with logging
-bot.on('message', async (msg) => {
+/*bot.on('message', async (msg) => {
     // Log all messages
     KeithLogger.logMessage(msg);
     
     if (config.antiLink && config.antiLink.enabled) {
         await handleAntiLink(msg);
     }
+});*/
+// Message handling with bot deployer detection
+bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text || '';
+    const lowerText = text.toLowerCase();
+
+    // Log all messages
+    KeithLogger.logMessage(msg);
+
+    // Check for bot deployment requests
+    if (isBotDeploymentRequest(lowerText)) {
+        try {
+            const buttons = [
+                [
+                    { text: '👑 Keith', url: 'https://t.me/keithkeizzah' },
+                    { text: '🚀 Laurent', url: 'https://t.me/LaurentSams' }
+                ],
+                [
+                    { text: '💻 Nick', url: 'https://t.me/Nick_Hunter9' },
+                    { text: '🎁 Maurice', url: 'https://t.me/mauricegift' }
+                ]
+            ];
+
+            await bot.sendMessage(chatId, 
+                `🤖 Need a bot deployed?\n\n` +
+                `Here are our trusted bot deployers who can help you:\n\n` +
+                `• Keith - Custom bot development\n` +
+                `• Laurent - Bot hosting & deployment\n` +
+                `• Nick - Technical setup\n` +
+                `• Gifted Maurice - Bot solutions\n\n` +
+                `Click any button below to contact them directly!`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: {
+                        inline_keyboard: buttons
+                    },
+                    reply_to_message_id: msg.message_id
+                }
+            );
+        } catch (error) {
+            KeithLogger.error('Error sending deployer buttons:', error);
+        }
+    }
+
+    if (config.antiLink && config.antiLink.enabled) {
+        await handleAntiLink(msg);
+    }
 });
 
+// Function to detect bot deployment requests
+function isBotDeploymentRequest(text) {
+    const keywords = {
+        deploy: ['deploy', 'deployment', 'setup', 'install'],
+        host: ['host', 'hosting', 'server', 'vps'],
+        need: ['need', 'want', 'looking for', 'searching for'],
+        bot: ['bot', 'robot', 'automation']
+    };
+
+    // Check if text contains at least one word from deploy/host/need categories AND bot
+    const hasDeployHostNeed = 
+        keywords.deploy.some(word => text.includes(word)) ||
+        keywords.host.some(word => text.includes(word)) ||
+        keywords.need.some(word => text.includes(word));
+
+    const hasBot = keywords.bot.some(word => text.includes(word));
+
+    return hasDeployHostNeed && hasBot;
+}
+//========================================================================================================================
+//========================================================================================================================
 // New members handling
 bot.on('new_chat_members', (msg) => {
     KeithLogger.logEvent('new_member', `New member joined ${msg.chat.title}`);
