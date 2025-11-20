@@ -366,7 +366,7 @@ function isBotDeploymentRequest(text) {
         deploy: ['deploy', 'deployment', 'setup', 'install'],
         host: ['host', 'hosting', 'server', 'vps'],
         need: ['need', 'want', 'looking for', 'searching for'],
-        bot: ['bot', 'robot', 'automation']
+        bot: ['bot', 'aniekee', 'nataka']
     };
 
     // Check if text contains at least one word from deploy/host/need categories AND bot
