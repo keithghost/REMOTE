@@ -17,6 +17,93 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "fancy",
+  aliases: ["fancytext", "ft"],
+  category: "tools",
+  description: "Generate fancy text styles and select by number"
+},
+async (from, client, conText) => {
+  const { q, mek, quotedMsg, reply } = conText;
+
+  let text;
+  if (q) {
+    text = q;
+  } else if (quotedMsg) {
+    text = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text;
+    if (!text) return reply("❌ Could not extract quoted text.");
+  } else {
+    return reply("📌 Provide text or reply to a message.");
+  }
+
+  try {
+    // First API: get all styles
+    const apiUrl = `https://apiskeith.vercel.app/fancytext/styles?q=${encodeURIComponent(text)}`;
+    const { data } = await axios.get(apiUrl, { timeout: 60000 });
+
+    if (!data || !Array.isArray(data.styles)) {
+      return reply("❌ Failed to fetch fancy styles.");
+    }
+
+    // Build numbered list showing the actual fancy results
+    let caption = `✨ Fancy styles for: *${data.input}*\n\n`;
+    data.styles.forEach((style, i) => {
+      caption += `${i + 1}. ${style.result || ""}\n`;
+    });
+    caption += `\n📌 Reply with the style number to get the fancy text.`;
+
+    const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+    const messageId = sent.key.id;
+
+    // Listen for reply with number
+    client.ev.on("messages.upsert", async (update) => {
+      const msg = update.messages[0];
+      if (!msg.message) return;
+
+      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      const chatId = msg.key.remoteJid;
+
+      if (!isReply) return;
+
+      const num = parseInt(responseText.trim(), 10);
+      if (isNaN(num) || num < 1 || num > data.styles.length) {
+        return client.sendMessage(chatId, {
+          text: `❌ Invalid style number. Reply with a number between 1 and ${data.styles.length}.`,
+          quoted: msg
+        });
+      }
+
+      try {
+        // Second API: get specific style
+        const styleUrl = `https://apiskeith.vercel.app/fancytext?q=${encodeURIComponent(text)}&style=${num}`;
+        const res = await axios.get(styleUrl, { timeout: 60000 });
+        const styled = res.data?.result;
+
+        if (!styled) {
+          return client.sendMessage(chatId, {
+            text: "❌ Failed to generate fancy text.",
+            quoted: msg
+          });
+        }
+
+        await client.sendMessage(chatId, { text: styled }, { quoted: msg });
+      } catch (err) {
+        console.error("Fancy error:", err);
+        await client.sendMessage(chatId, {
+          text: `❌ Error generating fancy text: ${err.message}`,
+          quoted: msg
+        });
+      }
+    });
+
+  } catch (error) {
+    console.error("Fancy text error:", error);
+    reply("⚠️ An error occurred while fetching fancy styles.");
+  }
+});
 //========================================================================================================================
 
 
