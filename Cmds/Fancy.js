@@ -47,10 +47,10 @@ async (from, client, conText) => {
       return reply("❌ Failed to fetch fancy styles.");
     }
 
-    // Build numbered list showing the actual fancy results
+    // Build numbered list showing actual fancy results (fallback to name if blank)
     let caption = `✨ Fancy styles for: *${data.input}*\n\n`;
     data.styles.forEach((style, i) => {
-      caption += `${i + 1}. ${style.result || ""}\n`;
+      caption += `${i + 1}. ${style.result || style.name}\n`;
     });
     caption += `\n📌 Reply with the style number to get the fancy text.`;
 
@@ -77,8 +77,9 @@ async (from, client, conText) => {
       }
 
       try {
-        // Second API: get specific style
-        const styleUrl = `https://apiskeith.vercel.app/fancytext?q=${encodeURIComponent(text)}&style=${num}`;
+        // Second API: fix off-by-one by subtracting 1
+        const index = num - 1;
+        const styleUrl = `https://apiskeith.vercel.app/fancytext?q=${encodeURIComponent(text)}&style=${index}`;
         const res = await axios.get(styleUrl, { timeout: 60000 });
         const styled = res.data?.result;
 
@@ -104,6 +105,7 @@ async (from, client, conText) => {
     reply("⚠️ An error occurred while fetching fancy styles.");
   }
 });
+    
 //========================================================================================================================
 
 
