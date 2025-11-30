@@ -21,7 +21,7 @@ const axios = require('axios');
 
 keith({
   pattern: "fancy",
-  aliases: ["fancytext", "ft"],
+  aliases: ["fancytext", "font", "style", "fancystyle"],
   category: "tools",
   description: "Generate fancy text styles and select by number"
 },
