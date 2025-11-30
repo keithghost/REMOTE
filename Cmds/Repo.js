@@ -2,7 +2,59 @@
 const { keith } = require('../commandHandler');
 const { sendButtons } = require('gifted-btns');
 const axios = require('axios');
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
 
+keith({
+  pattern: "copy",
+  aliases: ["copied", "cp"],
+  description: "Copy quoted message text via button",
+  category: "General",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quotedMsg, reply, botname } = conText;
+
+  if (!quotedMsg) {
+    return reply("📌 Reply to a message with `.copy` to generate a copy button.");
+  }
+
+
+  const text = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text;
+  if (!text) {
+    return reply("❌ Could not extract quoted text.");
+  }
+
+  try {
+    await sendButtons(client, from, {
+      title: "",
+      text: "*Tap the button below to copy the quoted text👇.*",
+      footer: `> *${botname}*`,
+      buttons: [
+        {
+          name: "cta_copy",
+          buttonParamsJson: JSON.stringify({
+            display_text: "📋 Copy your Quoted Text",
+            id: "copy_text",
+            copy_code: text
+          })
+        }
+      ]
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("❌ Copy command failed:", err);
+    await client.sendMessage(from, {
+      text: "❌ Failed to generate copy button."
+    }, { quoted: mek });
+  }
+});
+//========================================================================================================================
+//
 keith({
   pattern: "repo",
   aliases: ["script", "sc"],
