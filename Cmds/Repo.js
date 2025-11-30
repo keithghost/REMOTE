@@ -9,6 +9,49 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "location",
+  aliases: ["pinlocation", "getlocation"],
+  category: "General",
+  description: "Send a location pin by name",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, q, reply } = conText;
+
+  if (!q) {
+    return reply("📌 Usage: `.location Nairobi, Kenya`");
+  }
+
+  try {
+    // Call your API to resolve coordinates
+    const apiUrl = `https://apiskeith.vercel.app/tools/location?q=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(apiUrl, { timeout: 60000 });
+
+    if (!data.status || !data.result?.results?.length) {
+      return reply(`❌ Could not find location for: ${q}`);
+    }
+
+    const loc = data.result.results[0];
+    const { lat, lng } = loc.geometry;
+    const formatted = loc.formatted || q;
+
+    await client.sendMessage(
+      from,
+      {
+        location: {
+          degreesLatitude: lat,
+          degreesLongitude: lng,
+          name: formatted
+        }
+      },
+      { quoted: mek }
+    );
+  } catch (err) {
+    console.error("Location error:", err);
+    reply("❌ Failed to fetch location.");
+  }
+});
 //========================================================================================================================
 
 keith({
