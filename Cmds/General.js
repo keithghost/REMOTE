@@ -1,4 +1,5 @@
 const { keith, commands } = require('../commandHandler');
+const fs = require("fs");
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
@@ -12,6 +13,64 @@ const { keith, commands } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+//const { keith } = require("../commandHandler");
+
+keith({
+  pattern: "toviewonce",
+  aliases: ["tovo", "tovv"],
+  description: "Send quoted media (image/video/audio) as view-once message",
+  category: "General",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) {
+    return reply("❌ Reply to an image, video, or audio message to make it view-once.");
+  }
+
+  try {
+    if (quoted?.imageMessage) {
+      const caption = quoted.imageMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+      await client.sendMessage(
+        from,
+        { image: { url: filePath }, caption, viewOnce: true },
+        { quoted: mek }
+      );
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+
+    if (quoted?.videoMessage) {
+      const caption = quoted.videoMessage.caption || "";
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.videoMessage);
+      await client.sendMessage(
+        from,
+        { video: { url: filePath }, caption, viewOnce: true },
+        { quoted: mek }
+      );
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+
+    if (quoted?.audioMessage) {
+      const filePath = await client.downloadAndSaveMediaMessage(quoted.audioMessage);
+      await client.sendMessage(
+        from,
+        {
+          audio: { url: filePath },
+          mimetype: "audio/mpeg",
+          ptt: true,
+          viewOnce: true   // flag added here
+        },
+        { quoted: mek }
+      );
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  } catch (err) {
+    console.error("toviewonce command error:", err);
+    reply("❌ Couldn't send the media. Try again.");
+  }
+});
 //========================================================================================================================
 /*keith({
   pattern: "menu",
