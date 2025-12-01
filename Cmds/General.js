@@ -12,6 +12,82 @@ const fs = require("fs");
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "text",
+  aliases: ["anonymous", "anon", "textmess"],
+  description: "Send custom text or quoted media anonymously to one or more numbers",
+  category: "Owner",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, arg, quoted, quotedMsg, reply, superUser, prefix } = conText;
+
+  if (!superUser) return reply("You are not authorised to use this command !!!");
+
+  if (!arg[0] && !quotedMsg) {
+    return reply(
+      `Usage:\n${prefix}text <message> | <number[,number,...]>\n${prefix}text <number[,number,...]> (with quoted media)`
+    );
+  }
+
+  // Join args back into one string
+  const text = arg.join(" ");
+  const parts = text.split("|");
+
+  let message = "";
+  let numbers = [];
+
+  if (parts.length === 1) {
+    // Either ".anon <number>" or ".anon <message>"
+    if (quotedMsg) {
+      numbers = parts[0].split(",").map(x => x.trim()).filter(x => x !== "");
+    } else {
+      return reply("❌ Please provide a target number after '|'");
+    }
+  } else {
+    message = parts[0].trim();
+    numbers = parts[1].split(",").map(x => x.trim()).filter(x => x !== "");
+  }
+
+  if (numbers.length === 0) return reply("❌ Please provide at least one target number");
+
+  reply(`⏳ Sending to ${numbers.join(", ")}`);
+
+  try {
+    for (const number of numbers) {
+      const jid = number.includes("@s.whatsapp.net") ? number : number + "@s.whatsapp.net";
+
+      if (quotedMsg) {
+        if (quoted?.imageMessage) {
+          const caption = message || quoted.imageMessage.caption || "";
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+          await client.sendMessage(jid, { image: { url: filePath }, caption });
+        } else if (quoted?.videoMessage) {
+          const caption = message || quoted.videoMessage.caption || "";
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.videoMessage);
+          await client.sendMessage(jid, { video: { url: filePath }, caption });
+        } else if (quoted?.audioMessage) {
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.audioMessage);
+          await client.sendMessage(jid, { audio: { url: filePath }, mimetype: "audio/mpeg", ptt: true });
+        } else if (quoted?.stickerMessage) {
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.stickerMessage);
+          await client.sendMessage(jid, { sticker: { url: filePath } });
+        } else {
+          const body = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || message;
+          await client.sendMessage(jid, { text: body });
+        }
+      } else {
+        // No quoted message, just send text
+        await client.sendMessage(jid, { text: message });
+      }
+    }
+
+    reply(`✅ Message sent to ${numbers.join(", ")}`);
+  } catch (err) {
+    console.error("anon command error:", err);
+    reply("❌ Failed to send your message.");
+  }
+});
 //========================================================================================================================
 
 //const { keith } = require("../commandHandler");
