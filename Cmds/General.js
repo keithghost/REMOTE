@@ -11,13 +11,90 @@ const fs = require("fs");
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require("../commandHandler");
+
+keith({
+  pattern: "groupanon",
+  aliases: ["ganon", "grouptext"],
+  description: "Send custom text or quoted media anonymously to one or more groups",
+  category: "Anonymous",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, arg, quoted, quotedMsg, reply, superUser, prefix } = conText;
+
+  if (!superUser) return reply("You are not authorised to use this command !!!");
+
+  if (!arg[0] && !quotedMsg) {
+    return reply(
+      `Usage:\n${prefix}groupanon <message> | <groupJid[,groupJid,...]>\n${prefix}groupanon <groupJid[,groupJid,...]> (with quoted media)`
+    );
+  }
+
+  // Join args back into one string
+  const text = arg.join(" ");
+  const parts = text.split("|");
+
+  let message = "";
+  let groups = [];
+
+  if (parts.length === 1) {
+    // Either ".groupanon <groupJid>" or ".groupanon <message>"
+    if (quotedMsg) {
+      groups = parts[0].split(",").map(x => x.trim()).filter(x => x !== "");
+    } else {
+      return reply("❌ Please provide a group JID after '|'");
+    }
+  } else {
+    message = parts[0].trim();
+    groups = parts[1].split(",").map(x => x.trim()).filter(x => x !== "");
+  }
+
+  if (groups.length === 0) return reply("❌ Please provide at least one group JID");
+
+  reply(`⏳ Sending to groups: ${groups.join(", ")}`);
+
+  try {
+    for (const group of groups) {
+      const jid = group.endsWith("@g.us") ? group : group + "@g.us";
+
+      if (quotedMsg) {
+        if (quoted?.imageMessage) {
+          const caption = message || quoted.imageMessage.caption || "";
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+          await client.sendMessage(jid, { image: { url: filePath }, caption });
+        } else if (quoted?.videoMessage) {
+          const caption = message || quoted.videoMessage.caption || "";
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.videoMessage);
+          await client.sendMessage(jid, { video: { url: filePath }, caption });
+        } else if (quoted?.audioMessage) {
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.audioMessage);
+          await client.sendMessage(jid, { audio: { url: filePath }, mimetype: "audio/mpeg", ptt: true });
+        } else if (quoted?.stickerMessage) {
+          const filePath = await client.downloadAndSaveMediaMessage(quoted.stickerMessage);
+          await client.sendMessage(jid, { sticker: { url: filePath } });
+        } else {
+          const body = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || message;
+          await client.sendMessage(jid, { text: body });
+        }
+      } else {
+        // No quoted message, just send text
+        await client.sendMessage(jid, { text: message });
+      }
+    }
+
+    reply(`✅ Message sent to groups: ${groups.join(", ")}`);
+  } catch (err) {
+    console.error("groupanon command error:", err);
+    reply("❌ Failed to send your message.");
+  }
+});
 //========================================================================================================================
 
 keith({
   pattern: "text",
   aliases: ["anonymous", "anon", "textmess"],
   description: "Send custom text or quoted media anonymously to one or more numbers",
-  category: "Owner",
+  category: "Anonymous",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, arg, quoted, quotedMsg, reply, superUser, prefix } = conText;
