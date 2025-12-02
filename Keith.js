@@ -1067,46 +1067,58 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 });
 //========================================================================================================================        
 //========================================================================================================================        
-  function saveUserJid(jid) {
-        try {
-            if (!jid) throw new Error("No JID provided");
+ function saveUserJid(jid) {
+    try {
+        if (!jid) throw new Error("No JID provided");
 
-            // Normalize JID
-            const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
-
-            // Validate JID
-            const blockedSuffixes = ['@g.us', '@newsletter'];
-            if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
-                throw new Error("Cannot save group or newsletter JIDs");
-            }
-
-            // Block broadcast JIDs except for specific patterns like status viewers
-            const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
-            if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
-                throw new Error("Cannot save general broadcast JIDs");
-            }
-
-            // Read existing
-            let userJids = [];
-            try {
-                const data = fs.readFileSync('./jids.json', 'utf-8');
-                userJids = JSON.parse(data);
-            } catch {
-                userJids = [];
-            }
-
-            // Add if new
-            if (!userJids.includes(normalizedJid)) {
-                userJids.push(normalizedJid);
-                fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
-                return true;
-            }
-            return false;
-        } catch (error) {
-            throw error;
+        // First convert @lid to @s.whatsapp.net
+        let normalizedJid = jid;
+        
+        if (normalizedJid.endsWith('@lid')) {
+            normalizedJid = normalizedJid.replace('@lid', '@s.whatsapp.net');
+        } else if (!normalizedJid.includes('@')) {
+            normalizedJid = normalizedJid + '@s.whatsapp.net';
         }
-    }      
 
+        // Block broadcast SUFFIX (ending with @broadcast)
+        // But allow WhatsApp numbers (which will be converted to @s.whatsapp.net)
+        if (normalizedJid.endsWith('@broadcast')) {
+            throw new Error(`Cannot save JID with @broadcast suffix: ${normalizedJid}`);
+        }
+
+        // Block other unwanted suffixes
+        const blockedSuffixes = ['@g.us', '@newsletter'];
+        if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
+            throw new Error(`Cannot save JID with blocked suffix: ${normalizedJid}`);
+        }
+
+        // Ensure all saved JIDs end with @s.whatsapp.net
+        if (!normalizedJid.endsWith('@s.whatsapp.net')) {
+            const numberPart = normalizedJid.split('@')[0];
+            normalizedJid = numberPart + '@s.whatsapp.net';
+        }
+
+        // Read existing
+        let userJids = [];
+        try {
+            const data = fs.readFileSync('./jids.json', 'utf-8');
+            userJids = JSON.parse(data);
+        } catch {
+            userJids = [];
+        }
+
+        // Add if new
+        if (!userJids.includes(normalizedJid)) {
+            userJids.push(normalizedJid);
+            fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error saving user JID:', error.message);
+        return false;
+    }
+} 
 //========================================================================================================================
 // Greet functionality
 //========================================================================================================================
@@ -1222,20 +1234,19 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     }
        // ====== AUTOMATICALLY SAVE USER JID ======
     try {
-        const senderJid = ms.key.participant || ms.key.remoteJid;
-        const isGroup = ms.key.remoteJid.endsWith('@g.us');
-        const isBroadcast = ms.key.remoteJid === 'status@broadcast';
-        
-        // Only save if it's a private chat (not group, not broadcast, and not from the bot)
-        if (!isGroup && !isBroadcast && !ms.key.fromMe) {
-            const saved = saveUserJid(senderJid);
-            if (saved) {
-                KeithLogger.info(`New user JID saved: ${senderJid}`);
-            }
+    // Get the sender JID
+    const senderJid = ms.key.participant || ms.key.remoteJid;
+    
+    // Don't save if: group chat OR from bot OR no sender JID
+    if (!ms.key.remoteJid.endsWith('@g.us') && !ms.key.fromMe && senderJid) {
+        const saved = saveUserJid(senderJid);
+        if (saved) {
+            KeithLogger.info(`New user JID saved: ${senderJid}`);
         }
-    } catch (error) {
-        KeithLogger.error("Error saving user JID:", error);
     }
+} catch (error) {
+    KeithLogger.error("Error saving user JID:", error);
+}
     // ========================================
 
     function standardizeJid(jid) {
