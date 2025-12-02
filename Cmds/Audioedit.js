@@ -13,8 +13,8 @@ try {
 }
 
 keith({
-  pattern: "tostatus",
-  aliases: ["story", "poststatus", "sendstatus"],
+  pattern: "reshare",
+  aliases: ["story", "tostatus", "poststatus", "sendstatus"],
   description: "Post a status visible only to selected contacts (@s.whatsapp.net only)",
   category: "Owner",
   filename: __filename
