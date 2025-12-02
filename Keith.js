@@ -1754,12 +1754,36 @@ client.ev.on("connection.update", async (update) => {
         reconnectAttempts = 0;
     }
 
-    if (connection === "open") {
+  /*  if (connection === "open") {
         KeithLogger.success("✅ keith md is active , enjoy 😀");
         reconnectAttempts = 0;
-        startAutoBio();
+        startAutoBio();*/
         
-        
+      // Add at the top of your file with other imports
+const chalk = require('chalk');
+
+// Then in your connection.open handler:
+if (connection === "open") {
+    // Colorful cyan/pink/blue banner
+    console.log(chalk.cyanBright(`
+██╗  ██╗ ███████╗ ██╗ ████████╗ ██╗  ██╗
+██║ ██╔╝ ██╔════╝ ██║ ╚══██╔══╝ ██║  ██║
+█████╔╝  █████╗   ██║    ██║    ███████║
+██╔═██╗  ██╔══╝   ██║    ██║    ██╔══██║
+██║  ██╗ ███████╗ ██║    ██║    ██║  ██║
+╚═╝  ╚═╝ ╚══════╝ ╚═╝    ╚═╝    ╚═╝  ╚═╝
+`));
+    
+    // Multi-colored text
+    console.log(chalk.magentaBright('✨ ') + 
+                chalk.cyanBright('KEITH MD') + 
+                chalk.magentaBright(' ✨') + 
+                chalk.blueBright(' is now active and connected!\n'));
+    
+    KeithLogger.success("✅ keith md is active , enjoy 😀");
+    reconnectAttempts = 0;
+    startAutoBio();
+    // ... rest of the code ...  
         setTimeout(async () => {
             try {
                 const totalCommands = commands.filter((command) => command.pattern).length;
