@@ -803,6 +803,93 @@ async function startKeith() {
         }
 
         KeithLogger.success("Plugin Files Loaded");
+      //  KeithLogger.success("Plugin Files Loaded");
+
+// =================================================================
+// JID Management Functions - ADD THIS HERE
+// =================================================================
+
+let saveUserJid; // Declare variable first
+
+// Define the function after client is available
+saveUserJid = function(jid) {
+    try {
+        if (!jid) return false;
+
+        // Normalize JID
+        let normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+        
+        // Standardize: remove any prefix/suffix
+        normalizedJid = normalizedJid.split(':')[0]; // Remove device info
+        normalizedJid = normalizedJid.split('/')[0]; // Remove resource info
+        
+        // Add @s.whatsapp.net if missing
+        if (!normalizedJid.includes('@')) {
+            normalizedJid = normalizedJid + '@s.whatsapp.net';
+        }
+
+        // Validate JID - only save personal contacts
+        const blockedSuffixes = ['@g.us', '@newsletter', '@broadcast'];
+        if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
+            return false; // Don't save groups, newsletters, or broadcasts
+        }
+
+        // Don't save bot's own JID
+        const botJid = client?.user?.id ? client.user.id.split(':')[0] + '@s.whatsapp.net' : '';
+        if (normalizedJid === botJid) {
+            return false;
+        }
+
+        // Read existing jids.json or create empty array
+        let userJids = [];
+        const jidsPath = path.join(__dirname, 'jids.json');
+        
+        try {
+            if (fs.existsSync(jidsPath)) {
+                const data = fs.readFileSync(jidsPath, 'utf-8');
+                userJids = JSON.parse(data);
+                if (!Array.isArray(userJids)) userJids = [];
+            }
+        } catch (error) {
+            userJids = [];
+        }
+
+        // Add if new (case-insensitive comparison)
+        const jidExists = userJids.some(existingJid => 
+            existingJid.toLowerCase() === normalizedJid.toLowerCase()
+        );
+        
+        if (!jidExists) {
+            userJids.push(normalizedJid);
+            fs.writeFileSync(jidsPath, JSON.stringify(userJids, null, 2));
+            KeithLogger.success(`✅ New JID saved: ${normalizedJid}`);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        KeithLogger.error('Error saving JID:', error);
+        return false;
+    }
+};
+
+// Function to get saved JIDs
+function getSavedJids() {
+    try {
+        const jidsPath = path.join(__dirname, 'jids.json');
+        if (fs.existsSync(jidsPath)) {
+            const data = fs.readFileSync(jidsPath, 'utf-8');
+            const jids = JSON.parse(data);
+            return Array.isArray(jids) ? jids : [];
+        }
+    } catch (error) {
+        KeithLogger.error('Error reading jids.json:', error);
+    }
+    return [];
+}
+
+// =================================================================
+// END OF JID FUNCTIONS
+// =================================================================
         
         
         
@@ -1121,7 +1208,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
 // JID Management Functions (Add this near other helper functions)
 //========================================================================================================================
 
-function saveUserJid(jid) {
+/*function saveUserJid(jid) {
     try {
         if (!jid) throw new Error("No JID provided");
 
@@ -1194,7 +1281,7 @@ function getSavedJids() {
         console.error('Error reading jids.json:', error);
     }
     return [];
-}
+}*/
 //========================================================================================================================
 client.ev.on("messages.upsert", async ({ messages }) => {
     const mek = messages[0];
