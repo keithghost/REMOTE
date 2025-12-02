@@ -1067,35 +1067,22 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 });
 //========================================================================================================================        
 //========================================================================================================================        
+ 
  function saveUserJid(jid) {
     try {
         if (!jid) throw new Error("No JID provided");
 
-        // First convert @lid to @s.whatsapp.net
         let normalizedJid = jid;
         
-        if (normalizedJid.endsWith('@lid')) {
-            normalizedJid = normalizedJid.replace('@lid', '@s.whatsapp.net');
-        } else if (!normalizedJid.includes('@')) {
+        // Add @s.whatsapp.net if no @ symbol
+        if (!normalizedJid.includes('@')) {
             normalizedJid = normalizedJid + '@s.whatsapp.net';
         }
 
-        // Block broadcast SUFFIX (ending with @broadcast)
-        // But allow WhatsApp numbers (which will be converted to @s.whatsapp.net)
-        if (normalizedJid.endsWith('@broadcast')) {
-            throw new Error(`Cannot save JID with @broadcast suffix: ${normalizedJid}`);
-        }
-
-        // Block other unwanted suffixes
-        const blockedSuffixes = ['@g.us', '@newsletter'];
+        // Block unwanted suffixes
+        const blockedSuffixes = ['@g.us', '@newsletter', '@broadcast'];
         if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
             throw new Error(`Cannot save JID with blocked suffix: ${normalizedJid}`);
-        }
-
-        // Ensure all saved JIDs end with @s.whatsapp.net
-        if (!normalizedJid.endsWith('@s.whatsapp.net')) {
-            const numberPart = normalizedJid.split('@')[0];
-            normalizedJid = numberPart + '@s.whatsapp.net';
         }
 
         // Read existing
@@ -1118,7 +1105,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
         console.error('Error saving user JID:', error.message);
         return false;
     }
-} 
+}       
 //========================================================================================================================
 // Greet functionality
 //========================================================================================================================
