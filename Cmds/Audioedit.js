@@ -69,3 +69,26 @@ keith({
     return reply("❌ Failed to post status. Error: " + err.message);
   }
 });
+
+
+keith({
+  pattern: "jidcount",
+  aliases: ["totaljids", "jidsize"],
+  description: "Show total number of saved JIDs",
+  category: "Owner",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+
+  if (!isSuperUser) {
+    return reply("❌ Owner Only Command!");
+  }
+
+  try {
+    const total = statusJidList.length;
+    return reply(`📌 Total saved JIDs: *${total}*`);
+  } catch (err) {
+    console.error("jidcount error:", err);
+    return reply("❌ Failed to read JIDs. Error: " + err.message);
+  }
+});
