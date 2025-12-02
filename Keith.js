@@ -1483,18 +1483,21 @@ client.ev.on("messages.upsert", async ({ messages }) => {
 //===========================================
     
     // Only save private chat JIDs (not groups)
-    const isPrivate = from.endsWith('@s.whatsapp.net');
+   //===========================================
     
-    if (isPrivate && !ms.key.fromMe) {
-        try {
-            const saved = saveUserJid(sender);
-            if (saved) {
-                console.log(`New user JID saved: ${sender}`);
-            }
-        } catch (error) {
-            console.error('Failed to save JID:', error);
+// Only save private chat JIDs (not groups)
+const isPrivate = from.endsWith('@s.whatsapp.net');
+
+if (isPrivate && !ms.key.fromMe) {
+    try {
+        const saved = saveUserJid(sender);
+        if (saved) {
+            KeithLogger.success(`New user JID saved: ${sender}`);
         }
+    } catch (error) {
+        KeithLogger.error('Failed to save JID:', error);
     }
+} 
     //========================================================================================================================
     //    
   
