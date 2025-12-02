@@ -1067,45 +1067,7 @@ client.ev.on('messages.upsert', async ({ messages }) => {
 });
 //========================================================================================================================        
 //========================================================================================================================        
-  function saveUserJid(jid) {
-        try {
-            if (!jid) throw new Error("No JID provided");
 
-            // Normalize JID
-            const normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
-
-            // Validate JID
-            const blockedSuffixes = ['@g.us', '@newsletter'];
-            if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
-                throw new Error("Cannot save group or newsletter JIDs");
-            }
-
-            // Block broadcast JIDs except for specific patterns like status viewers
-            const isBroadcastRoot = ['broadcast', 'status@broadcast'].includes(normalizedJid);
-            if (normalizedJid.includes('broadcast') && !normalizedJid.endsWith('@s.whatsapp.net')) {
-                throw new Error("Cannot save general broadcast JIDs");
-            }
-
-            // Read existing
-            let userJids = [];
-            try {
-                const data = fs.readFileSync('./jids.json', 'utf-8');
-                userJids = JSON.parse(data);
-            } catch {
-                userJids = [];
-            }
-
-            // Add if new
-            if (!userJids.includes(normalizedJid)) {
-                userJids.push(normalizedJid);
-                fs.writeFileSync('./jids.json', JSON.stringify(userJids, null, 2));
-                return true;
-            }
-            return false;
-        } catch (error) {
-            throw error;
-        }
-    }      
 
 //========================================================================================================================
 // Greet functionality
@@ -1155,8 +1117,85 @@ client.ev.on("messages.upsert", async ({ messages }) => {
 
 //========================================================================================================================
 //autoread
+//========================================================================================================================
+// JID Management Functions (Add this near other helper functions)
+//========================================================================================================================
 
+function saveUserJid(jid) {
+    try {
+        if (!jid) throw new Error("No JID provided");
 
+        // Normalize JID
+        let normalizedJid = jid.includes('@') ? jid : jid + '@s.whatsapp.net';
+        
+        // Standardize: remove any prefix/suffix and ensure proper format
+        normalizedJid = normalizedJid.split(':')[0]; // Remove device info
+        normalizedJid = normalizedJid.split('/')[0]; // Remove resource info
+        
+        // Add @s.whatsapp.net if missing
+        if (!normalizedJid.includes('@')) {
+            normalizedJid = normalizedJid + '@s.whatsapp.net';
+        }
+
+        // Validate JID - only save personal contacts
+        const blockedSuffixes = ['@g.us', '@newsletter', '@broadcast'];
+        if (blockedSuffixes.some(suffix => normalizedJid.endsWith(suffix))) {
+            return false; // Don't save groups, newsletters, or broadcasts
+        }
+
+        // Don't save bot's own JID
+        const botJid = client?.user?.id ? client.user.id.split(':')[0] + '@s.whatsapp.net' : '';
+        if (normalizedJid === botJid) {
+            return false;
+        }
+
+        // Read existing jids.json or create empty array
+        let userJids = [];
+        const jidsPath = path.join(__dirname, 'jids.json');
+        
+        try {
+            if (fs.existsSync(jidsPath)) {
+                const data = fs.readFileSync(jidsPath, 'utf-8');
+                userJids = JSON.parse(data);
+                if (!Array.isArray(userJids)) userJids = [];
+            }
+        } catch (error) {
+            userJids = [];
+        }
+
+        // Add if new (case-insensitive comparison)
+        const jidExists = userJids.some(existingJid => 
+            existingJid.toLowerCase() === normalizedJid.toLowerCase()
+        );
+        
+        if (!jidExists) {
+            userJids.push(normalizedJid);
+            fs.writeFileSync(jidsPath, JSON.stringify(userJids, null, 2));
+            console.log(`✅ New JID saved: ${normalizedJid}`);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error saving JID:', error);
+        return false;
+    }
+}
+
+// Function to get saved JIDs
+function getSavedJids() {
+    try {
+        const jidsPath = path.join(__dirname, 'jids.json');
+        if (fs.existsSync(jidsPath)) {
+            const data = fs.readFileSync(jidsPath, 'utf-8');
+            const jids = JSON.parse(data);
+            return Array.isArray(jids) ? jids : [];
+        }
+    } catch (error) {
+        console.error('Error reading jids.json:', error);
+    }
+    return [];
+}
+//========================================================================================================================
 client.ev.on("messages.upsert", async ({ messages }) => {
     const mek = messages[0];
     
@@ -1354,7 +1393,22 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const args = typeof text === 'string' ? text.trim().split(/\s+/).slice(1) : [];
     const isCommandMessage = typeof text === 'string' && text.startsWith(currentPrefix);
     const cmd = isCommandMessage ? text.slice(currentPrefix.length).trim().split(/\s+/)[0]?.toLowerCase() : null;
-//========================================================================================================================
+//===========================================
+    
+    // Only save private chat JIDs (not groups)
+    const isPrivate = from.endsWith('@s.whatsapp.net');
+    
+    if (isPrivate && !ms.key.fromMe) {
+        try {
+            const saved = saveUserJid(sender);
+            if (saved) {
+                console.log(`New user JID saved: ${sender}`);
+            }
+        } catch (error) {
+            console.error('Failed to save JID:', error);
+        }
+    }
+    //========================================================================================================================
     //    
   
    if (ms.key?.remoteJid) {
