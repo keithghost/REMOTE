@@ -1,4 +1,3 @@
-
 const { keith } = require('../commandHandler');
 const axios = require('axios');
 const fs = require('fs-extra');
@@ -11,7 +10,6 @@ function getMediaType(quoted) {
   if (quoted.videoMessage) return "video";
   if (quoted.stickerMessage) return "sticker";
   if (quoted.audioMessage) return "audio";
-  if (quoted.documentMessage) return "document";
   return "unknown";
 }
 
@@ -24,62 +22,57 @@ async function saveMediaToTemp(client, quotedMedia, type) {
   return savedPath;
 }
 
-async function uploadToQuax(filePath) {
-  if (!fs.existsSync(filePath)) throw new Error("File does not exist");
-
-  const mimeType = mime.lookup(filePath) || 'application/octet-stream';
+async function uploadToCatbox(filePath) {
+  const buffer = await fs.readFile(filePath);
   const form = new FormData();
-  form.append('files[]', fs.createReadStream(filePath), {
+  form.append('reqtype', 'fileupload');
+  form.append('fileToUpload', buffer, {
     filename: path.basename(filePath),
-    contentType: mimeType
-  });
-  form.append('expiry', '-1');
-
-  const response = await axios.post('https://qu.ax/upload.php', form, {
-    headers: {
-      ...form.getHeaders(),
-      'origin': 'https://qu.ax',
-      'referer': 'https://qu.ax/',
-      'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
-    }
+    contentType: mime.lookup(path.extname(filePath)) || 'application/octet-stream'
   });
 
-  const result = response.data;
-  if (result.success && result.files?.[0]?.url) {
-    return result.files[0].url;
-  } else {
-    throw new Error("Upload failed or malformed response");
-  }
+  const { data } = await axios.post('https://catbox.moe/user/api.php', form, {
+    headers: form.getHeaders(),
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity
+  });
+
+  return data.trim(); // Catbox returns the full valid URL
 }
 
 keith({
   pattern: "url",
-  alias: ["upload", "urlconvert"],
-  desc: "Convert quoted media to Qu.ax URL",
+  aliases: ["upload", "urlconvert"],
+  description: "Convert quoted media to Catbox URL",
   category: "Uploader",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, quoted, quotedMsg, reply } = conText;
 
-  if (!quotedMsg) return reply("📌 Please quote a media or document message to upload.");
+  if (!quotedMsg) return reply("📌 Please quote an image, video, audio, or sticker to upload.");
 
   const type = getMediaType(quotedMsg);
   if (type === "unknown") return reply("❌ Unsupported media type.");
 
-  const mediaNode = quoted?.[`${type}Message`];
+  const mediaNode =
+    quoted?.imageMessage ||
+    quoted?.videoMessage ||
+    quoted?.audioMessage ||
+    quoted?.stickerMessage;
+
   if (!mediaNode) return reply("❌ Could not extract media content.");
 
   let filePath;
   try {
     filePath = await saveMediaToTemp(client, mediaNode, type);
-    const link = await uploadToQuax(filePath);
+    const link = await uploadToCatbox(filePath);
     await client.sendMessage(from, { text: link }, { quoted: mek });
   } catch (err) {
     console.error("Upload error:", err);
     await reply("❌ Failed to upload. Error:\n" + err.message);
   } finally {
     if (filePath && fs.existsSync(filePath)) {
-      try { fs.unlinkSync(filePath); } catch {}
+      try { fs.unlinkSync(filePath); } catch (e) { console.error("unlink error:", e); }
     }
   }
 });
