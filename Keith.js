@@ -1714,12 +1714,31 @@ client.ev.on("connection.update", async (update) => {
         KeithLogger.info("Keith md is connecting..");
         reconnectAttempts = 0;
     }
+    
+const chalk = require('chalk');
 
-    if (connection === "open") {
-        KeithLogger.success("✅ keith md is active , enjoy 😀");
-        reconnectAttempts = 0;
-        startAutoBio();
-        
+
+if (connection === "open") {
+    
+    console.log(chalk.cyanBright(`
+██╗  ██╗ ███████╗ ██╗ ████████╗ ██╗  ██╗
+██║ ██╔╝ ██╔════╝ ██║ ╚══██╔══╝ ██║  ██║
+█████╔╝  █████╗   ██║    ██║    ███████║
+██╔═██╗  ██╔══╝   ██║    ██║    ██╔══██║
+██║  ██╗ ███████╗ ██║    ██║    ██║  ██║
+╚═╝  ╚═╝ ╚══════╝ ╚═╝    ╚═╝    ╚═╝  ╚═╝
+`));
+    
+    // Multi-colored text
+    console.log(chalk.magentaBright('✨ ') + 
+                chalk.cyanBright('KEITH MD') + 
+                chalk.magentaBright(' ✨') + 
+                chalk.blueBright(' is now active and connected!\n'));
+    
+    KeithLogger.success("✅ keith md is active , enjoy 😀");
+    reconnectAttempts = 0;
+    startAutoBio();
+    
         
         setTimeout(async () => {
             try {
