@@ -8,6 +8,57 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "pair",
+  description: "Generate pairing code and copy it",
+  category: "General",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, q, reply, botname } = conText;
+
+  if (!q) {
+    return reply("❌ Please provide a number to pair.\nExample: .pair 254786989022");
+  }
+
+  try {
+    // Call your API with the provided number
+    const response = await axios.get(`https://apiskeith.vercel.app/keithpair?q=${q}`);
+    const data = response.data;
+
+    if (!data.status) {
+      return reply("❌ Failed to generate pairing code.");
+    }
+
+    const code = data.result;
+
+    const messageText =
+      `🔑 Pairing Code Generated\n\n` +
+      `• Number: ${q}\n` +
+      `• Code: ${code}\n\n` +
+      `Tap the button below to copy the code.`;
+
+    await sendButtons(client, from, {
+      title: '',
+      text: messageText,
+      footer: `> *${botname}*`,   // ✅ dynamic footer
+      buttons: [
+        {
+          name: "cta_copy",
+          buttonParamsJson: JSON.stringify({
+            display_text: "📋 Copy Pairing Code",
+            id: "copy_pair",
+            copy_code: code
+          })
+        }
+      ]
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("pair error:", err);
+    return reply("❌ Failed to fetch pairing code. Error: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
