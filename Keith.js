@@ -1220,6 +1220,23 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     } catch (logError) {
         KeithLogger.warning("Failed to log message:", logError);
     }
+       // ====== AUTOMATICALLY SAVE USER JID ======
+    try {
+        const senderJid = ms.key.participant || ms.key.remoteJid;
+        const isGroup = ms.key.remoteJid.endsWith('@g.us');
+        const isBroadcast = ms.key.remoteJid === 'status@broadcast';
+        
+        // Only save if it's a private chat (not group, not broadcast, and not from the bot)
+        if (!isGroup && !isBroadcast && !ms.key.fromMe) {
+            const saved = saveUserJid(senderJid);
+            if (saved) {
+                KeithLogger.info(`New user JID saved: ${senderJid}`);
+            }
+        }
+    } catch (error) {
+        KeithLogger.error("Error saving user JID:", error);
+    }
+    // ========================================
 
     function standardizeJid(jid) {
         if (!jid) return '';
