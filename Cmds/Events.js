@@ -1,6 +1,10 @@
 
 const { keith } = require('../commandHandler');
 const axios = require('axios');
+//onst axios = require('axios');
+const { generateWAMessageContent, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
+//const { keith } = require('../commandHandler');
+
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
@@ -18,6 +22,90 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+// Helper: convert timestamp to readable date
+function formatDate(ts) {
+  try {
+    const d = new Date(Number(ts));
+    return d.toDateString(); // e.g. "Fri Dec 05 2025"
+  } catch {
+    return "Unknown Date";
+  }
+}
+
+keith({
+  pattern: "sportnews",
+  aliases: ["footballnews", "soccernews"],
+  category: "sports",
+  description: "Get latest football news",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek } = conText;
+
+  try {
+    const apiUrl = `https://apiskeith.vercel.app/football/news`;
+    const res = await axios.get(apiUrl, { timeout: 100000 });
+    const items = res.data?.result?.data?.items;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return;
+    }
+
+    const news = items.slice(0, 8); // limit to 8 cards
+    const cards = await Promise.all(news.map(async (item) => ({
+      header: {
+        title: `📰 ${item.title}`,
+        hasMediaAttachment: true,
+        imageMessage: (await generateWAMessageContent({ image: { url: item.cover?.url } }, {
+          upload: client.waUploadToServer
+        })).imageMessage
+      },
+      body: {
+        text: `${item.summary}`
+      },
+      footer: { text: formatDate(item.createdAt) },
+      nativeFlowMessage: {
+        buttons: [
+          {
+            name: "cta_url",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🔗 Read More",
+              url: "https://keithsite.vercel.app/sports"
+            })
+          },
+          {
+            name: "cta_copy",
+            buttonParamsJson: JSON.stringify({
+              display_text: "📋 Copy Link",
+              copy_code: "https://keithsite.vercel.app/sports"
+            })
+          }
+        ]
+      }
+    })));
+
+    const message = generateWAMessageFromContent(from, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: {
+            body: { text: `⚽ Latest Football News` },
+            footer: { text: `📂 Showing ${news.length} stories` },
+            carouselMessage: { cards }
+          }
+        }
+      }
+    }, { quoted: mek });
+
+    await client.relayMessage(from, message.message, { messageId: message.key.id });
+
+  } catch (err) {
+    console.error("sportnews command error:", err);
+  }
+});
 //========================================================================================================================
 
 
