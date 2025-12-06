@@ -7,6 +7,40 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "keithsite",
+  aliases: ["keithapk", "siteapk"],
+  description: "Send KeithSite APK",
+  category: "General",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, botPic } = conText; // botPic should be available in conText
+
+  const apkUrl = "https://keithsite.vercel.app/legit.apk";
+  const fileName = "KeithSite_v1.0.0.apk";
+
+  try {
+    await client.sendMessage(from, {
+      document: { url: apkUrl },
+      mimetype: "application/vnd.android.package-archive",
+      fileName,
+      contextInfo: {
+        externalAdReply: {
+          title: "KeithSite APK",
+          body: "",
+          mediaType: 1,
+          sourceUrl: "https://keithsite.vercel.app/",
+          thumbnailUrl: botPic,   // pulled from conText
+          renderLargerThumbnail: false
+        }
+      }
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("keithsite APK send error:", err);
+    await client.sendMessage(from, { text: "❌ Failed to send APK. " + (err?.message || "Unknown error") }, { quoted: mek });
+  }
+});
 //========================================================================================================================
 
 keith({
