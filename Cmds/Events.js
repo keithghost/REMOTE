@@ -23,6 +23,10 @@ const { generateWAMessageContent, generateWAMessageFromContent } = require('@whi
 //========================================================================================================================
 //========================================================================================================================
 
+
+//========================================================================================================================
+//========================================================================================================================
+
 keith({
   pattern: "livescore",
   aliases: ["live", "score", "fixtures"],
@@ -90,11 +94,8 @@ keith({
       // Get user's timezone from context or default
       const userTimeZone = timezone || "Africa/Nairobi";
       
-      // Get current time in user's timezone PROPERLY
+      // Get current time in user's timezone
       const now = new Date();
-      const currentTimeUTC = now.getTime();
-      
-      // Convert UTC to user's timezone for display
       const currentUserTimeStr = now.toLocaleTimeString("en-US", {
         timeZone: userTimeZone,
         hour12: false,
@@ -102,28 +103,34 @@ keith({
         minute: "2-digit"
       });
       
-      const [currentHour, currentMinute] = currentUserTimeStr.split(':').map(Number);
-      const currentTimeMinutes = currentHour * 60 + currentMinute;
-      
-      // Filter and categorize matches
+      // Filter matches based on status
       let filteredGames = [];
 
       games.forEach(game => {
+        const matchStatus = game.R?.st || ""; // Get status from R.st
+        
         // Convert match time to user's timezone
         const userMatchTime = convertToUserTime(game.tm, game.dt, userTimeZone);
-        const matchTimeMinutes = userMatchTime ? parseTimeToMinutes(userMatchTime.time) : null;
         
-        const matchStatus = analyzeMatchStatus(game, matchTimeMinutes, currentTimeMinutes);
+        // Categorize based on status (following HTML logic)
+        let category = "";
         
-        if (
-          (choice === "1" && matchStatus === "live") ||
-          (choice === "2" && matchStatus === "finished") ||
-          (choice === "3" && matchStatus === "upcoming")
-        ) {
+        if (matchStatus === '1T' || matchStatus === '2T' || matchStatus === 'HT') {
+          category = "live";
+        } else if (matchStatus === 'FT' || matchStatus === 'Pen') {
+          category = "finished";
+        } else if (matchStatus === '' || matchStatus === 'Pst' || matchStatus === 'Canc') {
+          category = "upcoming";
+        }
+        
+        if (category && (
+          (choice === "1" && category === "live") ||
+          (choice === "2" && category === "finished") ||
+          (choice === "3" && category === "upcoming")
+        )) {
           filteredGames.push({
             ...game,
-            matchTimeMinutes,
-            matchStatus,
+            category,
             userMatchTime: userMatchTime ? userMatchTime.time : game.tm,
             userMatchDate: userMatchTime ? userMatchTime.date : game.dt
           });
@@ -137,7 +144,7 @@ keith({
         });
       }
 
-      // Group by date (using converted dates)
+      // Group by date
       const matchesByDate = {};
       
       filteredGames.forEach(game => {
@@ -173,14 +180,9 @@ keith({
             output += `   🕒 ${game.userMatchTime}`;
             
             // Add match status info
-            if (game.cm === "HT") {
-              output += ` (Half Time)`;
-            } else if (game.cm === "FT") {
-              output += ` (Full Time)`;
-            } else if (!isNaN(parseInt(game.cm)) && parseInt(game.cm) > 0) {
-              output += ` (${game.cm} minute)`;
-            } else if (game.matchStatus === "upcoming") {
-              output += ` (Starts Soon)`;
+            const statusText = getMatchStatusText(game.R?.st);
+            if (statusText) {
+              output += ` (${statusText})`;
             }
           } else if (game.tm) {
             output += `   🕒 ${game.tm}`;
@@ -206,17 +208,6 @@ keith({
 });
 
 // Helper functions
-function parseTimeToMinutes(timeStr) {
-  if (!timeStr) return null;
-  
-  try {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours * 60 + minutes;
-  } catch (e) {
-    return null;
-  }
-}
-
 function convertToUserTime(timeStr, dateStr, userTimeZone) {
   if (!timeStr || !dateStr) return null;
   
@@ -257,46 +248,29 @@ function convertToUserTime(timeStr, dateStr, userTimeZone) {
   }
 }
 
-function analyzeMatchStatus(game, matchTimeMinutes, currentTimeMinutes) {
-  // Check if match has explicit status
-  if (game.cm === "FT") return "finished";
-  if (game.cm === "HT") return "live";
+function getMatchDisplay(game) {
+  const status = game.R?.st || "";
   
-  // Check if match is in progress (minute > 0)
-  const currentMinute = parseInt(game.cm);
-  if (!isNaN(currentMinute) && currentMinute > 0 && currentMinute <= 90) {
-    return "live";
-  }
+  if (status === 'HT') return "⏸️";
+  if (status === 'FT' || status === 'Pen') return "✅";
+  if (status === '1T' || status === '2T') return "🔴";
   
-  // If no match time, assume upcoming if cm is 0 or empty
-  if (!matchTimeMinutes) {
-    return (game.cm === "0" || game.cm === "") ? "upcoming" : "unknown";
-  }
-  
-  // Estimate match status based on time
-  const matchEndTime = matchTimeMinutes + 105;
-  
-  if (currentTimeMinutes < matchTimeMinutes) {
-    return "upcoming";
-  } else if (currentTimeMinutes >= matchTimeMinutes && currentTimeMinutes <= matchEndTime) {
-    return "live";
-  } else {
-    return "finished";
-  }
+  return game.category === "upcoming" ? "⏰" : "⚽";
 }
 
-function getMatchDisplay(game) {
-  if (game.cm === "HT") return "⏸️";
-  if (game.cm === "FT") return "✅";
+function getMatchStatusText(status) {
+  const statusMap = {
+    '': 'Not Started',
+    'FT': 'Full Time',
+    '1T': 'First Half',
+    '2T': 'Second Half',
+    'HT': 'Half Time',
+    'Pst': 'Postponed',
+    'Canc': 'Cancelled',
+    'Pen': 'Penalties'
+  };
   
-  const min = parseInt(game.cm);
-  if (!isNaN(min) && min > 0) {
-    if (min <= 45) return `🟢`;
-    if (min <= 90) return `🟡`;
-    return `🔴`;
-  }
-  
-  return game.matchStatus === "upcoming" ? "⏰" : "⚽";
+  return statusMap[status] || status;
 }
 
 function getScoreDisplay(game) {
