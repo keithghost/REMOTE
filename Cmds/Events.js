@@ -23,6 +23,292 @@ const { generateWAMessageContent, generateWAMessageFromContent } = require('@whi
 //========================================================================================================================
 //========================================================================================================================
 
+keith({
+  pattern: "livescore",
+  aliases: ["live", "score", "fixtures"],
+  description: "Get live, finished, or upcoming football matches",
+  category: "sports",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, timezone } = conText;
+
+  const caption = `╭═════════════════⊷
+║  ⚽ *Football Scores* ⚽
+║━━━━━━━━━━━━━━━━━
+║ 𝗥𝗘𝗣𝗟𝗔𝗬 𝗪𝗜𝗧𝗛 𝗡𝗨𝗠𝗕𝗘𝗥
+║ 1. Live Matches 🔴
+║ 2. Finished Matches ✅
+║ 3. Upcoming Matches ⏰
+╰═════════════════⊷`;
+
+  const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+  const messageId = sent.key.id;
+
+  client.ev.on("messages.upsert", async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message) return;
+
+    const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+    const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+    const chatId = msg.key.remoteJid;
+
+    if (!isReply || chatId !== from) return;
+
+    const choice = responseText.trim();
+    
+    const optionMap = {
+      "1": { name: "Live", emoji: "🔴" },
+      "2": { name: "Finished", emoji: "✅" },
+      "3": { name: "Upcoming", emoji: "⏰" }
+    };
+
+    if (!optionMap[choice]) {
+      return client.sendMessage(chatId, {
+        text: "❌ Invalid option. Reply with 1, 2, or 3.",
+        quoted: msg
+      });
+    }
+
+    const selected = optionMap[choice];
+
+    try {
+      await client.sendMessage(chatId, { react: { text: selected.emoji, key: msg.key } });
+
+      // Fetch all matches
+      const res = await axios.get("https://apiskeith.vercel.app/livescore");
+      const data = res.data;
+
+      if (!data.status || !data.result || !data.result.games) {
+        return client.sendMessage(chatId, {
+          text: `❌ No match data available at the moment.`,
+          quoted: msg
+        });
+      }
+
+      const games = Object.values(data.result.games);
+      
+      // Get user's timezone from context or default
+      const userTimeZone = timezone || "Africa/Nairobi";
+      
+      // Get current time in user's timezone PROPERLY
+      const now = new Date();
+      const currentTimeUTC = now.getTime();
+      
+      // Convert UTC to user's timezone for display
+      const currentUserTimeStr = now.toLocaleTimeString("en-US", {
+        timeZone: userTimeZone,
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+      
+      const [currentHour, currentMinute] = currentUserTimeStr.split(':').map(Number);
+      const currentTimeMinutes = currentHour * 60 + currentMinute;
+      
+      // Filter and categorize matches
+      let filteredGames = [];
+
+      games.forEach(game => {
+        // Convert match time to user's timezone
+        const userMatchTime = convertToUserTime(game.tm, game.dt, userTimeZone);
+        const matchTimeMinutes = userMatchTime ? parseTimeToMinutes(userMatchTime.time) : null;
+        
+        const matchStatus = analyzeMatchStatus(game, matchTimeMinutes, currentTimeMinutes);
+        
+        if (
+          (choice === "1" && matchStatus === "live") ||
+          (choice === "2" && matchStatus === "finished") ||
+          (choice === "3" && matchStatus === "upcoming")
+        ) {
+          filteredGames.push({
+            ...game,
+            matchTimeMinutes,
+            matchStatus,
+            userMatchTime: userMatchTime ? userMatchTime.time : game.tm,
+            userMatchDate: userMatchTime ? userMatchTime.date : game.dt
+          });
+        }
+      });
+
+      if (filteredGames.length === 0) {
+        return client.sendMessage(chatId, {
+          text: `⚽ *${selected.name} Matches*\n\nNo ${selected.name.toLowerCase()} matches found at the moment.`,
+          quoted: msg
+        });
+      }
+
+      // Group by date (using converted dates)
+      const matchesByDate = {};
+      
+      filteredGames.forEach(game => {
+        const date = game.userMatchDate || game.dt || "Today";
+        
+        if (!matchesByDate[date]) {
+          matchesByDate[date] = [];
+        }
+        
+        matchesByDate[date].push(game);
+      });
+
+      // Create formatted output
+      let output = `⚽ *${selected.name} Matches* ${selected.emoji}\n`;
+      output += `🌍 Timezone: ${userTimeZone}\n`;
+      output += `🕐 Current Time: ${currentUserTimeStr}\n\n`;
+      
+      let totalMatches = 0;
+      
+      Object.entries(matchesByDate).forEach(([date, dateGames]) => {
+        output += `📅 *${date}*\n`;
+        output += "─".repeat(30) + "\n";
+        
+        dateGames.forEach(game => {
+          const status = getMatchDisplay(game);
+          const score = getScoreDisplay(game);
+          
+          output += `${status} *${game.p1} vs ${game.p2}*\n`;
+          output += `   ${score}\n`;
+          
+          // Show converted user time
+          if (game.userMatchTime) {
+            output += `   🕒 ${game.userMatchTime}`;
+            
+            // Add match status info
+            if (game.cm === "HT") {
+              output += ` (Half Time)`;
+            } else if (game.cm === "FT") {
+              output += ` (Full Time)`;
+            } else if (!isNaN(parseInt(game.cm)) && parseInt(game.cm) > 0) {
+              output += ` (${game.cm} minute)`;
+            } else if (game.matchStatus === "upcoming") {
+              output += ` (Starts Soon)`;
+            }
+          } else if (game.tm) {
+            output += `   🕒 ${game.tm}`;
+          }
+          
+          output += "\n\n";
+          totalMatches++;
+        });
+      });
+
+      output += `📊 Total: ${totalMatches} match(es)`;
+
+      await client.sendMessage(chatId, { text: output }, { quoted: msg });
+
+    } catch (err) {
+      console.error("livescore error:", err);
+      await client.sendMessage(chatId, {
+        text: `❌ Error fetching ${selected.name} matches: ${err.message}`,
+        quoted: msg
+      });
+    }
+  });
+});
+
+// Helper functions
+function parseTimeToMinutes(timeStr) {
+  if (!timeStr) return null;
+  
+  try {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  } catch (e) {
+    return null;
+  }
+}
+
+function convertToUserTime(timeStr, dateStr, userTimeZone) {
+  if (!timeStr || !dateStr) return null;
+  
+  try {
+    // Parse the API date and time (assume it's in UTC)
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    
+    // Create UTC date
+    const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+    
+    // Convert to user's timezone
+    const userDateStr = utcDate.toLocaleDateString("en-US", {
+      timeZone: userTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    
+    const userTimeStr = utcDate.toLocaleTimeString("en-US", {
+      timeZone: userTimeZone,
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    
+    // Format date back to YYYY-MM-DD format
+    const [userMonth, userDay, userYear] = userDateStr.split('/');
+    const formattedDate = `${userYear}-${userMonth.padStart(2, '0')}-${userDay.padStart(2, '0')}`;
+    
+    return {
+      date: formattedDate,
+      time: userTimeStr
+    };
+  } catch (e) {
+    console.error("Time conversion error:", e);
+    return null;
+  }
+}
+
+function analyzeMatchStatus(game, matchTimeMinutes, currentTimeMinutes) {
+  // Check if match has explicit status
+  if (game.cm === "FT") return "finished";
+  if (game.cm === "HT") return "live";
+  
+  // Check if match is in progress (minute > 0)
+  const currentMinute = parseInt(game.cm);
+  if (!isNaN(currentMinute) && currentMinute > 0 && currentMinute <= 90) {
+    return "live";
+  }
+  
+  // If no match time, assume upcoming if cm is 0 or empty
+  if (!matchTimeMinutes) {
+    return (game.cm === "0" || game.cm === "") ? "upcoming" : "unknown";
+  }
+  
+  // Estimate match status based on time
+  const matchEndTime = matchTimeMinutes + 105;
+  
+  if (currentTimeMinutes < matchTimeMinutes) {
+    return "upcoming";
+  } else if (currentTimeMinutes >= matchTimeMinutes && currentTimeMinutes <= matchEndTime) {
+    return "live";
+  } else {
+    return "finished";
+  }
+}
+
+function getMatchDisplay(game) {
+  if (game.cm === "HT") return "⏸️";
+  if (game.cm === "FT") return "✅";
+  
+  const min = parseInt(game.cm);
+  if (!isNaN(min) && min > 0) {
+    if (min <= 45) return `🟢`;
+    if (min <= 90) return `🟡`;
+    return `🔴`;
+  }
+  
+  return game.matchStatus === "upcoming" ? "⏰" : "⚽";
+}
+
+function getScoreDisplay(game) {
+  if (game.R && game.R.r1 !== undefined && game.R.r2 !== undefined) {
+    return `📊 ${game.R.r1} - ${game.R.r2}`;
+  }
+  return "📊 0 - 0";
+}
+
+//========================================================================================================================
+//========================================================================================================================
+
 // Helper: convert timestamp to readable date
 function formatDate(ts) {
   try {
