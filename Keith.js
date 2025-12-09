@@ -1495,41 +1495,7 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
 
   
     if (isCommandMessage && cmd) {
-    }
- // ====================================================
-
-
-         
-    else if (text && text.startsWith('>') && isSuperUser) {
-    // Create reply function here since we're outside command handler
-    const reply = (teks) => {
-        client.sendMessage(from, { text: teks }, { quoted: ms });
-    };
-
-    try {
-        const code = text.slice(1).trim();
-        
-        if (!code) {
-            reply(" code 👀👀!??");
-            return;
-        }
-        
-        let evaled = await eval(`(async () => { ${code} })()`);
-        if (typeof evaled !== 'string') {
-            evaled = require('util').inspect(evaled, { depth: 2 });
-        }
-        
-        reply(String(evaled));
-        return;
-        
-    } catch (err) {
-        reply(String(err));
-        return;
-    }
-}
-// ====================================================
-
-
+    
       
         const keithCmd = Array.isArray(evt.commands) 
             ? evt.commands.find((c) => (
