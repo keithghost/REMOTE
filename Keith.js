@@ -1490,35 +1490,6 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
 
 
 
-// ========== EVAL COMMAND (using '>' prefix) ==========
-if (text && text.startsWith('>') && isSuperUser) {
-    try {
-        const code = text.slice(1).trim();
-        
-        if (!code) {
-            reply("❌ Please provide code!");
-            return;
-        }
-        
-        let evaled = await eval(`(async () => { ${code} })()`);
-        if (typeof evaled !== 'string') {
-            evaled = require('util').inspect(evaled, { depth: 2 });
-        }
-        
-        reply(String(evaled));
-        return;
-        
-    } catch (err) {
-        reply(String(err));
-        return;
-    }
-}
-// ====================================================
-
-
-
-// ====================================================
-
 
   
     if (isCommandMessage && cmd) {
