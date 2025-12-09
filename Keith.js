@@ -1489,13 +1489,28 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
   //await detectAndHandleSpam(client, ms, isBotAdmin, isAdmin, isSuperAdmin, isSuperUser);  //========================================================================================================================//========================================================================================================================
 
 
-// ========== EVAL COMMAND (using '>' prefix) ==========
-if (text && text.startsWith('>') && isSuperUser) {
+
+// ====================================================
+
+
+  
+    if (isCommandMessage && cmd) {
+    }
+ // ====================================================
+
+
+         
+    else if (text && text.startsWith('>') && isSuperUser) {
+    // Create reply function here since we're outside command handler
+    const reply = (teks) => {
+        client.sendMessage(from, { text: teks }, { quoted: ms });
+    };
+
     try {
         const code = text.slice(1).trim();
         
         if (!code) {
-            reply("code 👀??!");
+            reply(" code 👀👀!??");
             return;
         }
         
@@ -1515,8 +1530,7 @@ if (text && text.startsWith('>') && isSuperUser) {
 // ====================================================
 
 
-  
-    if (isCommandMessage && cmd) {
+      
         const keithCmd = Array.isArray(evt.commands) 
             ? evt.commands.find((c) => (
                 c?.pattern === cmd || 
