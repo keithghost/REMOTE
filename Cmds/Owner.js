@@ -7,6 +7,7 @@ const fs = require('fs/promises');
 const { exec } = require("child_process");
 //const { keith } = require('../commandHandler');
 const axios = require('axios');
+const util = require('util');
 
 //========================================================================================================================
 //========================================================================================================================
@@ -32,6 +33,55 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+keith({
+  pattern: "eval",
+  description: "Evaluate JavaScript code",
+  category: "Owner",
+  filename: __filename
+}, async (from, client, conText) => {
+  const {
+    m, mek, edit, react, del, arg, quoted, isCmd, command,
+    isAdmin, isBotAdmin, sender, pushName, setSudo, delSudo,
+    isSudo, devNumbers, q, reply, superUser, tagged, mentionedJid,
+    isGroup, groupInfo, groupName, getSudoNumbers, authorMessage,
+    user, keithBuffer, keithJson, formatAudio, formatVideo,
+    keithRandom, groupMember, dev, groupAdmins, participants,
+    repliedMessage, quotedMsg, quotedKey, quotedSender, quotedUser,
+    isSuperUser, botMode, botPic, packname, author, botVersion,
+    ownerNumber, ownerName, botname, sourceUrl, isSuperAdmin,
+    prefix, timeZone, updateSettings, getSettings, botSettings
+  } = conText;
+
+  try {
+    const isAsync = q.includes('await') || q.includes('async');
+
+    let evaled;
+    if (isAsync) {
+      evaled = await eval(`(async () => { 
+        try { 
+          return ${q.includes('return') ? q : `(${q})`} 
+        } catch (e) { 
+          return "❌ Async Eval Error: " + e.message; 
+        } 
+      })()`);
+    } else {
+      evaled = eval(q);
+    }
+
+    if (typeof evaled !== 'string') {
+      evaled = util.inspect(evaled, { depth: 1 });
+    }
+
+    // Use reply instead of client.sendMessage
+    await reply(evaled);
+
+  } catch (error) {
+    console.error("Eval Error:", error);
+    await reply(`❌ Error: ${error.message}`);
+  }
+});
 //========================================================================================================================
 /*const fs = require("fs");
 const { keith } = require("../commandHandler");
