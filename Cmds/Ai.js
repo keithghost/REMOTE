@@ -366,11 +366,11 @@ keith({
       `https://apiskeith.vercel.app/ai/removebg?url=${encodeURIComponent(imageUrl)}`
     );
 
-    if (!result?.status || !result?.result?.data?.cutoutUrl) {
+    if (!result?.status || !result?.result) {
       return reply("❌ No response from RemoveBG API");
     }
 
-    const cutoutUrl = result.result.data.cutoutUrl;
+    const cutoutUrl = result.result;
 
     // Send back the processed image
     await client.sendMessage(from, { image: { url: cutoutUrl } }, { quoted: mek });
