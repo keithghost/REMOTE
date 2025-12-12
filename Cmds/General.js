@@ -19,7 +19,7 @@ keith({
   pattern: "gitclone",
   aliases: ["zip", "repozip"],
   description: "Clone GitHub repo and return as zip",
-  category: "Utility",
+  category: "General",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, q, reply } = conText;
