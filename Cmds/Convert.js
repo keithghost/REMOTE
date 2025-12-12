@@ -19,6 +19,38 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "bitly",
+  description: "Shorten a URL using Bitly API",
+  category: "Shortener",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, q, reply } = conText;
+
+  if (!q) {
+    return reply("📌 Provide a URL to shorten.\nExample: .bitly https://example.com");
+  }
+
+  try {
+    // Call your API
+    const apiUrl = `https://apiskeith.vercel.app/shortener/bitly?url=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(apiUrl, { timeout: 10000 });
+
+    if (!data?.status || !data?.result?.shortened) {
+      return reply("❌ Failed to shorten URL.");
+    }
+
+    const shortUrl = data.result.shortened;
+
+    
+    await reply(`${shortUrl}`);
+
+  } catch (err) {
+    console.error("Bitly error:", err);
+    await reply("❌ Error: " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
