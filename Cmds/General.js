@@ -11,6 +11,36 @@ const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "screenshot",
+  aliases: ["ss", "webshot"],
+  description: "Take a screenshot of a given URL",
+  category: "General",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, q, reply } = conText;
+
+  if (!q) {
+    return reply("📌 Provide a URL to screenshot.\nExample: .screenshot https://apis-keith.vercel.app/");
+  }
+
+  try {
+    // Build screenshot API URL
+    const apiUrl = `https://apiskeith.vercel.app/tool/screenshot?url=${encodeURIComponent(q)}`;
+
+    // Send screenshot image with simplified caption
+    await client.sendMessage(from, {
+      image: { url: apiUrl },
+      caption: `Screenshot of ${q}`
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Screenshot error:", err);
+    await reply("❌ Failed to capture screenshot. Error: " + err.message);
+  }
+});
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
 
