@@ -1268,7 +1268,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
 
     const sendr = ms.key.fromMe 
         ? (client.user.id.split(':')[0] + '@s.whatsapp.net' || client.user.id) 
-        : (ms.key.participant || ms.key.remoteJid);
+        : (ms.key.participantPn || ms.key.senderPn || ms.key.participant || ms.key.remoteJid);
     let participants = [];
     let groupAdmins = [];
     let groupSuperAdmins = [];
