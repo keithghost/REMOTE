@@ -1243,7 +1243,7 @@ keith({
 async (from, client, conText) => {
   const { reply, q, isSuperUser, isBotAdmin, isGroup } = conText;
 
-  if (!isGroup) return reply("❌ Group command only!");
+//  if (!isGroup) return reply("❌ Group command only!");
  // if (!isBotAdmin) return reply("❌ Need admin role!");
   if (!isSuperUser) return reply("❌ Admin only command!");
 
@@ -1318,7 +1318,7 @@ keith({
 async (from, client, conText) => {
   const { reply, q, isSuperUser, isBotAdmin, isGroup } = conText;
 
-  if (!isGroup) return reply("❌ Group command only!");
+//  if (!isGroup) return reply("❌ Group command only!");
  // if (!isBotAdmin) return reply("❌ Need admin role!");
   if (!isSuperUser) return reply("❌ Admin only command!");
 
