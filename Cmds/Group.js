@@ -114,8 +114,54 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 
-
 keith({
+  pattern: "demoteall",
+  aliases: ["demoteadmins", "stripadmins"],
+  category: "group",
+  description: "Demote all group admins"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup, isBotAdmin, isSuperAdmin, superUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  if (!isBotAdmin) return reply("❌ Bot must be admin to demote others.");
+
+  try {
+    // Fetch group metadata
+    const metadata = await client.groupMetadata(from);
+
+    // Collect all admins
+    const admins = metadata.participants.filter(p => p.admin === 'admin' || p.admin === 'superadmin');
+
+    // Filter out super admin, bot itself, and superUser numbers
+    const demoteIds = admins
+      .map(a => a.id)
+      .filter(id =>
+        id !== isSuperAdmin &&                // skip super admin
+        !id.includes(client.user.id) &&       // skip bot itself
+        !(Array.isArray(superUser) && superUser.includes(id)) // skip superUser numbers
+      );
+
+    if (demoteIds.length === 0) {
+      return reply("ℹ️ No admins found to demote.");
+    }
+
+    // Demote all in one batch
+    await client.groupParticipantsUpdate(from, demoteIds, 'demote');
+
+    // Confirmation message
+    await client.sendMessage(from, {
+      text: `🔻 All admins have been demoted (${demoteIds.length}).`,
+      mentions: demoteIds
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("DemoteAll Error:", err);
+    reply("❌ Failed to demote admins: " + err.message);
+  }
+});
+/*keith({
   pattern: "demoteall",
   aliases: ["demoteadmins", "stripadmins"],
   category: "group",
@@ -157,7 +203,7 @@ async (from, client, conText) => {
     console.error("DemoteAll Error:", err);
     reply("❌ Failed to demote admins: " + err.message);
   }
-});
+});*/
 //========================================================================================================================
 
 
@@ -1011,6 +1057,7 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
 
 
 
