@@ -1,5 +1,7 @@
 const { keith, commands } = require('../commandHandler');
 const fs = require("fs");
+const axios = require('axios');
+const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
@@ -10,6 +12,64 @@ const fs = require("fs");
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+//const { keith } = require('../commandHandler');
+
+
+keith({
+  pattern: "gitclone",
+  aliases: ["zip", "repozip"],
+  description: "Clone GitHub repo and return as zip",
+  category: "Utility",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, q, reply } = conText;
+
+  if (!q) {
+    return reply("📌 Provide a GitHub repo URL.\nExample: .gitclone https://github.com/Keithkeizzah/KEITH-MD");
+  }
+
+  try {
+    // Normalize repo URL
+    let repoUrl = q.trim();
+    if (!repoUrl.startsWith("https://github.com/")) {
+      return reply("❌ Only GitHub repo URLs are supported.");
+    }
+
+    // Extract owner/repo
+    const parts = repoUrl.replace("https://github.com/", "").split("/");
+    if (parts.length < 2) {
+      return reply("❌ Invalid GitHub repo URL format.");
+    }
+    const owner = parts[0];
+    const repo = parts[1];
+
+    // Build archive URL (default branch = main)
+    const zipUrl = `https://github.com/${owner}/${repo}/archive/refs/heads/main.zip`;
+    const fileName = `${repo}-main.zip`;
+
+    // Download zip
+    const tmpDir = path.join(__dirname, "..", "tmp");
+    await fs.ensureDir(tmpDir);
+    const filePath = path.join(tmpDir, fileName);
+
+    const response = await axios.get(zipUrl, { responseType: "arraybuffer" });
+    await fs.writeFile(filePath, response.data);
+
+    // Send zip as document
+    await client.sendMessage(from, {
+      document: { url: filePath },
+      mimetype: "application/zip",
+      fileName
+    }, { quoted: mek });
+
+    // Cleanup
+    try { fs.unlinkSync(filePath); } catch {}
+
+  } catch (err) {
+    console.error("gitclone error:", err);
+    await reply("❌ Failed to clone repo. Error: " + err.message);
+  }
+});
 //========================================================================================================================
 //const { keith } = require("../commandHandler");
 
