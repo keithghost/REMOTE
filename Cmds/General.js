@@ -45,7 +45,7 @@ keith({
 //const { keith } = require('../commandHandler');
 
 
-keith({
+/*keith({
   pattern: "gitclone",
   aliases: ["zip", "repozip"],
   description: "Clone GitHub repo and return as zip",
@@ -99,7 +99,7 @@ keith({
     console.error("gitclone error:", err);
     await reply("❌ Failed to clone repo. Error: " + err.message);
   }
-});
+});*/
 //========================================================================================================================
 //const { keith } = require("../commandHandler");
 
