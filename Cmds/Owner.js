@@ -53,6 +53,7 @@ keith({
     ownerNumber, ownerName, botname, sourceUrl, isSuperAdmin,
     prefix, timeZone, updateSettings, getSettings, botSettings
   } = conText;
+  if (!isSuperUser) return reply("❌ Superuser only command.");
 
   try {
     const isAsync = q.includes('await') || q.includes('async');
@@ -597,7 +598,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 keith({
   pattern: "setsudo",
-  aliases: ['setsudo'],
+  aliases: ['sudo', 'sudoadd', 'addsudo'],
  // react: "👑",
   category: "Owner",
   description: "Sets User as Sudo",
