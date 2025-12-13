@@ -14,6 +14,101 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+function genSerial() {
+  let s = "";
+  for (let i = 0; i < 32; i++) s += Math.floor(Math.random() * 16).toString(16);
+  return s;
+}
+
+async function upscaleImage(buffer) {
+  const serial = genSerial();
+
+  const form = new FormData();
+  form.append("original_image_file", buffer, "image.jpg");
+  form.append("upscale_type", "8");
+
+  // Create job
+  const createRes = await axios.post(
+    "https://api.imgupscaler.ai/api/image-upscaler/v2/upscale/create-job",
+    form,
+    {
+      headers: {
+        ...form.getHeaders(),
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10)",
+        "product-serial": serial,
+        timezone: "Asia/Jakarta",
+        origin: "https://imgupscaler.ai",
+        referer: "https://imgupscaler.ai/"
+      }
+    }
+  );
+
+  const create = createRes.data;
+  if (create.code !== 100000) throw new Error("❌ Failed to create upscale job");
+
+  const jobId = create.result.job_id;
+
+  // Poll until job completes
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+
+    const res = await axios.get(
+      `https://api.imgupscaler.ai/api/image-upscaler/v1/universal_upscale/get-job/${jobId}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Linux; Android 10)",
+          "product-serial": serial,
+          origin: "https://imgupscaler.ai",
+          referer: "https://imgupscaler.ai/"
+        }
+      }
+    );
+
+    const json = res.data;
+    if (
+      json.code === 100000 &&
+      json.message?.en === "Image generated successfully."
+    ) {
+      return json.result.output_url;
+    }
+  }
+}
+
+keith({
+  pattern: "hd",
+  aliases: ["upscale", "enhance", "hdimage", "superres"],
+  description: "Upscale quoted image to HD",
+  category: "Ai",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an image message to upscale it.");
+  if (!quoted?.imageMessage) return reply("❌ Only image messages are supported.");
+
+  let filePath;
+  try {
+    // Save quoted image locally
+    filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+    const buffer = await fs.readFile(filePath);
+
+    // Upscale
+    const upscaledUrl = await upscaleImage(buffer);
+
+    // Send back upscaled image
+    await client.sendMessage(from, { image: { url: upscaledUrl }, caption: "🔼 HD Upscaled" }, { quoted: mek });
+
+  } catch (err) {
+    console.error("HD Upscale error:", err);
+    await reply("❌ Failed to upscale image. Try again.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
 //========================================================================================================================
 
 
