@@ -9,6 +9,41 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "bible",
+  description: "Fetch Bible verses (e.g., john3:16-18,20)",
+  category: "Search",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("📌 Provide a verse reference, e.g. john3:16-18,20");
+
+  try {
+    const url = `https://apiskeith.vercel.app/search/bible?q=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(url);
+
+    if (!data.status || !data.result) {
+      return reply("❌ Verse not found or API error.");
+    }
+
+    const { reference, translation, verses } = data.result;
+
+    // Format verses nicely
+    let message = `📖 *${reference}* (${translation.name})\n\n`;
+    for (const v of verses) {
+      message += `${v.book} ${v.chapter}:${v.verse} — ${v.text}\n\n`;
+    }
+
+    await reply(message.trim());
+
+  } catch (err) {
+    console.error("Bible command error:", err);
+    reply("❌ Failed to fetch Bible verses. " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
