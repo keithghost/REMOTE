@@ -204,7 +204,7 @@ keith({
 
 keith({
   pattern: "lyrics",
-  aliases: ["lyric", "song"],
+  aliases: ["lyric", "ly"],
   description: "Search for song lyrics by title or phrase",
   category: "Search",
   filename: __filename
