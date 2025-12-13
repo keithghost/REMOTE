@@ -18,6 +18,55 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+/*const { keith } = require('../commandHandler');
+const axios = require('axios');
+*/
+function parseConversionQuery(q) {
+  const match = q.trim().match(/^(\d+(?:\.\d+)?)([a-zA-Z]+)\s+to\s+([a-zA-Z]+)$/i);
+  if (!match) throw new Error("❌ Invalid format. Use like: 10ksh to Tsh");
+
+  const amount = parseFloat(match[1]);
+  const base = match[2].toUpperCase();
+  const target = match[3].toUpperCase();
+
+  return { amount, base, target };
+}
+
+async function getExchangeRate(base, target) {
+  const url = `https://api.exchangerate-api.com/v4/latest/${encodeURIComponent(base)}`;
+  const { data } = await axios.get(url);
+
+  if (!data.rates || !data.rates[target]) {
+    throw new Error(`Target currency "${target}" not found.`);
+  }
+
+  return data.rates[target];
+}
+
+keith({
+  pattern: "currency",
+  description: "Convert currency (e.g., 10KES to TZS)",
+  category: "Utility",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) return reply("📌 Provide a query like: 10KES to TZS");
+
+  try {
+    const { amount, base, target } = parseConversionQuery(q);
+    const rate = await getExchangeRate(base, target);
+    const converted = amount * rate;
+
+    await client.sendMessage(from, {
+      text: `${amount} ${base} = ${converted.toFixed(2)} ${target}`
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Currency error:", err);
+    reply("❌ Failed to convert currency. " + err.message);
+  }
+});
 //========================================================================================================================
 
 keith({
