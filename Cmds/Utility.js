@@ -57,7 +57,7 @@ keith({
   pattern: "resize",
   aliases: ["imgresize"],
   description: "Resize quoted image to specified dimensions (e.g., 300×250)",
-  category: "Editing",
+  category: "Utility",
   filename: __filename
 }, async (from, client, conText) => {
   const { q, reply, mek, quoted, quotedMsg, keithRandom } = conText;
@@ -442,6 +442,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
