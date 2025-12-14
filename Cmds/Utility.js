@@ -156,7 +156,7 @@ keith({
               const imageBuffer = fs.readFileSync(outputPath);
               await client.sendMessage(from, {
                 image: imageBuffer,
-                caption: `Added bold slanted watermark: "${watermarkText}" (${fontColor}, size ${fontSize})`
+                caption: `Added watermark: "${watermarkText}" (${fontColor}, size ${fontSize})`
               }, { quoted: mek });
 
               fs.unlinkSync(outputPath);
@@ -442,6 +442,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
