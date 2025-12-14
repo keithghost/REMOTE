@@ -15,6 +15,115 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 
+const namedColors = {
+  black: "000000", white: "ffffff", red: "ff0000", blue: "0000ff", green: "00ff00",
+  yellow: "ffff00", pink: "ffc0cb", purple: "800080", orange: "ffa500", gray: "808080",
+  cyan: "00ffff", magenta: "ff00ff", gold: "ffd700", silver: "c0c0c0"
+};
+
+keith({
+  pattern: "watermark",
+  aliases: ["wm", "addwatermark"],
+  description: "Add bold slanted watermark to quoted image (text or image watermark)",
+  category: "Utility",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek, quoted, quotedMsg, keithRandom } = conText;
+
+  if (!quotedMsg || !quoted?.imageMessage) {
+    return reply(`📌 Reply to an *image* to add watermark.\nExample: .watermark MyBrand |red,60 (text)\nOr reply with an image and caption .watermark to use another quoted image as watermark`);
+  }
+
+  const baseImagePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+  const outputPath = keithRandom('.jpg');
+
+  try {
+    if (q) {
+      // Text watermark with optional color + size
+      let [textPart, options] = q.split("|");
+      const watermarkText = textPart.trim().length > 20 ? textPart.trim().substring(0, 20) + "..." : textPart.trim();
+
+      let fontColor = "white";
+      let fontSize = 48; // default size
+
+      if (options) {
+        const parts = options.split(",").map(p => p.trim().toLowerCase());
+        if (parts[0]) fontColor = namedColors[parts[0]] ? `#${namedColors[parts[0]]}` : parts[0];
+        if (parts[1]) fontSize = parseInt(parts[1]) || 48;
+      }
+
+      await new Promise((resolve, reject) => {
+        exec(`ffmpeg -i ${baseImagePath} -vf "drawtext=text='${watermarkText}':fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf:fontcolor=${fontColor}:fontsize=${fontSize}:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2" ${outputPath}`,
+          async (error) => {
+            try {
+              fs.unlinkSync(baseImagePath);
+              if (error) return reject(new Error(`Error adding text watermark: ${error.message}`));
+
+              const imageBuffer = fs.readFileSync(outputPath);
+              await client.sendMessage(from, {
+                image: imageBuffer,
+                caption: `Added bold slanted watermark: "${watermarkText}" (${fontColor}, size ${fontSize})`
+              }, { quoted: mek });
+
+              fs.unlinkSync(outputPath);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          });
+      });
+    } else {
+      // Image watermark (same as before)
+      if (!quotedMsg.quoted || !quotedMsg.quoted.imageMessage) {
+        return reply(`📌 For image watermark, reply to the main image and quote another image as watermark.`);
+      }
+
+      const watermarkPath = await client.downloadAndSaveMediaMessage(quotedMsg.quoted.imageMessage);
+      const tempWatermarkPath = keithRandom('.png');
+
+      await new Promise((resolve, reject) => {
+        exec(`ffmpeg -i ${baseImagePath} -f null - 2>&1 | grep -oP 'Stream.*Video:.*\\s\\K\\d+x\\d+'`, (err, stdout) => {
+          if (err) return reject(new Error("Couldn't get base image dimensions"));
+
+          const [width, height] = stdout.trim().split('x').map(Number);
+          const wmWidth = Math.floor(width / 4);
+          const wmHeight = Math.floor(height / 4);
+
+          exec(`ffmpeg -i ${watermarkPath} -vf "scale=${wmWidth}:${wmHeight}" ${tempWatermarkPath}`, (err) => {
+            if (err) return reject(new Error("Couldn't resize watermark image"));
+            resolve();
+          });
+        });
+      });
+
+      await new Promise((resolve, reject) => {
+        exec(`ffmpeg -i ${baseImagePath} -i ${tempWatermarkPath} -filter_complex "overlay=W-w-10:H-h-10" ${outputPath}`,
+          async (error) => {
+            try {
+              fs.unlinkSync(baseImagePath);
+              fs.unlinkSync(watermarkPath);
+              fs.unlinkSync(tempWatermarkPath);
+
+              if (error) return reject(new Error(`Error adding image watermark: ${error.message}`));
+
+              const imageBuffer = fs.readFileSync(outputPath);
+              await client.sendMessage(from, {
+                image: imageBuffer,
+                caption: `Added image watermark (bottom-right corner)`
+              }, { quoted: mek });
+
+              fs.unlinkSync(outputPath);
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          });
+      });
+    }
+  } catch (err) {
+    reply(`❌ Error: ${err.message}`);
+  }
+});
 
 
 //========================================================================================================================
@@ -239,6 +348,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
