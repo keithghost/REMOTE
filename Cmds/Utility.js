@@ -12,7 +12,101 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "imgsize",
+  aliases: ["imagesize", "dimension"],
+  description: "Get dimensions (width×height) of quoted image",
+  category: "Utility",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, mek, quoted, quotedMsg, keithRandom } = conText;
+
+  // Must reply to an image
+  if (!quotedMsg || !quoted?.imageMessage) {
+    return reply(`📌 Reply to an *image* to get its dimensions.\nExample: .imgsize`);
+  }
+
+  // Download quoted image
+  const mediaPath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+
+  try {
+    await new Promise((resolve, reject) => {
+      exec(`ffmpeg -i ${mediaPath} -f null - 2>&1 | grep -oP 'Stream.*Video:.*\\s\\K\\d+x\\d+'`, async (err, stdout) => {
+        try {
+          fs.unlinkSync(mediaPath);
+
+          if (err || !stdout) return reject(new Error("Couldn't detect image dimensions"));
+
+          const dimensions = stdout.trim();
+          await reply(`🖼️ Image dimensions: ${dimensions}`);
+
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  } catch (err) {
+    reply(`❌ Error: ${err.message}`);
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "resize",
+  aliases: ["imgresize"],
+  description: "Resize quoted image to specified dimensions (e.g., 300×250)",
+  category: "Editing",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek, quoted, quotedMsg, keithRandom } = conText;
+
+  // Must reply to an image
+  if (!quotedMsg || !quoted?.imageMessage) {
+    return reply(`📌 Reply to an *image* with dimensions like *300×250* to resize it.\nExample: .resize 300×250`);
+  }
+
+  // Validate dimensions format
+  if (!q || !q.match(/^\d+×\d+$/)) {
+    return reply(`📌 Provide dimensions in format *width×height* (e.g., 300×250)`);
+  }
+
+  const [width, height] = q.split("×").map(Number);
+
+  if (width <= 0 || height <= 0 || width > 5000 || height > 5000) {
+    return reply(`❌ Invalid dimensions. Please use values between 1 and 5000`);
+  }
+
+  // Download quoted image
+  const mediaPath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+  const outputPath = keithRandom('.jpg');
+
+  try {
+    await new Promise((resolve, reject) => {
+      exec(`ffmpeg -i ${mediaPath} -vf "scale=${width}:${height}" ${outputPath}`, async (error) => {
+        try {
+          fs.unlinkSync(mediaPath);
+
+          if (error) return reject(new Error(`Error resizing image: ${error.message}`));
+
+          const imageBuffer = fs.readFileSync(outputPath);
+          await client.sendMessage(from, {
+            image: imageBuffer,
+            caption: `Resized to ${width}×${height}`
+          }, { quoted: mek });
+
+          fs.unlinkSync(outputPath);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+  } catch (err) {
+    reply(`❌ Error: ${err.message}`);
+  }
+});
 //========================================================================================================================
 
 const namedColors = {
@@ -348,6 +442,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
