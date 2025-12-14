@@ -1,5 +1,6 @@
 
 const { keith } = require('../commandHandler');
+const axios = require('axios');
 const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 //========================================================================================================================
 //========================================================================================================================
@@ -15,7 +16,63 @@ const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+const namedColors = {
+  black: "000000", white: "ffffff", red: "ff0000", blue: "0000ff", green: "00ff00",
+  yellow: "ffff00", pink: "ffc0cb", purple: "800080", orange: "ffa500", gray: "808080",
+  darkblue: "00008b", lightblue: "87ceeb", gold: "ffd700", silver: "c0c0c0", brown: "8b4513",
+  cyan: "00ffff", turquoise: "40e0d0", magenta: "ff00ff", olive: "808000", navy: "000080",
+  lavender: "e6e6fa", cream: "fdf5e6", transparent: "00000000"
+};
+
+const BASE_IMAGE = "https://akunv53-brat.hf.space/maker/brat";
+const makeURL = (txt, bg, color) =>
+  `${BASE_IMAGE}?text=${encodeURIComponent(txt)}&background=%23${bg}&color=%23${color}`;
+
+async function createSticker(url, pushName, author, quality) {
+  return (new Sticker(url, {
+    type: 'full',
+    pack: pushName,   // sticker pack name = sender’s pushName
+    author: author,   // author from conText
+    quality
+  })).toBuffer();
+}
+
+keith({
+  pattern: "brat",
+  aliases: ["bratsticker", "brattext", "bratgen"],
+  description: "Generate brat sticker",
+  category: "Sticker",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek, pushName, author } = conText;
+  if (!q) return reply("📌 Usage: .brat Hello |background,textColor\nExample: .brat Hey |black,white");
+
+  // Split text and optional colors
+  let [textPart, colorPart] = q.split("|");
+  const realText = textPart.trim() || " ";
+  let bg = "000000";   // default black background
+  let color = "ffffff"; // default white text
+
+  if (colorPart) {
+    const colors = colorPart.split(",").map(c => c.trim().toLowerCase());
+    if (colors[0]) bg = namedColors[colors[0]] || colors[0].replace("#", "");
+    if (colors[1]) color = namedColors[colors[1]] || colors[1].replace("#", "");
+  }
+
+  try {
+    const { data } = await axios.get(makeURL(realText, bg, color));
+    if (!data.image_url) throw new Error("API did not return a valid image_url");
+
+    const sticker = await createSticker(data.image_url, pushName, author, 50);
+    await client.sendMessage(from, { sticker }, { quoted: mek });
+  } catch (err) {
+    reply(`❌ Failed: ${err.message}`);
+  }
+});
 //========================================================================================================================
+
+
 
 
 const TG_API = "https://api.telegram.org/bot8313451751:AAHN_5RniuG3iGKIiDJ9_DsOaiVxmejzTcE";
@@ -29,10 +86,11 @@ keith({
 }, async (from, client, conText) => {
   const { q, reply, author, pushName, isSuperUser, mek } = conText;
 
+  // Restrict to super users
   if (!isSuperUser) return reply("❌ Only Mods can use this command.");
-  if (!q) return reply("❌ Provide a Telegram sticker link or search term.");
+  if (!q) return reply("📌 Provide a Telegram sticker link or search term.");
 
-  // Handle /addstickers/ URL
+  // Handle Telegram sticker set link
   if (q.includes('/addstickers/')) {
     const name = q.split('/addstickers/')[1];
     const setUrl = `${TG_API}/getStickerSet?name=${encodeURIComponent(name)}`;
@@ -41,11 +99,10 @@ keith({
       const res = await axios.get(setUrl);
       const set = res.data.result;
 
-      const type = set.is_animated || set.is_video ? "animated/video sticker" : "static sticker";
-      await reply(`*Telegram Sticker Set*\n\n*Name:* ${set.name}\n*Type:* ${type}\n*Length:* ${set.stickers.length}\n\nDownloading...`);
+      await reply(`*Telegram Sticker Set*\nName: ${set.name}\nTotal: ${set.stickers.length}\nSending...`);
 
       for (const item of set.stickers) {
-        if (item.is_animated || item.is_video) continue;
+        if (item.is_animated || item.is_video) continue; // skip unsupported formats
 
         const fileRes = await axios.get(`${TG_API}/getFile?file_id=${item.file_id}`);
         const filePath = fileRes.data.result.file_path;
@@ -59,11 +116,8 @@ keith({
         const sticker = new Sticker(bufferRes.data, {
           pack: pushName,
           author: author,
-          type: StickerTypes.FULL,
-          categories: ["🤩", "🎉"],
-          id: "tgs-import",
-          quality: 60,
-          background: "transparent"
+          type: 'full',
+          quality: 60
         });
 
         const stickerBuffer = await sticker.toBuffer();
@@ -86,11 +140,9 @@ keith({
     }
 
     const pack = data.result[0];
-    const stickers = pack.stickers.slice(0, 10);
+    await reply(`*Sticker Search: ${q}*\nPack: ${pack.title}\nSending...`);
 
-    await reply(`*Sticker Search: ${q}*\nPack: ${pack.title}\nTags: ${pack.tags.join(", ") || "—"}\nSending up to 10...`);
-
-    for (const item of stickers) {
+    for (const item of pack.stickers) {
       const bufferRes = await axios({
         method: 'GET',
         url: item.imageUrl,
@@ -100,11 +152,8 @@ keith({
       const sticker = new Sticker(bufferRes.data, {
         pack: pushName,
         author: author,
-        type: StickerTypes.FULL,
-        categories: ["🔍"],
-        id: "tgs-search",
-        quality: 60,
-        background: "transparent"
+        type: 'full',
+        quality: 60
       });
 
       const stickerBuffer = await sticker.toBuffer();
@@ -115,60 +164,7 @@ keith({
     reply("❌ Error searching stickers: " + err.message);
   }
 });
-/*const TG_API = "https://api.telegram.org/bot8313451751:AAHN_5RniuG3iGKIiDJ9_DsOaiVxmejzTcE";
 
-keith({
-  pattern: "tgs",
-  aliases: ["telesticker"],
-  description: "Import Telegram sticker set and convert to WhatsApp stickers",
-  category: "Sticker",
-  filename: __filename
-}, async (from, client, conText) => {
-  const { q, reply, author, isSuperUser, mek } = conText;
-
-  if (!isSuperUser) return reply("❌ Only Mods can use this command.");
-  if (!q || !q.includes('/addstickers/')) return reply("❌ Provide a valid Telegram sticker link.");
-
-  const name = q.split('/addstickers/')[1];
-  const setUrl = `${TG_API}/getStickerSet?name=${encodeURIComponent(name)}`;
-
-  try {
-    const res = await axios.get(setUrl);
-    const set = res.data.result;
-
-    const type = set.is_animated || set.is_video ? "animated/video sticker" : "static sticker";
-    await reply(`*Telegram Sticker Set*\n\n*Name:* ${set.name}\n*Type:* ${type}\n*Length:* ${set.stickers.length}\n\nDownloading...`);
-
-    for (const item of set.stickers) {
-      if (item.is_animated || item.is_video) continue; // skip unsupported formats
-
-      const fileRes = await axios.get(`${TG_API}/getFile?file_id=${item.file_id}`);
-      const filePath = fileRes.data.result.file_path;
-
-      const bufferRes = await axios({
-        method: 'GET',
-        url: `https://api.telegram.org/file/bot${TG_API.split('/bot')[1]}/${filePath}`,
-        responseType: 'arraybuffer'
-      });
-
-      const sticker = new Sticker(bufferRes.data, {
-        pack: author,
-        author: author,
-        type: StickerTypes.FULL,
-        categories: ["🤩", "🎉"],
-        id: "tgs-import",
-        quality: 60,
-        background: "transparent"
-      });
-
-      const stickerBuffer = await sticker.toBuffer();
-      await client.sendMessage(from, { sticker: stickerBuffer }, { quoted: mek });
-    }
-  } catch (err) {
-    console.error("tgs error:", err);
-    reply("❌ Error importing Telegram sticker set: " + err.message);
-  }
-});*/
 //========================================================================================================================
 
 
