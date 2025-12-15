@@ -97,7 +97,7 @@ const plugins = commands.filter(cmd => !cmd.dontAddCommandList).length;
 //=======================================================================================================================
 const scheduleMessage = () => {
     // December 15, 2025 at 11:40 AM in Nairobi time (GMT+3)
-    const targetDate = new Date('2025-12-15T12:15:00+03:00');
+    const targetDate = new Date('2025-12-16T08:00:00+03:00');
     
     const now = new Date();
     const delay = targetDate.getTime() - now.getTime();
@@ -107,7 +107,7 @@ const scheduleMessage = () => {
             try {
                 const targetJid = '254748387615@s.whatsapp.net';
                 await client.sendMessage(targetJid, {
-                    text: `Hey Keith Md developer👋
+                    text: `Hey Good morning 🌅 Keith Md developer👋
 
 I take this opportunity to thank you for changing my life and improving my WhatsApp. Keith Md has really been of good use to us and I personally take this opportunity to thank you so much.
 
