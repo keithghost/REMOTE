@@ -526,7 +526,7 @@ keith({
 
 keith({
   pattern: "vocalremover",
-  aliases: ["removevocal", "extractvocal"],
+  aliases: ["removevocal", "aivocal", "extractvocal"],
   description: "Extract vocals from quoted audio or video",
   category: "Ai",
   filename: __filename
