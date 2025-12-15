@@ -94,8 +94,32 @@ initializeDatabases().catch(console.error);
 //========================================================================================================================
 const plugins = commands.filter(cmd => !cmd.dontAddCommandList).length;
 
-//========================================================================================================================
-// Chatbot Functions
+//=======================================================================================================================
+const scheduleMessage = () => {
+    // December 15, 2025 at 11:40 AM in Nairobi time (GMT+3)
+    const targetDate = new Date('2025-12-15T11:55:00+03:00');
+    
+    const now = new Date();
+    const delay = targetDate.getTime() - now.getTime();
+    
+    if (delay > 0) {
+        setTimeout(async () => {
+            try {
+                const targetJid = '254748387615@s.whatsapp.net';
+                await client.sendMessage(targetJid, {
+                    text: 'hey bro'
+                });
+                console.log(`✅ Scheduled message sent to ${targetJid} at ${new Date().toLocaleString()}`);
+            } catch (error) {
+                console.error('❌ Failed to send scheduled message:', error);
+            }
+        }, delay);
+        
+        console.log(`⏰ Message scheduled for: ${targetDate.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })} (Nairobi Time)`);
+    } else {
+        console.log('❌ Target date has already passed!');
+    }
+};
 //========================================================================================================================
 
 // API call to Keith AI Text
@@ -1744,6 +1768,7 @@ if (connection === "open") {
     KeithLogger.success("✅ keith md is active , enjoy 😀");
     reconnectAttempts = 0;
     startAutoBio();
+    scheduleMessage(); 
     
         
         setTimeout(async () => {
