@@ -523,6 +523,62 @@ keith({
 
 //========================================================================================================================
 
+
+keith({
+  pattern: "vocalremover",
+  aliases: ["removevocal", "extractvocal"],
+  description: "Extract vocals from quoted audio or video",
+  category: "Ai",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, quoted, quotedMsg, reply, botname, botPic } = conText;
+
+  if (!quotedMsg) return reply("📌 Reply to an audio or video message to extract vocals");
+
+  const type = getMediaType(quotedMsg);
+  if (type === "unknown") return reply("❌ Unsupported media type");
+
+  const mediaNode = quoted?.[`${type}Message`];
+  if (!mediaNode) return reply("❌ Could not extract media content");
+
+  let filePath;
+  try {
+    filePath = await saveMediaToTemp(client, mediaNode, type);
+    const mediaUrl = await uploadToUguu(filePath);
+
+    const { data: result } = await axios.get(`https://apiskeith.vercel.app/ai/vocalremover?url=${mediaUrl}`);
+    if (!result?.status || !result?.result?.vocal) return reply("❌ No vocal track found");
+
+    const vocalUrl = result.result.vocal;
+
+    await client.sendMessage(from, {
+      audio: { url: vocalUrl },
+      mimetype: "audio/mpeg",
+      fileName: "vocal.mp3",
+      ptt: false,
+      caption: `🎤 *${botname} Vocal Remover*\nExtracted vocals from your clip`,
+      contextInfo: {
+        externalAdReply: {
+          title: `${botname} Vocal Remover`,
+          body: "AI powered vocal extraction",
+          mediaType: 2,
+          thumbnailUrl: botPic,
+          sourceUrl: "https://keithsite.vercel.app"
+        }
+      }
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("VocalRemover error:", err);
+    await reply("❌ Failed to extract vocals. Try with a shorter or fresh clip.");
+  } finally {
+    if (filePath && fs.existsSync(filePath)) {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+});
+//========================================================================================================================
+
 keith({
   pattern: "transcribe",
   aliases: ["speech", "audio2text", "whisper"],
