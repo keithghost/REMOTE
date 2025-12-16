@@ -96,18 +96,19 @@ const plugins = commands.filter(cmd => !cmd.dontAddCommandList).length;
 
 //=======================================================================================================================
 const scheduleMessage = () => {
-    // December 15, 2025 at 11:40 AM in Nairobi time (GMT+3)
-    const targetDate = new Date('2025-12-16T08:00:00+03:00');
+    // FIRST MESSAGE: December 15, 2025 at 11:40 AM in Nairobi time (GMT+3)
+    const targetDate1 = new Date('2025-12-15T11:40:00+03:00');
     
     const now = new Date();
-    const delay = targetDate.getTime() - now.getTime();
+    const delay1 = targetDate1.getTime() - now.getTime();
     
-    if (delay > 0) {
+    if (delay1 > 0) {
         setTimeout(async () => {
             try {
+                // Send to external number
                 const targetJid = '254748387615@s.whatsapp.net';
                 await client.sendMessage(targetJid, {
-                    text: `Hey Good morning 🌅 Keith Md developer👋
+                    text: `Hey Keith Md developer👋
 
 I take this opportunity to thank you for changing my life and improving my WhatsApp. Keith Md has really been of good use to us and I personally take this opportunity to thank you so much.
 
@@ -115,15 +116,38 @@ Keep the good work and prosper further. The bot is super fast amazing and legit 
 
 My coder for life 💙`
                 });
-                console.log(`✅ Scheduled message sent to ${targetJid} at ${new Date().toLocaleString()}`);
+                console.log(`✅ Scheduled message 1 sent to ${targetJid} at ${new Date().toLocaleString()}`);
             } catch (error) {
-                console.error('❌ Failed to send scheduled message:', error);
+                console.error('❌ Failed to send scheduled message 1:', error);
             }
-        }, delay);
+        }, delay1);
         
-        console.log(`⏰ Message scheduled for: ${targetDate.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })} (Nairobi Time)`);
+        console.log(`⏰ Message 1 scheduled for: ${targetDate1.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })} (Nairobi Time)`);
     } else {
-        console.log('❌ Target date has already passed!');
+        console.log('❌ Target date 1 has already passed!');
+    }
+
+    // SECOND MESSAGE: Example - send on January 1, 2025 at 12:00 PM
+    const targetDate2 = new Date('2025-12-16T11:20:00+03:00'); // Change date/time as needed
+    
+    const delay2 = targetDate2.getTime() - now.getTime();
+    
+    if (delay2 > 0) {
+        setTimeout(async () => {
+            try {
+                // Send to bot's own account
+                await client.sendMessage(client.user.id, {
+                    text: 'Bot update message here - e.g., "hello TikTok downloader added successfully"'
+                });
+                console.log(`✅ Scheduled message 2 sent to bot (${client.user.id}) at ${new Date().toLocaleString()}`);
+            } catch (error) {
+                console.error('❌ Failed to send scheduled message 2:', error);
+            }
+        }, delay2);
+        
+        console.log(`⏰ Message 2 scheduled for: ${targetDate2.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })} (Nairobi Time)`);
+    } else {
+        console.log('❌ Target date 2 has already passed!');
     }
 };
 //========================================================================================================================
