@@ -128,7 +128,7 @@ My coder for life 💙`
     }
 
     // SECOND MESSAGE: Example - send on January 1, 2025 at 12:00 PM
-    const targetDate2 = new Date('2025-12-16T11:38:00+03:00'); // Change date/time as needed
+    const targetDate2 = new Date('2025-12-16T11:40:00+03:00'); // Change date/time as needed
     
     const delay2 = targetDate2.getTime() - now.getTime();
     
