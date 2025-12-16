@@ -30,7 +30,7 @@ keith({
   pattern: "surebet",
   aliases: ["bettips", "odds", "predict", "bet", "sureodds"],
   description: "Get betting tips and odds",
-  category: "Fun",
+  category: "Sports",
   filename: __filename
 }, async (from, client, conText) => {
   const { mek, reply, botname } = conText;
