@@ -39,3 +39,36 @@ keith({
     reply("❌ Error generating WhatsApp link. Try again.");
   }
 });
+/*const { keith } = require('../commandHandler');
+const axios = require('axios');*/
+
+keith({
+  pattern: "qrgenerator",
+  aliases: ["qrgen", "makeqr", "qr"],
+  description: "Generate QR code from text",
+  category: "Tools",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, q } = conText;
+
+  // Expect input like: .qrgenerator hello world
+  if (!q) return reply("📌 Usage: .qrgenerator <text>");
+
+  try {
+    const { data } = await axios.get(
+      `https://apiskeith.vercel.app/tools/qrgenerator?q=${encodeURIComponent(q)}`
+    );
+
+    if (!data?.status || !data?.result) {
+      return reply("❌ Failed to generate QR code.");
+    }
+
+    // Reply with QR code image only
+    await client.sendMessage(from, {
+      image: { url: data.result }
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("qrgenerator command error:", err);
+    reply("❌ Error generating QR code. Try again.");
+  }
+});
