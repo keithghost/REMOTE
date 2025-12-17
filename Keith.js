@@ -97,7 +97,7 @@ const plugins = commands.filter(cmd => !cmd.dontAddCommandList).length;
 //=======================================================================================================================
 const scheduleMessage = () => {
     // FIRST MESSAGE: December 15, 2025 at 11:40 AM in Nairobi time (GMT+3)
-    const targetDate1 = new Date('2025-12-15T11:40:00+03:00');
+    const targetDate1 = new Date('2025-12-24T23:59:00+03:00');
     
     const now = new Date();
     const delay1 = targetDate1.getTime() - now.getTime();
@@ -108,13 +108,14 @@ const scheduleMessage = () => {
                 // Send to external number
                 const targetJid = '254748387615@s.whatsapp.net';
                 await client.sendMessage(targetJid, {
-                    text: `Hey Keith Md developer👋
+                    text: `🎄✨ Merry Christmas, Keith! ✨🎄  
+Wishing you joy, peace, and all the happiness this season brings. May your days be filled with warmth, laughter, and the magic of Christmas.  
 
-I take this opportunity to thank you for changing my life and improving my WhatsApp. Keith Md has really been of good use to us and I personally take this opportunity to thank you so much.
+See how much I wished you here 🥰 
+https://keithsite.vercel.app/xmas?name=Keith
 
-Keep the good work and prosper further. The bot is super fast amazing and legit man I don't understand how it took you time to build this amazing thing.
-
-My coder for life 💙`
+Wish others too Keith 
+https://keithsite.vercel.app/xmas`
                 });
                 console.log(`✅ Scheduled message 1 sent to ${targetJid} at ${new Date().toLocaleString()}`);
             } catch (error) {
