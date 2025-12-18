@@ -10,6 +10,35 @@ const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+const more = String.fromCharCode(8206);
+const readmore = more.repeat(4001);
+
+keith({
+  pattern: "readmore",
+  aliases: ["rm", "collapse", "hide"],
+  category: "general",
+  description: "Create custom read-more text using | separators, supports \\n line breaks"
+}, async (from, client, conText) => {
+  const { reply, q } = conText;
+
+  if (!q || !q.includes("|")) {
+    return reply("📌 Usage: .readmore <part1> | <part2> | <part3> ...");
+  }
+
+  try {
+    // Split by | and trim each part
+    const parts = q.split("|").map(s => s.trim());
+
+    // Join with readmore marker, but ensure line breaks are preserved
+    const text = parts.join(`${readmore}\n`);
+
+    await reply(text);
+  } catch (err) {
+    console.error("readmore command error:", err);
+    reply("❌ Failed to generate read-more text.");
+  }
+});
 //========================================================================================================================
 
 
