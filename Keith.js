@@ -1226,7 +1226,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
             const settings = await getAutoReadSettings();
             
             if (settings.status) {
-                const isPrivate = mek.key.remoteJid.endsWith('@s.whatsapp.net');
+                const isPrivate = mek.key.remoteJid.endsWith('@lid');
                 const isGroup = mek.key.remoteJid.endsWith('@g.us');
                 
                 const shouldReadPrivate = settings.chatTypes.includes('private') && isPrivate;
