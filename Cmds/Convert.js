@@ -1,6 +1,73 @@
 
 const { keith } = require('../commandHandler');
 const axios = require('axios');
+const fs = require('fs/promises');
+const ffmpeg = require('fluent-ffmpeg');
+
+// Helper: convert buffer to WhatsApp voice note (PTT)
+async function toPtt(buffer, tempFilePath) {
+  const outputPath = tempFilePath + ".ogg";
+
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(tempFilePath)
+      .audioCodec('libopus')
+      .audioBitrate(24)
+      .audioChannels(1)
+      .audioFrequency(16000)
+      .toFormat('ogg')
+      .on('error', reject)
+      .on('end', async () => {
+        try {
+          const converted = await fs.readFile(outputPath);
+          resolve(converted);
+          await fs.unlink(outputPath).catch(() => {});
+        } catch (err) {
+          reject(err);
+        }
+      })
+      .save(outputPath);
+  });
+}
+
+keith({
+  pattern: "toptt",
+  aliases: ["tovoice", "tovn", "tovoicenote"],
+  category: "converter",
+  description: "Convert audio to WhatsApp voice note"
+}, async (from, client, conText) => {
+  const { mek, reply, quoted, quotedMsg } = conText;
+
+  if (!quotedMsg) {
+    return reply("Please reply to an audio message");
+  }
+
+  const quotedAudio = quoted?.audioMessage || quoted?.message?.audioMessage;
+  if (!quotedAudio) {
+    return reply("The quoted message doesn't contain any audio");
+  }
+
+  let tempFilePath;
+  try {
+    tempFilePath = await client.downloadAndSaveMediaMessage(quotedAudio, 'temp_media');
+    const buffer = await fs.readFile(tempFilePath);
+    const convertedBuffer = await toPtt(buffer, tempFilePath);
+
+    await client.sendMessage(from, {
+      audio: convertedBuffer,
+      mimetype: "audio/ogg; codecs=opus",
+      ptt: true
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Error in toptt command:", err);
+    await reply("Failed to convert to voice note");
+  } finally {
+    if (tempFilePath) {
+      fs.unlink(tempFilePath).catch(console.error);
+    }
+  }
+});
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
