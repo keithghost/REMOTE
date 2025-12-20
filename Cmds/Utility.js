@@ -318,10 +318,10 @@ keith({
 //========================================================================================================================
 
 keith({
-  pattern: "tomp3",
-  aliases: ["toaudio", "audioextract"],
+  pattern: "toaudio",
+  aliases: ["audioextract"],
   description: "Convert quoted audio or video to MP3",
-  category: "Utility",
+  category: "Converter",
   filename: __filename
 }, async (from, client, conText) => {
   const { quotedMsg, mek, reply, keithRandom } = conText;
@@ -362,7 +362,7 @@ keith({
   pattern: "toimg",
   aliases: ["sticker2img", "webp2png"],
   description: "Convert quoted sticker to image",
-  category: "Utility",
+  category: "Converter",
   filename: __filename
 }, async (from, client, conText) => {
   const { quotedMsg, mek, reply, keithRandom } = conText;
@@ -442,6 +442,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
