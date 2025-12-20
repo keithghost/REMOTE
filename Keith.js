@@ -1259,7 +1259,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
             pushName: ms.pushName || 'Unknown User',
             senderName: ms.pushName || 'Unknown User',
             sender: ms.key.participant || ms.key.remoteJid,
-            remoteJid: ms.key.remoteJid,
+            remoteJid: ms.key.remoteJid || ms.key.senderPn || ms.key.participant || ms.key.participantPn,
             mtype: getContentType(ms.message),
             text: ms.message?.conversation || 
                  ms.message?.extendedTextMessage?.text || 
