@@ -3,6 +3,7 @@ const { keith } = require('../commandHandler');
 const axios = require('axios');
 const fs = require('fs/promises');
 const ffmpeg = require('fluent-ffmpeg');
+const { exec } = require('child_process');
 
 // Helper: convert buffer to WhatsApp voice note (PTT)
 async function toPtt(buffer, tempFilePath) {
@@ -69,9 +70,166 @@ keith({
   }
 });
 //========================================================================================================================
+
+keith({
+  pattern: "toptv",
+  aliases: ["ptv", "toptvnote", "toptvmsg"],
+  category: "converter",
+  description: "Convert quoted video to WhatsApp portrait video (PTV)"
+}, async (from, client, conText) => {
+  const { mek, reply, quoted, quotedMsg } = conText;
+
+  if (!quotedMsg) {
+    return reply("Please reply to a video message");
+  }
+
+  const quotedVideo = quoted?.videoMessage || quoted?.message?.videoMessage;
+  if (!quotedVideo) {
+    return reply("The quoted message doesn't contain any video");
+  }
+
+  let tempFilePath;
+  try {
+    tempFilePath = await client.downloadAndSaveMediaMessage(quotedVideo, 'temp_media');
+    const buffer = await fs.readFile(tempFilePath);
+
+    await client.sendMessage(from, {
+      video: buffer,
+      mimetype: "video/mp4",
+      ptv: true
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Error in topvt command:", err);
+    await reply("❌ Failed to convert to portrait video bubble");
+  } finally {
+    if (tempFilePath) {
+      fs.unlink(tempFilePath).catch(console.error);
+    }
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "togif",
+  aliases: ["gifplay", "gifconvert", "gifnote"],
+  category: "converter",
+  description: "Convert quoted video to WhatsApp GIF"
+}, async (from, client, conText) => {
+  const { mek, reply, quoted, quotedMsg } = conText;
+
+  if (!quotedMsg) {
+    return reply("Please reply to a video message");
+  }
+
+  const quotedVideo = quoted?.videoMessage || quoted?.message?.videoMessage;
+  if (!quotedVideo) {
+    return reply("The quoted message doesn't contain any video");
+  }
+
+  let tempFilePath;
+  try {
+    tempFilePath = await client.downloadAndSaveMediaMessage(quotedVideo, 'temp_media');
+    const buffer = await fs.readFile(tempFilePath);
+
+    await client.sendMessage(from, {
+      video: buffer,
+      mimetype: "video/mp4",
+      gifPlayback: true
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Error in togif command:", err);
+    await reply("❌ Failed to convert to GIF");
+  } finally {
+    if (tempFilePath) {
+      fs.unlink(tempFilePath).catch(console.error);
+    }
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "toaudiodoc",
+  aliases: ["audiodoc", "audfile", "sendaudiodoc"],
+  category: "converter",
+  description: "Send quoted audio as a document"
+}, async (from, client, conText) => {
+  const { mek, reply, quoted, quotedMsg } = conText;
+
+  if (!quotedMsg) {
+    return reply("Please reply to an audio message");
+  }
+
+  const quotedAudio = quoted?.audioMessage || quoted?.message?.audioMessage;
+  if (!quotedAudio) {
+    return reply("The quoted message doesn't contain any audio");
+  }
+
+  let tempFilePath;
+  try {
+    tempFilePath = await client.downloadAndSaveMediaMessage(quotedAudio, 'temp_media');
+    const buffer = await fs.readFile(tempFilePath);
+
+    await client.sendMessage(from, {
+      document: buffer,
+      mimetype: "audio/mpeg",
+      fileName: "audio.mp3"
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Error in toaudiodoc command:", err);
+    await reply("❌ Failed to send audio as document");
+  } finally {
+    if (tempFilePath) {
+      fs.unlink(tempFilePath).catch(console.error);
+    }
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "tom4a",
+  aliases: ["toappleaudio", "m4aextract"],
+  description: "Convert quoted audio or video to M4A",
+  category: "converter",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, mek, reply, keithRandom } = conText;
+
+  const mediaType = quotedMsg?.videoMessage || quotedMsg?.audioMessage;
+  if (!mediaType) {
+    return reply("❌ Quote an audio or video to convert to M4A.");
+  }
+
+  try {
+    const media = await client.downloadAndSaveMediaMessage(mediaType);
+    const output = await keithRandom(".m4a");
+
+    exec(`ffmpeg -i ${media} -c:a aac -b:a 128k ${output}`, async (err) => {
+      fs.unlinkSync(media);
+      if (err) {
+        console.error("ffmpeg error:", err);
+        return reply("❌ Conversion failed.");
+      }
+
+      const buffer = fs.readFileSync(output);
+      await client.sendMessage(from, {
+        document: buffer,
+        mimetype: "audio/mp4",
+        fileName: "audio.m4a"
+      }, { quoted: mek });
+
+      fs.unlinkSync(output);
+    });
+  } catch (error) {
+    console.error("tom4a error:", error);
+    await reply("❌ An error occurred while converting the media.");
+  }
+});
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
