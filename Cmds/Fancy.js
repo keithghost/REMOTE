@@ -20,6 +20,36 @@ const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "onwhatsapp",
+  aliases: ["checkwa", "waexists", "wa"],
+  category: "tools",
+  description: "Check if a number exists on WhatsApp"
+}, async (from, client, conText) => {
+  const { reply, q } = conText;
+
+  if (!q) {
+    return reply("📌 Usage: .onwhatsapp <number>\n\nExample:\n.onwhatsapp 254712345678");
+  }
+
+  try {
+    // Normalize number into WhatsApp JID
+    const jid = q.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+
+    const [result] = await client.onWhatsApp(jid);
+
+    if (result?.exists) {
+      return reply(`✅ ${q} exists on WhatsApp\nJID: ${result.jid}`);
+    } else {
+      return reply(`❌ ${q} does not exist on WhatsApp`);
+    }
+  } catch (err) {
+    console.error("onwhatsapp error:", err);
+    return reply("❌ Failed to check WhatsApp number.");
+  }
+});
 //========================================================================================================================
 
 keith({
