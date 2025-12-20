@@ -1430,7 +1430,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
 //========================================================================================================================
     //    
   
-   if (ms.key?.remoteJid) {
+  /* if (ms.key?.remoteJid) {
     try {
         const { getPresenceSettings } = require('./database/presence');
         const presenceSettings = await getPresenceSettings();
@@ -1454,6 +1454,64 @@ client.ev.on("messages.upsert", async ({ messages }) => {
                 presenceSettings.groupChat === "recording" ? "recording" : 
                 "unavailable";
             await client.sendPresenceUpdate(presenceType, ms.key.remoteJid);
+        }
+    } catch (error) {
+        console.error('Error handling presence:', error);
+    }
+}*/
+    // Add this at the top of your file with other global declarations
+const presenceTimers = new Map();
+const PRESENCE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+
+// Then modify your presence code like this:
+if (ms.key?.remoteJid) {
+    try {
+        const { getPresenceSettings } = require('./database/presence');
+        const presenceSettings = await getPresenceSettings();
+        const remoteJid = ms.key.remoteJid;
+        
+        // Check if we have an active timer for this chat
+        if (presenceTimers.has(remoteJid)) {
+            console.log(`⏰ Presence timer already active for ${remoteJid}, skipping...`);
+            return; // Skip setting presence if timer is already active
+        }
+        
+        // Handle private chat presence
+        if (remoteJid.endsWith("@s.whatsapp.net") && presenceSettings.privateChat !== 'off') {
+            const presenceType = 
+                presenceSettings.privateChat === "online" ? "available" :
+                presenceSettings.privateChat === "typing" ? "composing" :
+                presenceSettings.privateChat === "recording" ? "recording" : 
+                "unavailable";
+            
+            await client.sendPresenceUpdate(presenceType, remoteJid);
+            
+            // Set timer to clear presence after duration
+            presenceTimers.set(remoteJid, setTimeout(() => {
+                console.log(`⏰ Presence duration ended for ${remoteJid}, clearing timer...`);
+                presenceTimers.delete(remoteJid);
+            }, PRESENCE_DURATION));
+            
+            console.log(`✅ Presence set to "${presenceSettings.privateChat}" for ${remoteJid} (15 min duration)`);
+        }
+        
+        // Handle group chat presence
+        if (remoteJid.endsWith("@g.us") && presenceSettings.groupChat !== 'off') {
+            const presenceType = 
+                presenceSettings.groupChat === "online" ? "available" :
+                presenceSettings.groupChat === "typing" ? "composing" :
+                presenceSettings.groupChat === "recording" ? "recording" : 
+                "unavailable";
+            
+            await client.sendPresenceUpdate(presenceType, remoteJid);
+            
+            // Set timer to clear presence after duration
+            presenceTimers.set(remoteJid, setTimeout(() => {
+                console.log(`⏰ Presence duration ended for ${remoteJid}, clearing timer...`);
+                presenceTimers.delete(remoteJid);
+            }, PRESENCE_DURATION));
+            
+            console.log(`✅ Presence set to "${presenceSettings.groupChat}" for ${remoteJid} (15 min duration)`);
         }
     } catch (error) {
         console.error('Error handling presence:', error);
