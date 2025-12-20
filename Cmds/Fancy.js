@@ -19,6 +19,28 @@ const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "sharephone",
+  aliases: ["sharecontact", "spn", "sharenumber"],
+  category: "tools",
+  description: "Share your phone number in chat"
+}, async (from, client, conText) => {
+  const { q } = conText;
+
+  try {
+    // Default to current chat if no JID provided
+    const jid = q && q.includes("@s.whatsapp.net") ? q : from;
+
+    await client.sendMessage(jid, {
+      sharePhoneNumber: {}
+    });
+
+  } catch (err) {
+    console.error("sharephone error:", err);
+  }
+});
 //========================================================================================================================
 
 
