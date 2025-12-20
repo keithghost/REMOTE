@@ -1430,13 +1430,13 @@ client.ev.on("messages.upsert", async ({ messages }) => {
 //========================================================================================================================
     //    
   
-  /* if (ms.key?.remoteJid) {
+   if (ms.key?.remoteJid) {
     try {
         const { getPresenceSettings } = require('./database/presence');
         const presenceSettings = await getPresenceSettings();
         
         // Handle private chat presence
-        if (ms.key.remoteJid.endsWith("@s.whatsapp.net") && presenceSettings.privateChat !== 'off') {
+        if (ms.key.remoteJid.endsWith("@lid") && presenceSettings.privateChat !== 'off') {
             const presenceType = 
                 presenceSettings.privateChat === "online" ? "available" :
                 presenceSettings.privateChat === "typing" ? "composing" :
@@ -1458,65 +1458,8 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     } catch (error) {
         console.error('Error handling presence:', error);
     }
-}*/
-    // Add this at the top of your file with other global declarations
-const presenceTimers = new Map();
-const PRESENCE_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
-
-// Then modify your presence code like this:
-if (ms.key?.remoteJid) {
-    try {
-        const { getPresenceSettings } = require('./database/presence');
-        const presenceSettings = await getPresenceSettings();
-        const remoteJid = ms.key.remoteJid;
-        
-        // Check if we have an active timer for this chat
-        if (presenceTimers.has(remoteJid)) {
-            console.log(`⏰ Presence timer already active for ${remoteJid}, skipping...`);
-            return; // Skip setting presence if timer is already active
-        }
-        
-        // Handle private chat presence
-        if (remoteJid.endsWith("@s.whatsapp.net") && presenceSettings.privateChat !== 'off') {
-            const presenceType = 
-                presenceSettings.privateChat === "online" ? "available" :
-                presenceSettings.privateChat === "typing" ? "composing" :
-                presenceSettings.privateChat === "recording" ? "recording" : 
-                "unavailable";
-            
-            await client.sendPresenceUpdate(presenceType, remoteJid);
-            
-            // Set timer to clear presence after duration
-            presenceTimers.set(remoteJid, setTimeout(() => {
-                console.log(`⏰ Presence duration ended for ${remoteJid}, clearing timer...`);
-                presenceTimers.delete(remoteJid);
-            }, PRESENCE_DURATION));
-            
-            console.log(`✅ Presence set to "${presenceSettings.privateChat}" for ${remoteJid} (15 min duration)`);
-        }
-        
-        // Handle group chat presence
-        if (remoteJid.endsWith("@g.us") && presenceSettings.groupChat !== 'off') {
-            const presenceType = 
-                presenceSettings.groupChat === "online" ? "available" :
-                presenceSettings.groupChat === "typing" ? "composing" :
-                presenceSettings.groupChat === "recording" ? "recording" : 
-                "unavailable";
-            
-            await client.sendPresenceUpdate(presenceType, remoteJid);
-            
-            // Set timer to clear presence after duration
-            presenceTimers.set(remoteJid, setTimeout(() => {
-                console.log(`⏰ Presence duration ended for ${remoteJid}, clearing timer...`);
-                presenceTimers.delete(remoteJid);
-            }, PRESENCE_DURATION));
-            
-            console.log(`✅ Presence set to "${presenceSettings.groupChat}" for ${remoteJid} (15 min duration)`);
-        }
-    } catch (error) {
-        console.error('Error handling presence:', error);
-    }
 }
+
 // Handle status broadcast actions
   if (ms.key.remoteJid === "status@broadcast") {
     try {
@@ -1555,43 +1498,7 @@ if (ms.key?.remoteJid) {
     }
   }    
 
-// Handle status broadcast actions
- /*if (ms.key.remoteJid === "status@broadcast") {
-    try {
-    //  const { getAutoStatusSettings } = require('./database/autostatus');
-      const settings = await getAutoStatusSettings();
-      const clienttech = jidNormalizedUser(client.user.id);
-      const fromJid = ms.key.participant || ms.key.remoteJid;
 
-      ms.message = getContentType(ms.message) === 'ephemeralMessage'
-        ? ms.message.ephemeralMessage.message
-        : ms.message;
-
-      if (settings.autoviewStatus === "true") {
-        await client.readMessages([ms.key.clienttech]);
-      }
-
-      if (settings.autoLikeStatus === "true" && ms.key.participant) {
-        const emojis = settings.statusLikeEmojis?.split(',') || [];
-        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-        await client.sendMessage(
-          ms.key.remoteJid,
-          { react: { key: ms.key, text: randomEmoji } },
-          { statusJidList: [ms.key.participant, clienttech] }
-        );
-      }
-
-      if (settings.autoReplyStatus === "true" && !ms.key.fromMe) {
-        await client.sendMessage(
-          fromJid,
-          { text: settings.statusReplyText },
-          { quoted: ms }
-        );
-      }
-    } catch (error) {
-      console.error("Error handling status broadcast:", error);
-    }
-  }*/
     
  
        
