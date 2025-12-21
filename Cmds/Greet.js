@@ -14,8 +14,80 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "channelremovepic",
+  aliases: ["removepic", "newslettermovepicture", "chpicremove"],
+  category: "channel",
+  description: "Remove WhatsApp channel picture"
+}, async (from, client, conText) => {
+  const { mek, reply } = conText;
+
+  // Ensure command is run inside a channel
+  if (!mek.key.remoteJid.endsWith("@newsletter")) {
+    return reply("❌ This command only works in WhatsApp channels!");
+  }
+
+  try {
+    // Remove the channel picture
+    await client.newsletterRemovePicture(mek.key.remoteJid);
+
+    await reply("🗑️ Channel picture removed successfully");
+  } catch (err) {
+    console.error("Channel remove picture error:", err);
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "channelunmute",
+  aliases: ["unmutec", "newsletterunmute"],
+  category: "channel",
+  description: "Unmute a WhatsApp channel"
+}, async (from, client, conText) => {
+  const { mek, reply } = conText;
+
+  // Ensure command is run inside a channel
+  if (!mek.key.remoteJid.endsWith("@newsletter")) {
+    return reply("❌ This command only works in WhatsApp channels!");
+  }
+
+  try {
+    // Unmute the channel
+    await client.newsletterUnmute(mek.key.remoteJid);
+
+    await reply("🔔 Channel unmuted successfully");
+  } catch (err) {
+    console.error("Channel unmute error:", err);
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "channelmute",
+  aliases: ["mutec", "newslettermute"],
+  category: "channel",
+  description: "Mute a WhatsApp channel"
+}, async (from, client, conText) => {
+  const { mek, reply } = conText;
+
+  // Ensure command is run inside a channel
+  if (!mek.key.remoteJid.endsWith("@newsletter")) {
+    return reply("❌ This command only works in WhatsApp channels!");
+  }
+
+  try {
+    // Mute the channel
+    await client.newsletterMute(mek.key.remoteJid);
+
+    await reply("🔇 Channel muted successfully");
+  } catch (err) {
+    console.error("Channel mute error:", err);
+  }
+});
 //========================================================================================================================
 
 keith({
