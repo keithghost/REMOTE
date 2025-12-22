@@ -418,45 +418,16 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
 //
-keith({
-  pattern: "dzlib",
-  aliases: ["decompress", "unzl"],
-  category: "coding",
-  description: "Decompress zlib Base64 back into text"
-},
-async (from, client, conText) => {
-  const { q, mek, quotedMsg, reply } = conText;
 
-  let compressed;
-  if (q) {
-    compressed = q;
-  } else if (quotedMsg) {
-    compressed = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text;
-    if (!compressed) {
-      return reply("❌ Could not extract quoted compressed text.");
-    }
-  } else {
-    return reply("📌 Reply to a compressed message or provide compressed text directly.");
-  }
 
-  try {
-    const decoded = zlib.inflateSync(Buffer.from(compressed, 'base64')).toString();
-    await reply(decoded);
-  } catch (error) {
-    console.error("Zlib decompression error:", error);
-    reply("⚠️ An error occurred while decompressing text.");
-  }
-});
-//========================================================================================================================
-//
 keith({
   pattern: "zlib",
-  aliases: ["compress", "zl"],
+  aliases: ["zb", "gzip"],
   category: "coding",
-  description: "Compress text or quoted message using zlib"
+  description: "Compress text or quoted message using gzip"
 },
 async (from, client, conText) => {
-  const { q, mek, quotedMsg, reply } = conText;
+  const { q, quotedMsg, reply } = conText;
 
   let text;
   if (q) {
@@ -471,11 +442,44 @@ async (from, client, conText) => {
   }
 
   try {
-    const compressed = zlib.deflateSync(text).toString('base64');
+    const compressed = zlib.gzipSync(text).toString('base64');
     await reply(compressed);
   } catch (error) {
-    console.error("Zlib compression error:", error);
-    reply("⚠️ An error occurred while compressing text.");
+    console.error("Gzip compression error:", error);
+    reply("⚠️ An error occurred while compressing text with gzip.");
+  }
+});
+//========================================================================================================================
+//
+
+
+keith({
+  pattern: "dzlib",
+  aliases: ["unzlib", "ungzip"],
+  category: "coding",
+  description: "Decompress gzip Base64 back into text"
+},
+async (from, client, conText) => {
+  const { q, quotedMsg, reply } = conText;
+
+  let compressed;
+  if (q) {
+    compressed = q;
+  } else if (quotedMsg) {
+    compressed = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text;
+    if (!compressed) {
+      return reply("❌ Could not extract quoted compressed text.");
+    }
+  } else {
+    return reply("📌 Reply to a compressed message or provide compressed text directly.");
+  }
+
+  try {
+    const decoded = zlib.gunzipSync(Buffer.from(compressed, 'base64')).toString();
+    await reply(decoded);
+  } catch (error) {
+    console.error("Gzip decompression error:", error);
+    reply("⚠️ An error occurred while decompressing gzip text.");
   }
 });
 //========================================================================================================================
