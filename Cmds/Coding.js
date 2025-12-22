@@ -39,6 +39,48 @@ const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "time",
+  aliases: ["now", "clock"],
+  category: "coding",
+  description: "Get the current time in a provided timezone, listed format"
+},
+async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) {
+    return reply("📌 Please provide a timezone.\nExample: time Africa/Nairobi");
+  }
+
+  try {
+    const now = new Date();
+
+    const formatterDate = new Intl.DateTimeFormat('en-US', {
+      timeZone: q.trim(),
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    const formatterTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: q.trim(),
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const dateStr = formatterDate.format(now);
+    const timeStr = formatterTime.format(now);
+
+    const output = `🕒 Current time ${q.trim()}\n${dateStr},\n${timeStr}`;
+
+    await reply(output);
+  } catch (error) {
+    console.error("Time command error:", error);
+    reply("⚠️ Invalid timezone. Please provide a valid IANA timezone like Africa/Nairobi or America/New_York.");
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "encrypt2",
