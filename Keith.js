@@ -1176,7 +1176,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const remoteJid = ms.key.remoteJid;
     const senderJid = ms.key.participant || ms.key.remoteJid;
     const senderNumber = senderJid.split('@')[0];
-    const isPrivate = remoteJid.endsWith('@s.whatsapp.net');
+    const isPrivate = remoteJid.endsWith('@lid');
 
     // Get current settings
     const greetSettings = await getGreetSettings();
