@@ -185,114 +185,138 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
 keith({
-  pattern: "settings",
-  aliases: ["config", "botconfig"],
+  pattern: "botsettings",
+  aliases: ["allsettings", "configlist", "settingslist", "settings", "setting"],
   category: "Settings",
-  description: "Manage all bot settings"
-},
-async (from, client, conText) => {
-  const { reply, q, isSuperUser, prefix } = conText;
+  description: "List all bot configuration settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser, prefix } = conText;
 
   if (!isSuperUser) return reply("❌ Owner Only Command!");
 
-  const args = q?.trim().split(/\s+/) || [];
-  const action = args[0]?.toLowerCase();
-  const key = args[1]?.toLowerCase();
-  const value = args.slice(2).join(" ");
+  try {
+    // Fetch all settings in parallel
+    const [
+      botSettings,
+      antiDelete,
+      antiLink,
+      antiStatusMention,
+      autoBio,
+      autoRead,
+      autoStatus,
+      chatbot,
+      greet,
+      presence,
+      groupEvents,
+      antiCall
+    ] = await Promise.all([
+      getSettings(),
+      getAntiDeleteSettings(),
+      getAntiLinkSettings(),
+      getAntiStatusMentionSettings(),
+      getAutoBioSettings(),
+      getAutoReadSettings(),
+      getAutoStatusSettings(),
+      getChatbotSettings(),
+      getGreetSettings(),
+      getPresenceSettings(),
+      getGroupEventsSettings(),
+      getAntiCallSettings()
+    ]);
 
-  const settings = await getSettings();
+    // Format all settings
+    let settingsList = `*🤖 BOT SETTINGS DASHBOARD*\n`;
+    settingsList += `📊 *All Configuration Values*\n\n`;
 
-  if (!action) {
-    return reply(
-      `*⚙️ Bot Settings*\n\n` +
-      `🔹 *Prefix:* \`${settings.prefix}\`\n` +
-      `🔹 *Mode:* ${settings.mode.toUpperCase()}\n` +
-      `🔹 *Bot Name:* ${settings.botname}\n` +
-      `🔹 *Author:* ${settings.author}\n` +
-      `🔹 *Packname:* ${settings.packname}\n` +
-      `🔹 *Timezone:* ${settings.timezone}\n` +
-      `🔹 *URL:* ${settings.url || '❌ Not Set'}\n` +
-      `🔹 *GitHub:* ${settings.gurl || '❌ Not Set'}\n\n` +
-      `*🛠 Usage:*\n` +
-      `▸ ${settings.prefix}settings list\n` +
-      `▸ ${settings.prefix}settings set <key> <value>\n` +
-      `▸ ${settings.prefix}settings reset`
-    );
-  }
+    // 1. BOT BASIC SETTINGS
+    settingsList += `*📌 BASIC SETTINGS*\n`;
+    settingsList += `├─ Bot Name: ${botSettings.botname}\n`;
+    settingsList += `├─ Author: ${botSettings.author}\n`;
+    settingsList += `├─ Prefix: ${botSettings.prefix}\n`;
+    settingsList += `├─ Mode: ${botSettings.mode.toUpperCase()}\n`;
+    settingsList += `├─ Packname: ${botSettings.packname}\n`;
+    settingsList += `├─ Timezone: ${botSettings.timezone}\n`;
+    settingsList += `├─ Profile URL: ${botSettings.url ? '✅ Set' : '❌ Not Set'}\n`;
+    settingsList += `└─ GitHub URL: ${botSettings.gurl ? '✅ Set' : '❌ Not Set'}\n\n`;
 
-  switch (action) {
-    case 'list':
-      return reply(
-        `*📋 Available Settings:*\n\n` +
-        `▸ prefix - Bot command prefix\n` +
-        `▸ mode - Bot mode (public/private)\n` +
-        `▸ botname - Bot display name\n` +
-        `▸ author - Bot author name\n` +
-        `▸ packname - Sticker pack name\n` +
-        `▸ timezone - Timezone for bot\n` +
-        `▸ url - Bot profile picture URL\n` +
-        `▸ gurl - GitHub/Repo URL`
-      );
+    // 2. AUTO FEATURES
+    settingsList += `*⚡ AUTO FEATURES*\n`;
+    settingsList += `├─ Auto-Read: ${autoRead.status ? '✅ ON' : '❌ OFF'}\n`;
+    settingsList += `├─ Auto-Bio: ${autoBio.status === 'on' ? '✅ ON' : '❌ OFF'}\n`;
+    settingsList += `├─ Auto-Reply Greet: ${greet.enabled ? '✅ ON' : '❌ OFF'}\n`;
+    settingsList += `├─ Auto-View Status: ${autoStatus.autoviewStatus === 'true' ? '✅ ON' : '❌ OFF'}\n`;
+    settingsList += `├─ Auto-Reply Status: ${autoStatus.autoReplyStatus === 'true' ? '✅ ON' : '❌ OFF'}\n`;
+    settingsList += `└─ Auto-Like Status: ${autoStatus.autoLikeStatus === 'true' ? '✅ ON' : '❌ OFF'}\n\n`;
 
-    case 'set':
-      if (!key || !value) {
-        return reply("❌ Usage: settings set <key> <value>");
-      }
+    // 3. CHATBOT SETTINGS
+    const chatbotStatusMap = { 'on': '✅ ON', 'off': '❌ OFF' };
+    const chatbotModeMap = { 'private': '🔒', 'group': '👥', 'both': '🌐' };
+    settingsList += `*🤖 CHATBOT*\n`;
+    settingsList += `├─ Status: ${chatbotStatusMap[chatbot.status] || '❌ OFF'}\n`;
+    settingsList += `├─ Mode: ${chatbotModeMap[chatbot.mode] || 'N/A'}\n`;
+    settingsList += `├─ Trigger: ${chatbot.trigger === 'dm' ? '📨 DM' : '🔊 All'}\n`;
+    settingsList += `└─ Response: ${chatbot.default_response === 'audio' ? '🎵 Audio' : '📝 Text'}\n\n`;
 
-      const validKeys = ['prefix', 'mode', 'botname', 'author', 'packname', 'timezone', 'url', 'gurl'];
-      if (!validKeys.includes(key)) {
-        return reply(`❌ Invalid setting! Available: ${validKeys.join(', ')}`);
-      }
+    // 4. PROTECTION SETTINGS
+    const protectionMap = {
+      'off': '❌ OFF',
+      'warn': '⚠️ WARN',
+      'delete': '🗑️ DELETE',
+      'remove': '🚫 REMOVE'
+    };
+    
+    settingsList += `*🛡️ PROTECTION SETTINGS*\n`;
+    settingsList += `├─ Anti-Delete: ${antiDelete.status ? '✅ ON' : '❌ OFF'}\n`;
+    settingsList += `├─ Anti-Link: ${protectionMap[antiLink.status] || '❌ OFF'}\n`;
+    settingsList += `├─ Anti-Status Mention: ${protectionMap[antiStatusMention.status] || '❌ OFF'}\n`;
+    settingsList += `└─ Anti-Call: ${antiCall.status ? '✅ ON' : '❌ OFF'}\n\n`;
 
-      // Validation for specific keys
-      if (key === 'prefix' && value.length > 3) {
-        return reply("❌ Prefix must be 1-3 characters long!");
-      }
+    // 5. PRESENCE SETTINGS
+    const presenceMap = {
+      'off': '❌ OFF',
+      'online': '🟢 ONLINE',
+      'typing': '✍️ TYPING',
+      'recording': '🎙️ RECORDING'
+    };
+    settingsList += `*🔄 PRESENCE*\n`;
+    settingsList += `├─ Private: ${presenceMap[presence.privateChat] || '❌ OFF'}\n`;
+    settingsList += `└─ Group: ${presenceMap[presence.groupChat] || '❌ OFF'}\n\n`;
 
-      if (key === 'mode' && !['public', 'private'].includes(value.toLowerCase())) {
-        return reply("❌ Mode must be 'public' or 'private'!");
-      }
+    // 6. GROUP SETTINGS
+    settingsList += `*👥 GROUP SETTINGS*\n`;
+    settingsList += `├─ Events: ${groupEvents.enabled ? '✅ ON' : '❌ OFF'}\n`;
+    settingsList += `└─ Promotions: ${groupEvents.showPromotions ? '✅ ON' : '❌ OFF'}\n\n`;
 
-      try {
-        const updateData = { [key]: value };
-        await updateSettings(updateData);
-        // Update the botSettings in context
-        conText.botSettings[key] = value;
-        return reply(`✅ Setting *${key}* updated to:\n${value}`);
-      } catch (error) {
-        return reply("❌ Failed to update setting!");
-      }
-      break;
+    // 7. ADDITIONAL INFO
+    settingsList += `*📊 QUICK STATS*\n`;
+    settingsList += `├─ Chat Types (Auto-Read): ${autoRead.chatTypes.join(', ') || 'None'}\n`;
+    settingsList += `├─ Chatbot Voice: ${chatbot.voice || 'Default'}\n`;
+    settingsList += `├─ Warn Limits: Link(${antiLink.warn_limit}), Status(${antiStatusMention.warn_limit})\n`;
+    settingsList += `└─ Status Like Emojis: ${autoStatus.statusLikeEmojis || 'Default'}\n\n`;
 
-    case 'reset':
-      try {
-        const defaultSettings = {
-          prefix: ".",
-          author: "Keith",
-          url: "https://files.catbox.moe/07dmp1.jpg",
-          gurl: "https://github.com/Keithkeizzah/KEITH-MD",
-          timezone: "Africa/Nairobi",
-          botname: "Keith-Md",
-          packname: "Keith-Md",
-          mode: "public"
-        };
-        await updateSettings(defaultSettings);
-        // Update all settings in context
-        Object.assign(conText.botSettings, defaultSettings);
-        return reply("✅ All settings reset to default values!");
-      } catch (error) {
-        return reply("❌ Failed to reset settings!");
-      }
-      break;
+    // 8. COMMANDS SECTION
+    settingsList += `*🔧 INDIVIDUAL COMMANDS*\n`;
+    settingsList += `▸ ${prefix}settings - Bot basic settings\n`;
+    settingsList += `▸ ${prefix}autoread - Auto-read settings\n`;
+    settingsList += `▸ ${prefix}chatbot - Chatbot configuration\n`;
+    settingsList += `▸ ${prefix}antidelete - Anti-delete settings\n`;
+    settingsList += `▸ ${prefix}antilink - Anti-link protection\n`;
+    settingsList += `▸ ${prefix}antistatusmention - Anti-status-mention\n`;
+    settingsList += `▸ ${prefix}anticall - Anti-call settings\n`;
+    settingsList += `▸ ${prefix}presence - Presence settings\n`;
+    settingsList += `▸ ${prefix}greet - Greeting settings\n`;
+    settingsList += `▸ ${prefix}events - Group events\n`;
+    settingsList += `▸ ${prefix}autobio - Auto-bio settings\n`;
 
-    default:
-      return reply(
-        "❌ Invalid subcommand. Options:\n\n" +
-        `▸ ${settings.prefix}settings list\n` +
-        `▸ ${settings.prefix}settings set <key> <value>\n` +
-        `▸ ${settings.prefix}settings reset`
-      );
+    // Send the settings list
+    await reply(settingsList);
+
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    return reply("❌ Error fetching settings. Please try again.");
   }
 });
 //========================================================================================================================
