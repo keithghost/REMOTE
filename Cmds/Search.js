@@ -6,7 +6,159 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "ghfollowing",
+  aliases: ["githubfollowing", "ghfing"],
+  category: "search",
+  description: "Show GitHub following in a carousel"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+  if (!q) return reply("📌 Provide a GitHub username.\nExample: ghfollowing Keithkeizzah");
+
+  try {
+    const apiUrl = `https://apiskeith.vercel.app/github/following?q=${encodeURIComponent(q)}`;
+    const res = await axios.get(apiUrl, { timeout: 60000 });
+    const results = res.data?.result;
+
+    if (!Array.isArray(results) || results.length === 0) {
+      return reply("❌ No following found.");
+    }
+
+    const following = results.slice(0, 50); // limit to 10 cards
+    const cards = await Promise.all(following.map(async (f) => ({
+      header: {
+        title: `👤 ${f.login}`,
+        hasMediaAttachment: true,
+        imageMessage: (await generateWAMessageContent({ image: { url: f.avatar_url } }, {
+          upload: client.waUploadToServer
+        })).imageMessage
+      },
+      body: {
+        text: `${f.bio ? f.bio + "\n" : ""}📦 Repos: ${f.public_repos}\n👥 Followers: ${f.followers}\n➡️ Following: ${f.following}\n📅 Joined: ${new Date(f.created_at).toDateString()}`
+      },
+      footer: { text: "🔹 Scroll to explore more following" },
+      nativeFlowMessage: {
+        buttons: [
+          {
+            name: "cta_url",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🌐 View Profile",
+              url: f.html_url
+            })
+          },
+          {
+            name: "cta_copy",
+            buttonParamsJson: JSON.stringify({
+              display_text: "📋 Copy Profile Link",
+              copy_code: f.html_url
+            })
+          }
+        ]
+      }
+    })));
+
+    const message = generateWAMessageFromContent(from, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: {
+            body: { text: `🔍 GitHub Following for: ${q}` },
+            footer: { text: `📂 Showing ${following.length} accounts` },
+            carouselMessage: { cards }
+          }
+        }
+      }
+    }, { quoted: mek });
+
+    await client.relayMessage(from, message.message, { messageId: message.key.id });
+
+  } catch (err) {
+    console.error("GitHub following error:", err);
+    reply("⚠️ An error occurred while fetching following.");
+  }
+});
 //========================================================================================================================
+
+keith({
+  pattern: "ghfollowers",
+  aliases: ["githubfollowers", "ghf"],
+  category: "search",
+  description: "Show GitHub followers in a carousel"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+  if (!q) return reply("📌 Provide a GitHub username.\nExample: ghfollowers Keithkeizzah");
+
+  try {
+    const apiUrl = `https://apiskeith.vercel.app/github/followers?q=${encodeURIComponent(q)}`;
+    const res = await axios.get(apiUrl, { timeout: 60000 });
+    const results = res.data?.result;
+
+    if (!Array.isArray(results) || results.length === 0) {
+      return reply("❌ No followers found.");
+    }
+
+    const followers = results.slice(0, 50); // limit to 10 cards
+    const cards = await Promise.all(followers.map(async (f) => ({
+      header: {
+        title: `👤 ${f.login}`,
+        hasMediaAttachment: true,
+        imageMessage: (await generateWAMessageContent({ image: { url: f.avatar_url } }, {
+          upload: client.waUploadToServer
+        })).imageMessage
+      },
+      body: {
+        text: `${f.bio ? f.bio + "\n" : ""}📦 Repos: ${f.public_repos}\n👥 Followers: ${f.followers}\n➡️ Following: ${f.following}\n📅 Joined: ${new Date(f.created_at).toDateString()}`
+      },
+      footer: { text: "🔹 Scroll to explore more followers" },
+      nativeFlowMessage: {
+        buttons: [
+          {
+            name: "cta_url",
+            buttonParamsJson: JSON.stringify({
+              display_text: "🌐 View Profile",
+              url: f.html_url
+            })
+          },
+          {
+            name: "cta_copy",
+            buttonParamsJson: JSON.stringify({
+              display_text: "📋 Copy Profile Link",
+              copy_code: f.html_url
+            })
+          }
+        ]
+      }
+    })));
+
+    const message = generateWAMessageFromContent(from, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: {
+            body: { text: `🔍 GitHub Followers for: ${q}` },
+            footer: { text: `📂 Showing ${followers.length} followers` },
+            carouselMessage: { cards }
+          }
+        }
+      }
+    }, { quoted: mek });
+
+    await client.relayMessage(from, message.message, { messageId: message.key.id });
+
+  } catch (err) {
+    console.error("GitHub followers error:", err);
+    reply("⚠️ An error occurred while fetching followers.");
+  }
+});
 //========================================================================================================================
 
 
