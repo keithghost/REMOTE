@@ -8,6 +8,54 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "movie",
+  aliases: ["moviesearch"],
+  category: "search",
+  description: "Search for movie information"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("📌 Provide a movie title.\nExample: movie Lucifer");
+  }
+
+  try {
+    const apiUrl = `https://apiskeith.vercel.app/search/movie?q=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(apiUrl, { timeout: 60000 });
+
+    if (!data?.status || !data.result) {
+      return reply("❌ Movie not found.");
+    }
+
+    const m = data.result;
+
+    let caption = `🎬 *${m.Title}* (${m.Year})
+⭐ Rated: ${m.Rated}
+📅 Released: ${m.Released}
+⏱ Runtime: ${m.Runtime}
+🎭 Genre: ${m.Genre}
+✍️ Writer: ${m.Writer}
+🎥 Actors: ${m.Actors}
+🌍 Language: ${m.Language}
+🏆 Awards: ${m.Awards}
+📊 IMDb: ${m.imdbRating} (${m.imdbVotes} votes)
+
+📝 Plot: ${m.Plot}`;
+
+    await client.sendMessage(from, {
+      image: { url: m.Poster },
+      caption
+    }, { quoted: mek });
+
+  } catch (err) {
+    console.error("Movie search error:", err);
+    reply("⚠️ An error occurred while fetching movie info.");
+  }
+});
 //========================================================================================================================
 
 
