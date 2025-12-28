@@ -191,45 +191,7 @@ keith({
 //========================================================================================================================
 
 
-keith({
-  pattern: "tom4a",
-  aliases: ["toappleaudio", "m4aextract"],
-  description: "Convert quoted audio or video to M4A",
-  category: "converter",
-  filename: __filename
-}, async (from, client, conText) => {
-  const { quotedMsg, mek, reply, keithRandom } = conText;
 
-  const mediaType = quotedMsg?.videoMessage || quotedMsg?.audioMessage;
-  if (!mediaType) {
-    return reply("❌ Quote an audio or video to convert to M4A.");
-  }
-
-  try {
-    const media = await client.downloadAndSaveMediaMessage(mediaType);
-    const output = await keithRandom(".m4a");
-
-    exec(`ffmpeg -i ${media} -c:a aac -b:a 128k ${output}`, async (err) => {
-      fs.unlinkSync(media);
-      if (err) {
-        console.error("ffmpeg error:", err);
-        return reply("❌ Conversion failed.");
-      }
-
-      const buffer = fs.readFileSync(output);
-      await client.sendMessage(from, {
-        document: buffer,
-        mimetype: "audio/mp4",
-        fileName: "audio.m4a"
-      }, { quoted: mek });
-
-      fs.unlinkSync(output);
-    });
-  } catch (error) {
-    console.error("tom4a error:", error);
-    await reply("❌ An error occurred while converting the media.");
-  }
-});
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
