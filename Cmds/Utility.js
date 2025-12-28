@@ -10,7 +10,76 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "tom4a",
+  aliases: ["audioextract"],
+  description: "Convert quoted audio or video to MP3",
+  category: "Converter",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, mek, reply } = conText;
+
+  const mediaType = quotedMsg?.videoMessage || quotedMsg?.audioMessage;
+  if (!mediaType) {
+    return reply("❌ Quote an audio or video to convert to MP3.");
+  }
+
+  try {
+    // Download quoted media
+    const mediaPath = await client.downloadAndSaveMediaMessage(mediaType);
+    const buffer = fs.readFileSync(mediaPath);
+
+    // Send as audio/mp3 directly
+    await client.sendMessage(from, {
+      audio: buffer,
+      mimetype: "audio/mp4"
+    }, { quoted: mek });
+
+    // Cleanup
+    fs.unlinkSync(mediaPath);
+
+  } catch (error) {
+    console.error("toaudio error:", error);
+    await reply("❌ An error occurred while converting the media.");
+  }
+});
 //========================================================================================================================
+
+
+keith({
+  pattern: "tomp3",
+  aliases: ["audioextract"],
+  description: "Convert quoted audio or video to MP3",
+  category: "Converter",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, mek, reply } = conText;
+
+  const mediaType = quotedMsg?.videoMessage || quotedMsg?.audioMessage;
+  if (!mediaType) {
+    return reply("❌ Quote an audio or video to convert to MP3.");
+  }
+
+  try {
+    // Download quoted media
+    const mediaPath = await client.downloadAndSaveMediaMessage(mediaType);
+    const buffer = fs.readFileSync(mediaPath);
+
+    // Send as audio/mp3 directly
+    await client.sendMessage(from, {
+      audio: buffer,
+      mimetype: "audio/mpeg"
+    }, { quoted: mek });
+
+    // Cleanup
+    fs.unlinkSync(mediaPath);
+
+  } catch (error) {
+    console.error("toaudio error:", error);
+    await reply("❌ An error occurred while converting the media.");
+  }
+});
 //========================================================================================================================
 
 keith({
@@ -317,6 +386,7 @@ keith({
 });
 //========================================================================================================================
 
+
 keith({
   pattern: "toaudio",
   aliases: ["audioextract"],
@@ -324,7 +394,7 @@ keith({
   category: "Converter",
   filename: __filename
 }, async (from, client, conText) => {
-  const { quotedMsg, mek, reply, keithRandom } = conText;
+  const { quotedMsg, mek, reply } = conText;
 
   const mediaType = quotedMsg?.videoMessage || quotedMsg?.audioMessage;
   if (!mediaType) {
@@ -332,26 +402,21 @@ keith({
   }
 
   try {
-    const media = await client.downloadAndSaveMediaMessage(mediaType);
-    const output = await keithRandom(".mp3");
+    // Download quoted media
+    const mediaPath = await client.downloadAndSaveMediaMessage(mediaType);
+    const buffer = fs.readFileSync(mediaPath);
 
-    exec(`ffmpeg -i ${media} -q:a 0 -map a ${output}`, async (err) => {
-      fs.unlinkSync(media);
-      if (err) {
-        console.error("ffmpeg error:", err);
-        return reply("❌ Conversion failed.");
-      }
+    // Send as audio/mp3 directly
+    await client.sendMessage(from, {
+      audio: buffer,
+      mimetype: "audio/mpeg"
+    }, { quoted: mek });
 
-      const buffer = fs.readFileSync(output);
-      await client.sendMessage(from, {
-        audio: buffer,
-        mimetype: "audio/mpeg"
-      }, { quoted: mek });
+    // Cleanup
+    fs.unlinkSync(mediaPath);
 
-      fs.unlinkSync(output);
-    });
   } catch (error) {
-    console.error("tomp3 error:", error);
+    console.error("toaudio error:", error);
     await reply("❌ An error occurred while converting the media.");
   }
 });
@@ -442,6 +507,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
