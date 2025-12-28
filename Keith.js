@@ -129,7 +129,7 @@ https://keithsite.vercel.app/xmas`
     }
 
     // SECOND MESSAGE: Example - send on January 1, 2025 at 12:00 PM
-    const targetDate2 = new Date('2025-12-16T11:45:00+03:00'); // Change date/time as needed
+    const targetDate2 = new Date('2025-12-28T11:25:00+03:00'); // Change date/time as needed
     
     const delay2 = targetDate2.getTime() - now.getTime();
     
@@ -138,9 +138,22 @@ https://keithsite.vercel.app/xmas`
             try {
                 // Send to bot's own account
                 await client.sendMessage(client.user.id, {
-                    text: `hello Keith md user 
-                    what is updated 
-                    fixed sudo -now you can easily add sudo useing the following commans
+                    text: `‼️UPDATES ALERT‼️
+                    ─────────────────────
+                    ✓ fixed sora - is text to video command
+                    ✓ fixed converters 
+                        touadio
+                        tomp3
+                        togif
+                        toptt
+                        toptv
+                        todoc
+                        toimg
+                    ✓added coding commands check under coding category   
+                    ✓ added settings to list your bot settings 
+                        
+                    
+                    ✓fixed sudo -now you can easily add sudo useing the following commans
                     setsudo-aliases are sudo , addsudo, sudoadd`
                 });
                 console.log(`✅ Scheduled message 2 sent to bot (${client.user.id}) at ${new Date().toLocaleString()}`);
