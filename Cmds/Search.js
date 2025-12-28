@@ -281,36 +281,82 @@ keith({
 
 keith({
   pattern: "google",
-  aliases: ["googlesearch", "searchgoogle"],
-  description: "Search Google results and preview links",
+  aliases: ["googlesearch", "gsearch"],
   category: "search",
-  filename: __filename
-}, async (from, client, conText) => {
-  const { q, reply, mek } = conText;
-
-  if (!q) return reply("🔍 Type a keyword to search Google.\n\nExample: google cat");
+  description: "Search Google and show results in a carousel"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+  if (!q) return reply("📌 Provide a search term.\nExample: google cat");
 
   try {
-    const res = await axios.get(`https://apiskeith.vercel.app/search/google?q=${encodeURIComponent(q)}`);
-    const data = res.data;
+    const apiUrl = `https://apiskeith.vercel.app/search/google?q=${encodeURIComponent(q)}`;
+    const res = await axios.get(apiUrl, { timeout: 60000 });
+    const results = res.data?.result?.items;
 
-    if (!data.status || !Array.isArray(data.result?.items) || data.result.items.length === 0) {
+    if (!Array.isArray(results) || results.length === 0) {
       return reply("❌ No results found.");
     }
 
-    const { formattedTotalResults, formattedSearchTime } = data.result.searchInformation;
-    const results = data.result.items.slice(0, 10);
+    const items = results.slice(0, 20); // limit to 8 cards
+    const cards = await Promise.all(items.map(async (item) => {
+      const thumb = item.pagemap?.cse_thumbnail?.[0]?.src || null;
+      return {
+        header: {
+          title: `🔎 ${item.title}`,
+          hasMediaAttachment: !!thumb,
+          imageMessage: thumb
+            ? (await generateWAMessageContent({ image: { url: thumb } }, {
+                upload: client.waUploadToServer
+              })).imageMessage
+            : undefined
+        },
+        body: {
+          text: `${item.snippet}\n🌐 ${item.displayLink}`
+        },
+        footer: { text: "🔹 Scroll to explore more results" },
+        nativeFlowMessage: {
+          buttons: [
+            {
+              name: "cta_url",
+              buttonParamsJson: JSON.stringify({
+                display_text: "🌐 Open Link",
+                url: item.link
+              })
+            },
+            {
+              name: "cta_copy",
+              buttonParamsJson: JSON.stringify({
+                display_text: "📋 Copy Link",
+                copy_code: item.link
+              })
+            }
+          ]
+        }
+      };
+    }));
 
-    const list = results.map((r, i) =>
-      `🔹 *${i + 1}. ${r.title}*\n${r.snippet || "No description"}\n🌐 ${r.link}`
-    ).join("\n\n");
+    const message = generateWAMessageFromContent(from, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: {
+            body: { text: `🔍 Google Results for: ${q}` },
+            footer: { text: `📂 Showing ${items.length} results` },
+            carouselMessage: { cards }
+          }
+        }
+      }
+    }, { quoted: mek });
 
-    const caption = `🔎 *Google Search: ${q}*\n📄 Results: ${formattedTotalResults}\n⏱️ Time: ${formattedSearchTime} seconds\n\n${list}`;
+    await client.relayMessage(from, message.message, { messageId: message.key.id });
 
-    await client.sendMessage(from, { text: caption }, { quoted: mek });
   } catch (err) {
-    console.error("google error:", err);
-    reply("❌ Error fetching Google results: " + err.message);
+    console.error("Google search error:", err);
+    reply("⚠️ An error occurred while fetching Google results.");
   }
 });
 //========================================================================================================================
