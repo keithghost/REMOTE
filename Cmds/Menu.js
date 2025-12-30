@@ -57,7 +57,7 @@ keith({
 
   const categories = Object.keys(commandList);
 
-  let menuText = `╰►Merry Christmas ${pushName} 🎄 ☃️ 🎅
+  let menuText = `╰►Happy new year ${pushName} 
 ╭───〔 *${botname}* 〕──────┈
 ├──────────────
 │✵│▸ 𝐓𝐎𝐓𝐀𝐋 𝐏𝐋𝐔𝐆𝐈𝐍𝐒: ${totalCommands}
