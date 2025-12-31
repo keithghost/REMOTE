@@ -45,13 +45,12 @@ function getCategoryCommands(categories, selectedNumber) {
 //========================================================================================================================
 //========================================================================================================================
 
-
 keith({
   pattern: "menu",
   category: "general",
   description: "Show all commands grouped by category"
 }, async (from, client, conText) => {
-  const { mek, pushName, botname, botPic, sourceUrl } = conText;
+  const { mek, pushName, botname, botPic } = conText;
 
   initializeCommands();
 
@@ -70,20 +69,14 @@ keith({
   });
 
   await client.sendMessage(from, {
-    text: menuText.trim(),
+    image: { url: botPic },
+    caption: menuText.trim(),
     contextInfo: {
-      mentionedJid: [mek.sender],
-      externalAdReply: {
-        title: `${botname} Menu`,
-        body: `Category-based command list`,
-        thumbnailUrl: botPic,
-        sourceUrl: sourceUrl,
-        mediaType: 1,
-        renderLargerThumbnail: true
-      }
+      mentionedJid: [mek.sender]
     }
   });
 });
+
 //========================================================================================================================
 //
 keith({
@@ -103,7 +96,7 @@ async (from, client, conText) => {
 
   initializeCommands();
 
-  const categories = Object.keys(commandList);
+  const categores = Object.keys(commandList);
 
   const menuText = `╰►Hey, ${pushName}
 ╭───〔  *${botname}* 〕──────┈⊷𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭𑲭
