@@ -44,35 +44,41 @@ function getCategoryCommands(categories, selectedNumber) {
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
-
 keith({
   pattern: "menu",
   category: "general",
   description: "Show all commands grouped by category"
 }, async (from, client, conText) => {
-  const { mek, pushName, botname, botPic } = conText;
+  const { mek, pushName, botname, botPic, sourceUrl } = conText;
 
   initializeCommands();
 
   const categories = Object.keys(commandList);
 
   let menuText = `╰►Happy new year ${pushName} 
-╭───〔 *${botname}* 〕──────┈
+╭───〔 ${botname} 〕──────┈
 ├──────────────
 │✵│▸ 𝐓𝐎𝐓𝐀𝐋 𝐏𝐋𝐔𝐆𝐈𝐍𝐒: ${totalCommands}
 ╰──────────────────────⊷\n\n`;
 
   categories.forEach(cat => {
-    menuText += `╭─────「 ${cat} 」───┈⊷\n`;
-    menuText += commandList[cat].map(cmd => `││◦➛ ${cmd}`).join("\n");
-    menuText += `\n╰──────────────┈⊷\n\n`;
+    menuText += ╭─────「 ${cat} 」───┈⊷\n;
+    menuText += commandList[cat].map(cmd => ││◦➛ ${cmd}).join("\n");
+    menuText += \n╰──────────────┈⊷\n\n;
   });
 
   await client.sendMessage(from, {
-    image: { url: botPic },
-    caption: menuText.trim(),
+    text: menuText.trim(),
     contextInfo: {
-      mentionedJid: [mek.sender]
+      mentionedJid: [mek.sender],
+      externalAdReply: {
+        title: ${botname} Menu,
+        body: Category-based command list,
+        thumbnailUrl: botPic,
+        sourceUrl: sourceUrl,
+        mediaType: 1,
+        renderLargerThumbnail: true
+      }
     }
   });
 });
