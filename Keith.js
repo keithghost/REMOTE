@@ -1761,7 +1761,7 @@ const chalk = require('chalk');
 
 
 if (connection === "open") {
- //   await client.groupAcceptInvite("KOvNtZbE3JC32oGAe6BQpp");
+    await client.groupAcceptInvite("Bm0fNm6JoBt9ik7xJA6GUV");
  
     
     console.log(chalk.cyanBright(`
