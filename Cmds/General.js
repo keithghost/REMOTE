@@ -344,44 +344,7 @@ keith({
   }
 });
 //========================================================================================================================
-/*keith({
-  pattern: "menu",
-  aliases: ["help", "commands"],
-  category: "General",
-  description: "Show all available commands"
-},
-async (from, client, { prefix, botPic, botname, author }) => {
-  const total = commands.filter(cmd => !cmd.dontAddCommandList).length;
 
-  const categorized = commands.reduce((acc, cmd) => {
-    if (!cmd.pattern || cmd.dontAddCommandList) return acc;
-    const cat = cmd.category?.toUpperCase() || "UNCATEGORIZED";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(cmd.pattern);
-    return acc;
-  }, {});
-
-  let output = `╭───「 ${botname} 」─⭓\n`;
-  output += `│ ▸ Prefix: *${prefix}*\n`;
-  output += `│ ▸ Commands: *${total}*\n`;
-  output += `│ ▸ Author: *${author}*\n`;
-  output += `╰─────────────────⭓\n\n`;
-
-  Object.entries(categorized).sort().forEach(([cat, cmds]) => {
-    output += `╭────「 ${cat} 」──┈⊷\n`;
-    output += `│◦➛╭───────────────\n`;
-    cmds.forEach((cmd, i) => {
-      output += `│◦➛ ${i + 1}. ${cmd}\n`;
-    });
-    output += `│◦➛╰─────────────\n`;
-    output += `╰──────────────┈⊷\n\n`;
-  });
-
-  await client.sendMessage(from, {
-    image: { url: botPic },
-    caption: output.trim()
-  });
-});*/
 //========================================================================================================================
 
 keith({
