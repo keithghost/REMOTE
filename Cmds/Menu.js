@@ -43,7 +43,6 @@ function getCategoryCommands(categories, selectedNumber) {
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
-//========================================================================================================================
 keith({
   pattern: "menu",
   category: "general",
@@ -62,9 +61,9 @@ keith({
 ╰──────────────────────⊷\n\n`;
 
   categories.forEach(cat => {
-    menuText += ╭─────「 ${cat} 」───┈⊷\n;
-    menuText += commandList[cat].map(cmd => ││◦➛ ${cmd}).join("\n");
-    menuText += \n╰──────────────┈⊷\n\n;
+    menuText += `╭─────「 ${cat} 」───┈⊷\n`;
+    menuText += commandList[cat].map(cmd => `││◦➛ ${cmd}`).join("\n");
+    menuText += `\n╰──────────────┈⊷\n\n`;
   });
 
   await client.sendMessage(from, {
@@ -72,8 +71,8 @@ keith({
     contextInfo: {
       mentionedJid: [mek.sender],
       externalAdReply: {
-        title: ${botname} Menu,
-        body: Category-based command list,
+        title: `${botname} Menu`,
+        body: "Category-based command list",
         thumbnailUrl: botPic,
         sourceUrl: sourceUrl,
         mediaType: 1,
