@@ -1506,4 +1506,453 @@ async (from, client, conText) => {
 //========================================================================================================================
 //========================================================================================================================
 
-                                                
+//========================================================================================================================
+
+keith({
+  pattern: "setanticallmessage",
+  aliases: ["callmessage", "antialert"],
+  description: "Set anti-call rejection message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide a message. Example: !setanticallmessage Sorry, I don't accept calls.");
+  
+  await updateAntiCallSettings({ message: q });
+  return reply(`✅ Anti-call message set:\n"${q}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setantideletenotification",
+  aliases: ["deletenotify", "deletemsg"],
+  description: "Set anti-delete notification text",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide notification text. Example: !setantideletenotification Someone deleted a message!");
+  
+  await updateAntiDeleteSettings({ notification: q });
+  return reply(`✅ Anti-delete notification set:\n"${q}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setgreetmessage",
+  aliases: ["setgreet", "greetmsg"],
+  description: "Set private chat greeting message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide greeting message. Example: !setgreetmessage Welcome! How can I help you today?");
+  
+  await updateGreetSettings({ message: q });
+  return reply(`✅ Greet message set:\n"${q}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setwelcome",
+  aliases: ["welcome", "setgroupwelcome"],
+  description: "Set group welcome message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide welcome message. Example: !setwelcome Welcome @user to {group}! We now have {count} members.");
+  
+  await updateGroupEventsSettings({ welcomeMessage: q });
+  return reply(`✅ Welcome message set:\n"${q}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setgoodbye",
+  aliases: ["goodbye", "setleave"],
+  description: "Set group goodbye message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide goodbye message. Example: !setgoodbye Goodbye @user! We'll miss you.");
+  
+  await updateGroupEventsSettings({ goodbyeMessage: q });
+  return reply(`✅ Goodbye message set:\n"${q}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setstatusemojis",
+  aliases: ["statusemojis", "setlikes"],
+  description: "Set auto-like status emojis",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide emojis. Example: !setstatusemojis 💛 ❤️ 💜 🤍 💙");
+  
+  const emojiList = q
+    .replace(/,/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(emoji => emoji.trim().length > 0)
+    .join(',');
+  
+  if (!emojiList) return reply("❌ No valid emojis provided");
+  
+  await updateAutoStatusSettings({ statusLikeEmojis: emojiList });
+  return reply(`✅ Status emojis set to: ${emojiList.split(',').join(' ')}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setstatusreply",
+  aliases: ["statusreply", "autoreplymsg"],
+  description: "Set auto-reply message for statuses",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide reply message. Example: !setstatusreply Nice status! 👍");
+  
+  await updateAutoStatusSettings({ statusReplyText: q });
+  return reply(`✅ Status reply message set:\n"${q}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setbio",
+  aliases: ["autobiotext", "setbiomsg"],
+  description: "Set auto-bio message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide bio message. Example: !setbio 🤖 Keith-MD | Always Active! | Nairobi Time");
+  
+  if (q.length > 100) return reply("❌ Bio message too long (max 100 characters)");
+  
+  await updateAutoBioSettings({ message: q });
+  return reply(`✅ Bio message set:\n"${q}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setchatbotvoice",
+  aliases: ["chatvoice", "setvoice"],
+  description: "Set chatbot voice",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply(`❌ Provide voice name. Available: ${availableVoices.join(', ')}`);
+  
+  if (!availableVoices.includes(q)) {
+    return reply(`❌ Invalid voice! Available: ${availableVoices.join(', ')}`);
+  }
+  
+  await updateChatbotSettings({ voice: q });
+  return reply(`✅ Chatbot voice set to: ${q}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setlinklimit",
+  aliases: ["linklimit", "antilinklimit"],
+  description: "Set anti-link warn limit (1-10)",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide limit (1-10). Example: !setlinklimit 3");
+  
+  const limit = parseInt(q);
+  if (isNaN(limit) || limit < 1 || limit > 10) {
+    return reply("❌ Limit must be 1-10");
+  }
+  
+  await updateAntiLinkSettings({ warn_limit: limit });
+  return reply(`✅ Anti-link warn limit set to: ${limit}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setstatuslimit",
+  aliases: ["statuslimit", "antistatuslimit"],
+  description: "Set anti-status-mention warn limit (1-10)",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide limit (1-10). Example: !setstatuslimit 5");
+  
+  const limit = parseInt(q);
+  if (isNaN(limit) || limit < 1 || limit > 10) {
+    return reply("❌ Limit must be 1-10");
+  }
+  
+  await updateAntiStatusMentionSettings({ warn_limit: limit });
+  return reply(`✅ Anti-status-mention warn limit set to: ${limit}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setcallaction",
+  aliases: ["callaction"],
+  description: "Set anti-call action (reject/block)",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide action: reject or block");
+  
+  const action = q.toLowerCase();
+  if (!['reject', 'block'].includes(action)) {
+    return reply("❌ Invalid action! Use: reject or block");
+  }
+  
+  await updateAntiCallSettings({ action });
+  return reply(`✅ Call action set to: ${action.toUpperCase()}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setantilink",
+  aliases: ["antilinkaction"],
+  description: "Set anti-link action (off/warn/delete/remove)",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide action: off, warn, delete, or remove");
+  
+  const action = q.toLowerCase();
+  if (!['off', 'warn', 'delete', 'remove'].includes(action)) {
+    return reply("❌ Invalid action! Use: off, warn, delete, or remove");
+  }
+  
+  await updateAntiLinkSettings({ status: action, action });
+  return reply(`✅ Anti-link action set to: ${action.toUpperCase()}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "setantistatus",
+  aliases: ["antistatusaction"],
+  description: "Set anti-status-mention action (off/warn/delete/remove)",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply("❌ Provide action: off, warn, delete, or remove");
+  
+  const action = q.toLowerCase();
+  if (!['off', 'warn', 'delete', 'remove'].includes(action)) {
+    return reply("❌ Invalid action! Use: off, warn, delete, or remove");
+  }
+  
+  await updateAntiStatusMentionSettings({ status: action, action });
+  return reply(`✅ Anti-status-mention action set to: ${action.toUpperCase()}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "clearchathistory",
+  aliases: ["chatclear", "clearai"],
+  description: "Clear chatbot conversation history",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  const cleared = await clearConversationHistory(from);
+  if (cleared) {
+    return reply("✅ Chatbot conversation history cleared!");
+  } else {
+    return reply("❌ No conversation history to clear!");
+  }
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "resetlinkwarns",
+  aliases: ["clearwarns", "resetantilink"],
+  description: "Reset all anti-link warnings",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  clearAllWarns();
+  return reply("✅ All anti-link warnings have been reset!");
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "resetstatuswarns",
+  aliases: ["clearstatuswarns", "resetsm"],
+  description: "Reset all anti-status-mention warnings",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  clearAllStatusWarns();
+  return reply("✅ All status mention warnings have been reset!");
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "cleargreetmemory",
+  aliases: ["clearreplied"],
+  description: "Clear greeting replied contacts memory",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  clearRepliedContacts();
+  return reply("✅ Greeting replied contacts memory cleared!");
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "getchatbotvoices",
+  aliases: ["voices", "listvoices"],
+  description: "Show available chatbot voices",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  return reply(`*🎙️ Available Chatbot Voices:*\n\n${availableVoices.join(', ')}`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "getgreetmessage",
+  aliases: ["viewgreet"],
+  description: "Show current greeting message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  const settings = await getGreetSettings();
+  return reply(`*📝 Current Greet Message:*\n\n"${settings.message}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "getwelcome",
+  aliases: ["viewwelcome"],
+  description: "Show current group welcome message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  const settings = await getGroupEventsSettings();
+  return reply(`*👋 Current Welcome Message:*\n\n"${settings.welcomeMessage}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "getgoodbye",
+  aliases: ["viewgoodbye"],
+  description: "Show current group goodbye message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  const settings = await getGroupEventsSettings();
+  return reply(`*👋 Current Goodbye Message:*\n\n"${settings.goodbyeMessage}"`);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "getbiosetting",
+  aliases: ["viewbio"],
+  description: "Show current auto-bio message",
+  category: "Settings",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  const settings = await getAutoBioSettings();
+  return reply(`*📝 Current Bio Message:*\n\n"${settings.message}"`);
+});
+
+//========================================================================================================================                                                
