@@ -33,245 +33,42 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+ 
+// From Group.js
 
 keith({
   pattern: "listonline",
-  aliases: ["online", "active", "onlinemembers", "activeusers"],
+  aliases: ["online", "isonline"],
   category: "group",
-  description: "List all online/active group members"
-}, async (from, client, conText) => {
+  description: "List group members and trigger presence update"
+},
+async (from, client, conText) => {
   const { reply, isGroup } = conText;
 
-  if (!isGroup) return reply("❌ This command can only be used inside a group.");
+  if (!isGroup) return reply("❌ This command only works in groups!");
 
   try {
     const metadata = await client.groupMetadata(from);
-    const participants = metadata.participants;
-    
-    let onlineList = [];
-    let totalCount = participants.length;
-    
-    for (const member of participants) {
-      try {
-        const presence = await client.presenceSubscribe(member.id);
-        // Check if user is online (presence available)
-        if (presence && (presence.lastKnownPresence === 'available' || presence.lastSeen)) {
-          const number = member.id.split('@')[0];
-          const name = member.notify || `@${number}`;
-          onlineList.push(`${onlineList.length + 1}. ${name}`);
-        }
-      } catch (err) {
-        // Skip if presence can't be fetched
-        continue;
-      }
+    const members = metadata.participants.map(p => p.id);
+
+    // Trigger presence update for each member
+    for (const jid of members) {
+      await client.sendPresenceUpdate("available", jid);
     }
 
-    if (onlineList.length === 0) {
-      return reply("👥 *Group Members Status*\n\n📊 *Total Members:* " + totalCount + "\n\n⚡ *Online Members:* 0\n\nℹ️ No members are currently online or could not fetch presence data.");
-    }
+    // Build numbered list
+    const onlineList = members.map((id, i) => `${i + 1} @${id.split("@")[0]}`).join("\n");
 
-    const output = `👥 *Group Members Status*\n\n📊 *Total Members:* ${totalCount}\n\n⚡ *Online Members:* ${onlineList.length}\n\n${onlineList.join('\n')}`;
-    
-    await reply(output);
+    await client.sendMessage(from, {
+      text: `📋 Group Members (presence set to available):\n\n${onlineList}`,
+      mentions: members
+    });
 
   } catch (err) {
     console.error("listonline error:", err);
-    reply("❌ Failed to fetch online members. Try again.");
+    reply("⚠️ Failed to list online members.");
   }
-});
-
-//========================================================================================================================
-
-keith({
-  pattern: "listinactive",
-  aliases: ["offline", "inactive", "offlinemembers", "awayusers"],
-  category: "group",
-  description: "List all offline/inactive group members"
-}, async (from, client, conText) => {
-  const { reply, isGroup } = conText;
-
-  if (!isGroup) return reply("❌ This command can only be used inside a group.");
-
-  try {
-    const metadata = await client.groupMetadata(from);
-    const participants = metadata.participants;
-    
-    let offlineList = [];
-    let onlineCount = 0;
-    let totalCount = participants.length;
-    
-    for (const member of participants) {
-      try {
-        const presence = await client.presenceSubscribe(member.id);
-        // Check if user is offline/inactive
-        if (!presence || presence.lastKnownPresence !== 'available') {
-          const number = member.id.split('@')[0];
-          const name = member.notify || `@${number}`;
-          offlineList.push(`${offlineList.length + 1}. ${name}`);
-        } else {
-          onlineCount++;
-        }
-      } catch (err) {
-        // If presence can't be fetched, assume offline
-        const number = member.id.split('@')[0];
-        const name = member.notify || `@${number}`;
-        offlineList.push(`${offlineList.length + 1}. ${name} (status unknown)`);
-      }
-    }
-
-    if (offlineList.length === 0) {
-      return reply("👥 *Group Members Status*\n\n📊 *Total Members:* " + totalCount + "\n\n⚡ *Online Members:* " + totalCount + "\n\n💤 *Offline Members:* 0\n\n✅ All members are currently online!");
-    }
-
-    const output = `👥 *Group Members Status*\n\n📊 *Total Members:* ${totalCount}\n\n⚡ *Online Members:* ${onlineCount}\n\n💤 *Offline Members:* ${offlineList.length}\n\n${offlineList.join('\n')}`;
-    
-    await reply(output);
-
-  } catch (err) {
-    console.error("listinactive error:", err);
-    reply("❌ Failed to fetch inactive members. Try again.");
-  }
-});
-
-//========================================================================================================================
-
-keith({
-  pattern: "listunavailable",
-  aliases: ["unavailable", "away", "idle", "sleeping"],
-  category: "group",
-  description: "List group members who are unavailable/away"
-}, async (from, client, conText) => {
-  const { reply, isGroup } = conText;
-
-  if (!isGroup) return reply("❌ This command can only be used inside a group.");
-
-  try {
-    const metadata = await client.groupMetadata(from);
-    const participants = metadata.participants;
-    
-    let unavailableList = [];
-    let totalCount = participants.length;
-    
-    for (const member of participants) {
-      try {
-        const presence = await client.presenceSubscribe(member.id);
-        // Check various unavailable statuses
-        if (presence && (
-          presence.lastKnownPresence === 'unavailable' ||
-          presence.lastKnownPresence === 'composing' ||
-          presence.lastKnownPresence === 'recording' ||
-          presence.lastKnownPresence === 'paused'
-        )) {
-          const number = member.id.split('@')[0];
-          const name = member.notify || `@${number}`;
-          unavailableList.push(`${unavailableList.length + 1}. ${name}`);
-        }
-      } catch (err) {
-        // Skip if presence can't be fetched
-        continue;
-      }
-    }
-
-    if (unavailableList.length === 0) {
-      return reply("👥 *Group Members Status*\n\n📊 *Total Members:* " + totalCount + "\n\n🚫 *Unavailable Members:* 0\n\n✅ All members are available!");
-    }
-
-    const output = `👥 *Group Members Status*\n\n📊 *Total Members:* ${totalCount}\n\n🚫 *Unavailable Members:* ${unavailableList.length}\n\n${unavailableList.join('\n')}`;
-    
-    await reply(output);
-
-  } catch (err) {
-    console.error("listunavailable error:", err);
-    reply("❌ Failed to fetch unavailable members. Try again.");
-  }
-});
-
-//========================================================================================================================
-
-keith({
-  pattern: "memberstatus",
-  aliases: ["memberstats", "groupstats", "grouppresence"],
-  category: "group",
-  description: "Show detailed group member status statistics"
-}, async (from, client, conText) => {
-  const { reply, isGroup } = conText;
-
-  if (!isGroup) return reply("❌ This command can only be used inside a group.");
-
-  try {
-    const metadata = await client.groupMetadata(from);
-    const participants = metadata.participants;
-    
-    let onlineCount = 0;
-    let offlineCount = 0;
-    let unavailableCount = 0;
-    let unknownCount = 0;
-    let totalCount = participants.length;
-    
-    const onlineList = [];
-    const offlineList = [];
-    const unavailableList = [];
-    
-    for (const member of participants) {
-      try {
-        const presence = await client.presenceSubscribe(member.id);
-        const number = member.id.split('@')[0];
-        const name = member.notify || `@${number}`;
-        
-        if (!presence) {
-          unknownCount++;
-          offlineList.push(name);
-        } else if (presence.lastKnownPresence === 'available') {
-          onlineCount++;
-          onlineList.push(name);
-        } else if (presence.lastKnownPresence === 'unavailable') {
-          unavailableCount++;
-          unavailableList.push(name);
-        } else {
-          offlineCount++;
-          offlineList.push(name);
-        }
-      } catch (err) {
-        unknownCount++;
-        const number = member.id.split('@')[0];
-        offlineList.push(`@${number} (unknown)`);
-      }
-    }
-
-    const output = `
-👥 *GROUP MEMBER STATUS REPORT*
-
-📊 *Total Members:* ${totalCount}
-
-⚡ *Online Members (${onlineCount}):*
-${onlineList.length > 0 ? onlineList.slice(0, 10).map((name, i) => `${i+1}. ${name}`).join('\n') : 'None'}
-${onlineList.length > 10 ? `\n... and ${onlineList.length - 10} more` : ''}
-
-💤 *Offline Members (${offlineCount}):*
-${offlineList.length > 0 ? offlineList.slice(0, 10).map((name, i) => `${i+1}. ${name}`).join('\n') : 'None'}
-${offlineList.length > 10 ? `\n... and ${offlineList.length - 10} more` : ''}
-
-🚫 *Unavailable/Away (${unavailableCount}):*
-${unavailableList.length > 0 ? unavailableList.slice(0, 10).map((name, i) => `${i+1}. ${name}`).join('\n') : 'None'}
-${unavailableList.length > 10 ? `\n... and ${unavailableList.length - 10} more` : ''}
-
-❓ *Unknown Status (${unknownCount}):*
-${unknownCount > 0 ? `${unknownCount} members have unknown status` : 'All members status known'}
-
-📈 *Summary:*
-• Online: ${onlineCount} (${Math.round((onlineCount/totalCount)*100)}%)
-• Offline: ${offlineCount} (${Math.round((offlineCount/totalCount)*100)}%)
-• Unavailable: ${unavailableCount} (${Math.round((unavailableCount/totalCount)*100)}%)
-    `;
-    
-    await reply(output);
-
-  } catch (err) {
-    console.error("memberstatus error:", err);
-    reply("❌ Failed to fetch member status. Try again.");
-  }
-});
-
+});    
 //========================================================================================================================
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
@@ -1298,6 +1095,7 @@ async (from, client, conText) => {
   }
 });
 //========================================================================================================================
+
 
 
 
