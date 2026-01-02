@@ -93,8 +93,7 @@ keith({
 
 
 keith({
-  pattern: "question",
-  aliases: ["quiz", "trivia"],
+  pattern: "quickquiz",
   description: "Get a random multiple-choice question",
   category: "fun",
   filename: __filename
