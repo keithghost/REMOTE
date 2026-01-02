@@ -1,5 +1,7 @@
 const { keith } = require('../commandHandler');
 const axios = require('axios');
+//========================================================================================================================
+//========================================================================================================================
 
 // Game state storage
 const gameSessions = new Map();
@@ -27,6 +29,570 @@ async function fetchRiddles() {
 // Fetch riddles when module loads
 fetchRiddles();
 
+//========================================================================================================================
+//========================================================================================================================
+
+// Game state storage
+const flagGameSessions = new Map();
+// Flag data will be fetched from URL
+let flags = [];
+
+// Fetch flag data from JSON URL
+async function fetchFlags() {
+  try {
+    const response = await axios.get('https://raw.githubusercontent.com/Keithkeizzah/INFO/refs/heads/main/games/flag.json');
+    if (response.data && Array.isArray(response.data)) {
+      flags = response.data;
+      console.log(`✅ Loaded ${flags.length} flags from JSON`);
+      return true;
+    } else {
+      console.error('❌ Invalid JSON structure from URL');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error fetching flags:', error.message);
+    return false;
+  }
+}
+
+// Fetch flags when module loads
+fetchFlags();
+//========================================================================================================================
+
+//========================================================================================================================
+
+keith({
+  pattern: "flaggame",
+  aliases: ["guessflag", "countrygame"],
+  description: "Start a flag guessing game in group",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, isGroup, sender, senderName } = conText;
+  
+  if (!isGroup) return reply("❌ This game can only be played in groups!");
+  
+  if (flagGameSessions.has(from)) {
+    return reply("⚠️ A flag game is already running! Use `.endflag` to stop it.");
+  }
+  
+  // Ensure flags are loaded
+  if (flags.length === 0) {
+    const loaded = await fetchFlags();
+    if (!loaded || flags.length === 0) {
+      return reply("❌ Failed to load flag data from server. Please try again later.");
+    }
+  }
+  
+  // Initialize game session
+  const gameSession = {
+    host: sender,
+    hostName: senderName,
+    players: [], // Array of player objects
+    totalRounds: 5, // Fixed 5 rounds
+    currentRound: 1, // Round counter starts at 1
+    currentFlag: null,
+    currentOptions: [],
+    gameActive: true,
+    joinPhase: true,
+    currentPlayerIndex: 0,
+    scores: new Map(), // playerId -> score
+    flagsUsed: [],
+    roundTimeout: null,
+    joinTimeout: null,
+    listener: null,
+    roundResults: [], // Store results per round
+    playerRounds: new Map(), // Track rounds played per player: playerId -> roundsPlayed
+    currentTurn: 0 // Track total turns
+  };
+  
+  flagGameSessions.set(from, gameSession);
+  
+  // Send game start message
+  await client.sendMessage(from, {
+    text: `🏳️ *FLAG GUESSING GAME* 🏳️\n\n` +
+          `👤 Host: @${sender.split('@')[0]}\n` +
+          `🔄 Total Rounds: ${gameSession.totalRounds}\n` +
+          `⏰ Join Time: 30 seconds\n\n` +
+          `📝 *HOW TO PLAY:*\n` +
+          `1. Type "join" to register\n` +
+          `2. Each round shows a flag emoji\n` +
+          `3. Choose from 4 options (1-4)\n` +
+          `4. Each correct answer = 15 points\n` +
+          `5. Game ends after ${gameSession.totalRounds} rounds\n\n` +
+          `🏆 Winner gets special recognition!\n\n` +
+          `Type *join* now! ⏳`
+  }, { quoted: mek });
+  
+  // Set join timeout
+  gameSession.joinTimeout = setTimeout(async () => {
+    if (flagGameSessions.has(from)) {
+      const session = flagGameSessions.get(from);
+      if (session.joinPhase) {
+        session.joinPhase = false;
+        
+        if (session.players.length < 2) {
+          await client.sendMessage(from, {
+            text: "❌ Need at least 2 players to start. Game cancelled."
+          });
+          flagGameSessions.delete(from);
+          return;
+        }
+        
+        // Initialize player rounds tracking
+        session.players.forEach(player => {
+          session.playerRounds.set(player.id, 0);
+        });
+        
+        // Announce game start
+        await client.sendMessage(from, {
+          text: `🎯 *FLAG GAME STARTING!* 🎯\n\n` +
+                `👥 Players: ${session.players.length}\n` +
+                `🔄 Total Rounds: ${session.totalRounds}\n` +
+                `🎯 Round 1/${session.totalRounds}\n\n` +
+                `Good luck everyone! 🍀`
+        });
+        
+        // Start the first round
+        setTimeout(() => startNewFlagRound(from, client, session), 2000);
+      }
+    }
+  }, 30000);
+  
+  // Setup game listener
+  setupFlagGameListener(from, client);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "endflag",
+  aliases: ["stopflag"],
+  description: "End the current flag game",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup, sender } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = flagGameSessions.get(from);
+  if (!gameSession) return reply("❌ No flag game is currently running!");
+  
+  // Only host can end game
+  if (gameSession.host !== sender) {
+    return reply("❌ Only the game host can end the game!");
+  }
+  
+  await endFlagGameWithResults(from, client, gameSession, true);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "flagplayers",
+  description: "Show current flag game players and scores",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = flagGameSessions.get(from);
+  if (!gameSession) return reply("❌ No flag game is currently running!");
+  
+  let playersMessage = `📊 *FLAG GAME STATUS*\n\n`;
+  playersMessage += `🔄 Round: ${gameSession.currentRound}/${gameSession.totalRounds}\n`;
+  playersMessage += `👥 Players: ${gameSession.players.length}\n`;
+  playersMessage += `🎯 Current Turn: ${gameSession.currentTurn + 1}/${gameSession.players.length}\n\n`;
+  playersMessage += `🏆 *CURRENT SCORES:*\n`;
+  
+  // Sort by score
+  const sortedPlayers = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  const mentions = [];
+  sortedPlayers.forEach(([playerId, score], index) => {
+    const player = gameSession.players.find(p => p.id === playerId);
+    const mention = `@${playerId.split('@')[0]}`;
+    mentions.push(playerId);
+    
+    const turnIndicator = gameSession.players[gameSession.currentPlayerIndex]?.id === playerId ? "👈 (Your Turn)" : "";
+    const roundsPlayed = gameSession.playerRounds.get(playerId) || 0;
+    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "  ";
+    playersMessage += `${medal} ${mention}: ${score} points ${turnIndicator}\n`;
+  });
+  
+  if (gameSession.currentFlag) {
+    const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+    playersMessage += `\n🎯 *Current Turn:* @${currentPlayer?.id.split('@')[0]}`;
+    mentions.push(currentPlayer?.id);
+  }
+  
+  await client.sendMessage(from, {
+    text: playersMessage,
+    mentions
+  });
+});
+
+// Setup flag game listener
+function setupFlagGameListener(groupId, client) {
+  const listener = async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message || msg.key.remoteJid !== groupId) return;
+    
+    const gameSession = flagGameSessions.get(groupId);
+    if (!gameSession) return;
+    
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const senderName = msg.pushName || "Player";
+    
+    // Handle join messages during join phase
+    if (gameSession.joinPhase && text.toLowerCase().trim() === "join") {
+      // Check if already joined
+      if (gameSession.players.some(p => p.id === sender)) {
+        await client.sendMessage(groupId, {
+          text: `❌ @${sender.split('@')[0]} is already registered!`,
+          mentions: [sender]
+        });
+        return;
+      }
+      
+      // Add player
+      gameSession.players.push({
+        id: sender,
+        name: senderName,
+        joinedAt: Date.now()
+      });
+      
+      gameSession.scores.set(sender, 0);
+      
+      await client.sendMessage(groupId, {
+        text: `✅ @${sender.split('@')[0]} has joined the flag game!\n` +
+              `👥 Total players: ${gameSession.players.length}`,
+        mentions: [sender]
+      });
+      return;
+    }
+    
+    // Handle answers during active game
+    if (!gameSession.joinPhase && gameSession.gameActive && gameSession.currentFlag) {
+      // Check if it's this player's turn
+      const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+      if (!currentPlayer || currentPlayer.id !== sender) return;
+      
+      // Parse user input (can be number 1-4 or country name)
+      const userInput = text.trim();
+      const selectedNumber = parseInt(userInput);
+      
+      let isCorrect = false;
+      let selectedCountry = "";
+      
+      // Check if input is a number 1-4
+      if (!isNaN(selectedNumber) && selectedNumber >= 1 && selectedNumber <= 4) {
+        // User selected option by number
+        selectedCountry = gameSession.currentOptions[selectedNumber - 1];
+        isCorrect = selectedCountry === gameSession.currentFlag.country;
+      } else {
+        // User typed country name (case insensitive)
+        selectedCountry = userInput;
+        isCorrect = userInput.toLowerCase() === gameSession.currentFlag.country.toLowerCase();
+      }
+      
+      if (isCorrect) {
+        // Correct answer - add score
+        const currentScore = gameSession.scores.get(sender) || 0;
+        gameSession.scores.set(sender, currentScore + 15);
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: senderName,
+          correct: true,
+          points: 15,
+          flag: gameSession.currentFlag.flag,
+          country: gameSession.currentFlag.country,
+          selectedOption: selectedNumber ? `Option ${selectedNumber}: ${selectedCountry}` : selectedCountry
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        await client.sendMessage(groupId, {
+          text: `🎉 *CORRECT!* 🎉\n\n` +
+                `✅ @${sender.split('@')[0]} guessed correctly!\n` +
+                `🏁 Country: ${gameSession.currentFlag.country}\n` +
+                `💰 +15 points! Total: ${currentScore + 15}\n\n` +
+                `🎯 Round ${gameSession.currentRound} completed!\n` +
+                `Moving to next round...`,
+          mentions: [sender]
+        });
+        
+        // Clear timeout
+        if (gameSession.roundTimeout) {
+          clearTimeout(gameSession.roundTimeout);
+          gameSession.roundTimeout = null;
+        }
+        
+        // Move to next round
+        gameSession.currentRound++;
+        
+        // Check if game is over
+        if (gameSession.currentRound > gameSession.totalRounds) {
+          setTimeout(() => endFlagGameWithResults(groupId, client, gameSession, false), 3000);
+        } else {
+          // Start next round after delay
+          setTimeout(() => startNewFlagRound(groupId, client, gameSession), 3000);
+        }
+        
+      } else {
+        // Wrong answer - show correct answer and move to next round
+        let userResponse = `❌ Wrong answer, @${sender.split('@')[0]}!\n`;
+        
+        if (selectedNumber && selectedNumber >= 1 && selectedNumber <= 4) {
+          userResponse += `You selected: ${selectedCountry}\n`;
+        } else {
+          userResponse += `You answered: ${userInput}\n`;
+        }
+        
+        userResponse += `\n✅ The correct answer was: ${gameSession.currentFlag.country}\n` +
+                       `📍 Capital: ${gameSession.currentFlag.capital}\n` +
+                       `🌍 Continent: ${gameSession.currentFlag.continent}\n\n` +
+                       `🎯 Round ${gameSession.currentRound} completed!\n` +
+                       `Moving to next round...`;
+        
+        await client.sendMessage(groupId, {
+          text: userResponse,
+          mentions: [sender]
+        });
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: senderName,
+          correct: false,
+          points: 0,
+          flag: gameSession.currentFlag.flag,
+          country: gameSession.currentFlag.country,
+          selectedOption: selectedNumber ? `Option ${selectedNumber}: ${selectedCountry}` : selectedCountry
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        // Clear timeout
+        if (gameSession.roundTimeout) {
+          clearTimeout(gameSession.roundTimeout);
+          gameSession.roundTimeout = null;
+        }
+        
+        // Move to next round
+        gameSession.currentRound++;
+        
+        if (gameSession.currentRound > gameSession.totalRounds) {
+          setTimeout(() => endFlagGameWithResults(groupId, client, gameSession, false), 3000);
+        } else {
+          // Start next round after delay
+          setTimeout(() => startNewFlagRound(groupId, client, gameSession), 3000);
+        }
+      }
+    }
+  };
+  
+  // Store listener reference
+  flagGameSessions.get(groupId).listener = listener;
+  client.ev.on("messages.upsert", listener);
+}
+
+// Start a new flag round
+async function startNewFlagRound(groupId, client, gameSession) {
+  if (!gameSession.gameActive) return;
+  
+  // Clear any existing timeout
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  
+  // Get random flag that hasn't been used
+  const availableFlags = flags.filter(f => 
+    !gameSession.flagsUsed.includes(f.country)
+  );
+  
+  if (availableFlags.length === 0) {
+    // Reset if all flags used
+    gameSession.flagsUsed = [];
+  }
+  
+  const flag = availableFlags[Math.floor(Math.random() * availableFlags.length)];
+  gameSession.flagsUsed.push(flag.country);
+  gameSession.currentFlag = flag;
+  
+  // Use the options from JSON, shuffle them
+  gameSession.currentOptions = [...flag.options].sort(() => Math.random() - 0.5);
+  
+  // Move to next player for each round
+  gameSession.currentPlayerIndex = (gameSession.currentPlayerIndex + 1) % gameSession.players.length;
+  const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+  
+  // Announce new round
+  await client.sendMessage(groupId, {
+    text: `🔄 *ROUND ${gameSession.currentRound}/${gameSession.totalRounds}*\n\n` +
+          `🎯 *Current Player:* @${currentPlayer.id.split('@')[0]}\n\n` +
+          `🏳️ *GUESS THE COUNTRY:*\n` +
+          `${flag.flag} ${flag.flag} ${flag.flag}\n\n` +
+          `📋 *OPTIONS:*\n` +
+          `1. ${gameSession.currentOptions[0]}\n` +
+          `2. ${gameSession.currentOptions[1]}\n` +
+          `3. ${gameSession.currentOptions[2]}\n` +
+          `4. ${gameSession.currentOptions[3]}\n\n` +
+          `💡 *HINT:* Capital city is ${flag.capital}\n` +
+          `📍 Continent: ${flag.continent}\n\n` +
+          `⏰ Time limit: 25 seconds\n` +
+          `📝 Reply with number (1-4) OR type country name!`,
+    mentions: [currentPlayer.id]
+  });
+  
+  // Set timeout for this round
+  gameSession.roundTimeout = setTimeout(async () => {
+    if (flagGameSessions.has(groupId)) {
+      const session = flagGameSessions.get(groupId);
+      if (session.currentFlag && session.currentFlag.country === flag.country) {
+        // Time's up
+        const currentPlayer = session.players[session.currentPlayerIndex];
+        
+        await client.sendMessage(groupId, {
+          text: `⏰ *TIME'S UP!*\n\n` +
+                `@${currentPlayer.id.split('@')[0]} took too long!\n` +
+                `✅ Correct answer: ${flag.country}\n` +
+                `📍 Capital: ${flag.capital}\n` +
+                `🌍 Continent: ${flag.continent}\n\n` +
+                `🎯 Round ${session.currentRound} completed\n` +
+                `Moving to next round...`,
+          mentions: [currentPlayer.id]
+        });
+        
+        // Store round result
+        session.roundResults.push({
+          round: session.currentRound,
+          playerId: currentPlayer.id,
+          playerName: currentPlayer.name,
+          correct: false,
+          points: 0,
+          flag: flag.flag,
+          country: flag.country,
+          timeout: true
+        });
+        
+        // Update player rounds
+        const roundsPlayed = session.playerRounds.get(currentPlayer.id) || 0;
+        session.playerRounds.set(currentPlayer.id, roundsPlayed + 1);
+        
+        // Move to next round
+        session.currentRound++;
+        
+        if (session.currentRound > session.totalRounds) {
+          setTimeout(() => endFlagGameWithResults(groupId, client, session, false), 3000);
+        } else {
+          setTimeout(() => startNewFlagRound(groupId, client, session), 3000);
+        }
+      }
+    }
+  }, 25000);
+}
+
+// End game and show results
+async function endFlagGameWithResults(groupId, client, gameSession, forcedEnd = false) {
+  if (!gameSession.gameActive) return;
+  
+  gameSession.gameActive = false;
+  
+  // Clear timeouts
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  if (gameSession.joinTimeout) {
+    clearTimeout(gameSession.joinTimeout);
+  }
+  
+  // Remove listener
+  if (gameSession.listener) {
+    client.ev.off("messages.upsert", gameSession.listener);
+  }
+  
+  // Prepare final results
+  const scoresArray = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  let resultsMessage = `🏁 *FLAG GAME ${forcedEnd ? 'ENDED EARLY' : 'FINISHED'}* 🏁\n\n`;
+  resultsMessage += `🎯 Rounds Played: ${gameSession.currentRound - 1}/${gameSession.totalRounds}\n`;
+  resultsMessage += `👥 Total Players: ${gameSession.players.length}\n\n`;
+  
+  if (scoresArray.length > 0) {
+    resultsMessage += `🏆 *FINAL LEADERBOARD* 🏆\n\n`;
+    
+    const mentions = [];
+    scoresArray.forEach(([playerId, score], index) => {
+      const mention = `@${playerId.split('@')[0]}`;
+      mentions.push(playerId);
+      
+      const medal = index === 0 ? "🥇 *GOLD*" : 
+                    index === 1 ? "🥈 *SILVER*" : 
+                    index === 2 ? "🥉 *BRONZE*" : "   ";
+      resultsMessage += `${medal}\n${mention}: ${score} points\n\n`;
+    });
+    
+    // Check for draw (multiple players with same highest score)
+    if (scoresArray.length > 1) {
+      const highestScore = scoresArray[0][1];
+      const playersWithHighestScore = scoresArray.filter(([_, score]) => score === highestScore);
+      
+      if (playersWithHighestScore.length > 1) {
+        // It's a draw
+        resultsMessage += `🤝 *IT'S A DRAW!* 🤝\n`;
+        resultsMessage += `Multiple players tied with ${highestScore} points!\n\n`;
+        
+        const drawMentions = playersWithHighestScore.map(([playerId]) => `@${playerId.split('@')[0]}`).join(", ");
+        resultsMessage += `🏆 ${drawMentions}`;
+      } else {
+        // Single winner
+        const [winnerId, winnerScore] = scoresArray[0];
+        resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+        resultsMessage += `🏆 @${winnerId.split('@')[0]} wins with ${winnerScore} points!`;
+      }
+    } else if (scoresArray.length === 1) {
+      // Only one player
+      const [winnerId, winnerScore] = scoresArray[0];
+      resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+      resultsMessage += `🏆 @${winnerId.split('@')[0]} wins with ${winnerScore} points!`;
+    }
+    
+    await client.sendMessage(groupId, {
+      text: resultsMessage,
+      mentions
+    });
+  } else {
+    await client.sendMessage(groupId, {
+      text: `🏳️ Flag game ended with no scores recorded.`
+    });
+  }
+  
+  // Clean up
+  flagGameSessions.delete(groupId);
+}
+
+//========================================================================================================================
 //========================================================================================================================
 
 keith({
