@@ -65,6 +65,539 @@ const API_URL = 'https://apiskeith.vercel.app/fun/question';
 
 //========================================================================================================================
 
+// Tic Tac Toe Manager Class (Multiplayer with join system)
+class TicTacToeManager {
+  constructor() {
+    this.gameSessions = new Map(); // chatId -> game session
+    this.timeouts = new Map();
+  }
+
+  createGameSession(chatId, host) {
+    const session = {
+      host: host,
+      players: [], // Array of player objects
+      board: Array(9).fill(null),
+      currentPlayerIndex: 0,
+      symbols: ["❌", "⭕", "⭐", "🔷", "🔶", "🟢", "🟣", "🟡", "🔴"], // For up to 9 players
+      gameActive: true,
+      joinPhase: true,
+      joinTimeout: null,
+      moveTimeout: null,
+      startedAt: Date.now(),
+      lastMove: Date.now(),
+      listener: null
+    };
+    
+    this.gameSessions.set(chatId, session);
+    return session;
+  }
+
+  joinGame(chatId, playerId) {
+    if (!this.gameSessions.has(chatId)) return null;
+    
+    const session = this.gameSessions.get(chatId);
+    
+    // Check if already joined
+    if (session.players.some(p => p.id === playerId)) {
+      return { success: false, message: "Already joined!" };
+    }
+    
+    // Add player
+    session.players.push({
+      id: playerId,
+      name: playerId.split('@')[0],
+      symbol: session.symbols[session.players.length % session.symbols.length]
+    });
+    
+    return { success: true, players: session.players.length };
+  }
+
+  startGame(chatId) {
+    if (!this.gameSessions.has(chatId)) return false;
+    
+    const session = this.gameSessions.get(chatId);
+    
+    if (session.players.length < 2) {
+      return { success: false, message: "Need at least 2 players to start!" };
+    }
+    
+    session.joinPhase = false;
+    session.gameActive = true;
+    session.currentPlayerIndex = 0;
+    
+    return { success: true, session: session };
+  }
+
+  makeMove(chatId, playerId, position) {
+    if (!this.gameSessions.has(chatId)) {
+      return { success: false, message: "No active game!" };
+    }
+    
+    const session = this.gameSessions.get(chatId);
+    
+    // Check if it's this player's turn
+    const currentPlayer = session.players[session.currentPlayerIndex];
+    if (!currentPlayer || currentPlayer.id !== playerId) {
+      return { success: false, message: "Not your turn!" };
+    }
+    
+    // Check position validity
+    if (position < 0 || position > 8 || session.board[position] !== null) {
+      return { success: false, message: "Invalid move!" };
+    }
+    
+    // Make the move
+    session.board[position] = {
+      symbol: currentPlayer.symbol,
+      playerId: playerId,
+      playerName: playerId.split('@')[0]
+    };
+    
+    session.lastMove = Date.now();
+    
+    // Check for winner
+    const winner = this.checkWinner(session.board);
+    if (winner) {
+      session.gameActive = false;
+      return { 
+        success: true, 
+        win: true, 
+        winner: winner,
+        board: session.board 
+      };
+    }
+    
+    // Check for draw
+    if (!session.board.includes(null)) {
+      session.gameActive = false;
+      return { success: true, draw: true, board: session.board };
+    }
+    
+    // Move to next player
+    session.currentPlayerIndex = (session.currentPlayerIndex + 1) % session.players.length;
+    
+    return { 
+      success: true, 
+      nextPlayer: session.players[session.currentPlayerIndex],
+      board: session.board 
+    };
+  }
+
+  checkWinner(board) {
+    const winningLines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+      [0, 4, 8], [2, 4, 6]             // Diagonals
+    ];
+    
+    for (const line of winningLines) {
+      const [a, b, c] = line;
+      if (board[a] && board[b] && board[c] &&
+          board[a].playerId === board[b].playerId &&
+          board[a].playerId === board[c].playerId) {
+        return board[a]; // Return the winning player info
+      }
+    }
+    
+    return null;
+  }
+
+  formatBoard(board) {
+    const nums = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣"];
+    let out = "┄┄┄┄┄┄┄┄┄┄\n";
+    for (let i = 0; i < 3; i++) {
+      out += "┃ ";
+      for (let j = 0; j < 3; j++) {
+        const p = i * 3 + j;
+        if (board[p]) {
+          out += board[p].symbol + " ┃ ";
+        } else {
+          out += nums[p] + " ┃ ";
+        }
+      }
+      out += "\n";
+      if (i < 2) out += "┄┄┄┄┄┄┄┄┄┄\n";
+    }
+    return out + "┄┄┄┄┄┄┄┄┄┄";
+  }
+
+  endGame(chatId) {
+    if (this.gameSessions.has(chatId)) {
+      const session = this.gameSessions.get(chatId);
+      
+      // Clear timeouts
+      if (session.joinTimeout) clearTimeout(session.joinTimeout);
+      if (session.moveTimeout) clearTimeout(session.moveTimeout);
+      
+      // Remove listener
+      if (session.listener) {
+        // Note: We'll remove it outside since we need the client reference
+      }
+      
+      this.gameSessions.delete(chatId);
+      return true;
+    }
+    return false;
+  }
+
+  getSession(chatId) {
+    return this.gameSessions.get(chatId);
+  }
+}
+
+const ttt = new TicTacToeManager();
+
+//========================================================================================================================
+
+keith({
+  pattern: "tictactoe",
+  aliases: ["ttt", "xoxo"],
+  description: "Start Tic Tac Toe game with join system",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, isGroup, sender } = conText;
+  
+  if (!isGroup) return reply("❌ This game can only be played in groups!");
+  
+  if (ttt.getSession(from)) {
+    return reply("⚠️ A Tic Tac Toe game is already running! Use `.endttt` to stop it.");
+  }
+  
+  // Create game session
+  const session = ttt.createGameSession(from, sender);
+  
+  // Send game start message
+  await client.sendMessage(from, {
+    text: `🎮 *TIC TAC TOE GAME* 🎮\n\n` +
+          `👤 Host: @${sender.split('@')[0]}\n` +
+          `⏰ Join Time: 30 seconds\n\n` +
+          `📝 *HOW TO PLAY:*\n` +
+          `1. Type "join" to register\n` +
+          `2. Players take turns placing symbols\n` +
+          `3. Each player gets unique symbol\n` +
+          `4. Get 3 in a row to win!\n` +
+          `5. All players play on same board\n\n` +
+          `🎯 Board Positions:\n` +
+          `1️⃣ 2️⃣ 3️⃣\n` +
+          `4️⃣ 5️⃣ 6️⃣\n` +
+          `7️⃣ 8️⃣ 9️⃣\n\n` +
+          `Type *join* now! ⏳`
+  }, { quoted: mek });
+  
+  // Set join timeout
+  session.joinTimeout = setTimeout(async () => {
+    if (ttt.getSession(from)) {
+      const session = ttt.getSession(from);
+      if (session.joinPhase) {
+        session.joinPhase = false;
+        
+        if (session.players.length < 2) {
+          await client.sendMessage(from, {
+            text: "❌ Need at least 2 players to start. Game cancelled."
+          });
+          ttt.endGame(from);
+          return;
+        }
+        
+        // Announce game start
+        await client.sendMessage(from, {
+          text: `🎯 *TIC TAC TOE STARTING!* 🎯\n\n` +
+                `👥 Players: ${session.players.length}\n` +
+                `🎯 First turn: @${session.players[0].id.split('@')[0]} ${session.players[0].symbol}\n\n` +
+                `${ttt.formatBoard(session.board)}\n\n` +
+                `📝 During your turn, send number (1-9) to place your symbol\n` +
+                `Good luck everyone! 🍀`
+        });
+        
+        // Setup game listener for number inputs
+        setupTTTGameListener(from, client, session);
+      }
+    }
+  }, 30000);
+  
+  // Setup join listener
+  setupTTTJoinListener(from, client);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "endttt",
+  aliases: ["stopttt", "endtictactoe"],
+  description: "End the current Tic Tac Toe game",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup, sender } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const session = ttt.getSession(from);
+  if (!session) return reply("❌ No Tic Tac Toe game is currently running!");
+  
+  // Only host can end game
+  if (session.host !== sender) {
+    return reply("❌ Only the game host can end the game!");
+  }
+  
+  await endTTTGameWithResults(from, client, session, true);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "tttplayers",
+  description: "Show current Tic Tac Toe players and status",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const session = ttt.getSession(from);
+  if (!session) return reply("❌ No Tic Tac Toe game is currently running!");
+  
+  let playersMessage = `📊 *TIC TAC TOE STATUS*\n\n`;
+  playersMessage += `🔄 Phase: ${session.joinPhase ? 'Join Phase' : 'Game Active'}\n`;
+  playersMessage += `👥 Players: ${session.players.length}\n\n`;
+  playersMessage += `🎮 *PLAYERS LIST:*\n`;
+  
+  const mentions = [];
+  session.players.forEach((player, index) => {
+    const mention = `@${player.id.split('@')[0]}`;
+    mentions.push(player.id);
+    
+    const turnIndicator = !session.joinPhase && session.currentPlayerIndex === index ? "👈 (Your Turn)" : "";
+    playersMessage += `${player.symbol} ${mention} ${turnIndicator}\n`;
+  });
+  
+  if (!session.joinPhase) {
+    const currentPlayer = session.players[session.currentPlayerIndex];
+    playersMessage += `\n🎯 *Current Turn:* @${currentPlayer?.id.split('@')[0]} ${currentPlayer?.symbol}`;
+    mentions.push(currentPlayer?.id);
+    
+    playersMessage += `\n\n${ttt.formatBoard(session.board)}`;
+  }
+  
+  await client.sendMessage(from, {
+    text: playersMessage,
+    mentions
+  });
+});
+
+// Setup join listener
+function setupTTTJoinListener(groupId, client) {
+  const listener = async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message || msg.key.remoteJid !== groupId) return;
+    
+    const session = ttt.getSession(groupId);
+    if (!session || !session.joinPhase) return;
+    
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    const sender = msg.key.participant || msg.key.remoteJid;
+    
+    if (text.toLowerCase().trim() === "join") {
+      const result = ttt.joinGame(groupId, sender);
+      
+      if (!result.success) {
+        await client.sendMessage(groupId, {
+          text: result.message,
+          mentions: [sender]
+        });
+        return;
+      }
+      
+      await client.sendMessage(groupId, {
+        text: `✅ @${sender.split('@')[0]} has joined the Tic Tac Toe game!\n` +
+              `👥 Total players: ${result.players}`,
+        mentions: [sender]
+      });
+    }
+  };
+  
+  client.ev.on("messages.upsert", listener);
+  
+  // Store listener reference
+  const session = ttt.getSession(groupId);
+  if (session) {
+    session.joinListener = listener;
+  }
+}
+
+// Setup game listener for number inputs (1-9)
+function setupTTTGameListener(groupId, client, session) {
+  const listener = async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message || msg.key.remoteJid !== groupId) return;
+    
+    const currentSession = ttt.getSession(groupId);
+    if (!currentSession || currentSession.joinPhase || !currentSession.gameActive) return;
+    
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    const sender = msg.key.participant || msg.key.remoteJid;
+    
+    // Check if it's just a number 1-9
+    const position = parseInt(text.trim());
+    
+    if (isNaN(position) || position < 1 || position > 9) {
+      return; // Not a valid move number
+    }
+    
+    // Convert to 0-8 index
+    const movePosition = position - 1;
+    
+    const result = ttt.makeMove(groupId, sender, movePosition);
+    
+    if (!result.success) {
+      // Not their turn or invalid move
+      if (result.message === "Not your turn!") {
+        // Silently ignore - not their turn
+        return;
+      }
+      
+      // Invalid move (position already taken)
+      await client.sendMessage(groupId, {
+        text: `❌ @${sender.split('@')[0]}, position ${position} is already taken!\n` +
+              `Please choose another number (1-9).`,
+        mentions: [sender]
+      });
+      return;
+    }
+    
+    if (result.win) {
+      // Someone won
+      await client.sendMessage(groupId, {
+        text: `🎉 *TIC TAC TOE - VICTORY!* 🎉\n\n` +
+              `🏆 Winner: @${result.winner.playerName} ${result.winner.symbol}\n\n` +
+              `${ttt.formatBoard(result.board)}\n\n` +
+              `🎮 Game Over!`,
+        mentions: [result.winner.playerId]
+      });
+      
+      endTTTGameWithResults(groupId, client, currentSession, false);
+      
+    } else if (result.draw) {
+      // It's a draw
+      await client.sendMessage(groupId, {
+        text: `🤝 *TIC TAC TOE - DRAW!* 🤝\n\n` +
+              `The game ended in a draw!\n\n` +
+              `${ttt.formatBoard(result.board)}\n\n` +
+              `🎮 Game Over!`,
+        mentions: currentSession.players.map(p => p.id)
+      });
+      
+      endTTTGameWithResults(groupId, client, currentSession, false);
+      
+    } else {
+      // Game continues
+      const nextPlayer = result.nextPlayer;
+      
+      await client.sendMessage(groupId, {
+        text: `✅ @${sender.split('@')[0]} placed ${currentSession.players.find(p => p.id === sender)?.symbol} at position ${position}\n\n` +
+              `🎯 Next turn: @${nextPlayer.name} ${nextPlayer.symbol}\n\n` +
+              `${ttt.formatBoard(result.board)}\n\n` +
+              `📝 Send number (1-9) to place your symbol`,
+        mentions: [sender, nextPlayer.id]
+      });
+    }
+  };
+  
+  client.ev.on("messages.upsert", listener);
+  
+  // Store listener reference
+  session.listener = listener;
+}
+
+// End game and show results
+async function endTTTGameWithResults(groupId, client, session, forcedEnd = false) {
+  if (!session.gameActive) return;
+  
+  session.gameActive = false;
+  
+  // Remove listeners
+  if (session.joinListener) {
+    client.ev.off("messages.upsert", session.joinListener);
+  }
+  if (session.listener) {
+    client.ev.off("messages.upsert", session.listener);
+  }
+  
+  // Clear timeouts
+  if (session.joinTimeout) {
+    clearTimeout(session.joinTimeout);
+  }
+  if (session.moveTimeout) {
+    clearTimeout(session.moveTimeout);
+  }
+  
+  // Get final board state
+  const finalBoard = ttt.formatBoard(session.board);
+  
+  let resultsMessage = `🏁 *TIC TAC TOE ${forcedEnd ? 'ENDED EARLY' : 'FINISHED'}* 🏁\n\n`;
+  resultsMessage += `👥 Total Players: ${session.players.length}\n\n`;
+  resultsMessage += `🎮 *PLAYERS:*\n`;
+  
+  const mentions = [];
+  session.players.forEach((player, index) => {
+    const mention = `@${player.id.split('@')[0]}`;
+    mentions.push(player.id);
+    resultsMessage += `${player.symbol} ${mention}\n`;
+  });
+  
+  resultsMessage += `\n${finalBoard}\n\n`;
+  resultsMessage += `Thanks for playing! 🎮`;
+  
+  await client.sendMessage(groupId, {
+    text: resultsMessage,
+    mentions
+  });
+  
+  // Clean up
+  ttt.endGame(groupId);
+}
+
+//========================================================================================================================
+
+keith({
+  pattern: "ttthelp",
+  aliases: ["tictactoehelp"],
+  description: "Show Tic Tac Toe help",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply } = conText;
+  
+  await client.sendMessage(from, {
+    text: `🎮 *TIC TAC TOE HELP* 🎮\n\n` +
+          `📋 *COMMANDS:*\n` +
+          `• .tictactoe - Start game (host only)\n` +
+          `• Type "join" - Join the game\n` +
+          `• .tttplayers - Show players & board\n` +
+          `• .endttt - End game (host only)\n` +
+          `• .ttthelp - Show this help\n\n` +
+          `🎯 *HOW TO PLAY:*\n` +
+          `1. Host starts with .tictactoe\n` +
+          `2. Players type "join" to register\n` +
+          `3. Wait 30 seconds for join phase\n` +
+          `4. Players take turns\n` +
+          `5. During your turn, send number 1-9:\n` +
+          `   1️⃣ 2️⃣ 3️⃣\n` +
+          `   4️⃣ 5️⃣ 6️⃣\n` +
+          `   7️⃣ 8️⃣ 9️⃣\n` +
+          `6. Get 3 in a row to win!\n\n` +
+          `🎨 Each player gets unique symbol:\n` +
+          `❌ ⭕ ⭐ 🔷 🔶 🟢 🟣 🟡 🔴\n\n` +
+          `📝 *IMPORTANT:*\n` +
+          `- Just send the number (1-9) during your turn\n` +
+          `- Don't use .move command\n` +
+          `- Invalid moves are ignored`
+  });
+});
+//========================================================================================================================
+
 keith({
   pattern: "trivia",
   aliases: ["quiz", "triviagame"],
