@@ -249,6 +249,557 @@ const ttt = new TicTacToeManager();
 
 //========================================================================================================================
 
+
+// Game state storage
+const mathGameSessions = new Map();
+// Math problems will be fetched from URL
+let mathProblems = [];
+
+// Fetch math problems from JSON URL
+async function fetchMathProblems() {
+  try {
+    const response = await axios.get('https://raw.githubusercontent.com/Keithkeizzah/INFO/refs/heads/main/games/maths.json');
+    if (response.data && Array.isArray(response.data)) {
+      mathProblems = response.data;
+      console.log(`✅ Loaded ${mathProblems.length} math problems from JSON`);
+      return true;
+    } else {
+      console.error('❌ Invalid JSON structure from URL');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error fetching math problems:', error.message);
+    return false;
+  }
+}
+
+// Fetch math problems when module loads
+fetchMathProblems();
+
+//========================================================================================================================
+
+keith({
+  pattern: "mathgame",
+  aliases: ["maths", "quickmath"],
+  description: "Start a math challenge game in group",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, isGroup, sender } = conText;
+  
+  if (!isGroup) return reply("❌ This game can only be played in groups!");
+  
+  if (mathGameSessions.has(from)) {
+    return reply("⚠️ A math game is already running! Use `.endmath` to stop it.");
+  }
+  
+  // Ensure math problems are loaded
+  if (mathProblems.length === 0) {
+    const loaded = await fetchMathProblems();
+    if (!loaded || mathProblems.length === 0) {
+      return reply("❌ Failed to load math problems from server. Please try again later.");
+    }
+  }
+  
+  // Initialize game session
+  const gameSession = {
+    host: sender,
+    players: [], // Array of player objects
+    totalRounds: 10, // Fixed 10 rounds
+    currentRound: 1, // Round counter starts at 1
+    currentProblem: null,
+    gameActive: true,
+    joinPhase: true,
+    currentPlayerIndex: 0,
+    scores: new Map(), // playerId -> score
+    problemsUsed: [],
+    roundTimeout: null,
+    joinTimeout: null,
+    listener: null,
+    roundResults: [], // Store results per round
+    playerRounds: new Map(), // Track rounds played per player
+    currentTurn: 0 // Track total turns
+  };
+  
+  mathGameSessions.set(from, gameSession);
+  
+  // Send game start message
+  await client.sendMessage(from, {
+    text: `🧮 *MATH CHALLENGE GAME* 🧮\n\n` +
+          `👤 Host: @${sender.split('@')[0]}\n` +
+          `🔄 Total Rounds: ${gameSession.totalRounds}\n` +
+          `⏰ Join Time: 30 seconds\n\n` +
+          `📝 *HOW TO PLAY:*\n` +
+          `1. Type "join" to register\n` +
+          `2. Players take turns solving problems\n` +
+          `3. Points based on difficulty:\n` +
+          `   • Easy: 15 points\n` +
+          `   • Medium: 20 points\n` +
+          `   • Hard: 25 points\n` +
+          `   • Expert: 30 points\n\n` +
+          `🏆 Fastest correct answer wins the round!\n\n` +
+          `Type *join* now! ⏳`
+  }, { quoted: mek });
+  
+  // Set join timeout
+  gameSession.joinTimeout = setTimeout(async () => {
+    if (mathGameSessions.has(from)) {
+      const session = mathGameSessions.get(from);
+      if (session.joinPhase) {
+        session.joinPhase = false;
+        
+        if (session.players.length < 2) {
+          await client.sendMessage(from, {
+            text: "❌ Need at least 2 players to start. Game cancelled."
+          });
+          mathGameSessions.delete(from);
+          return;
+        }
+        
+        // Initialize player rounds tracking
+        session.players.forEach(player => {
+          session.playerRounds.set(player.id, 0);
+        });
+        
+        // Announce game start
+        await client.sendMessage(from, {
+          text: `🎯 *MATH GAME STARTING!* 🎯\n\n` +
+                `👥 Players: ${session.players.length}\n` +
+                `🔄 Total Rounds: ${session.totalRounds}\n` +
+                `🎯 Round 1/${session.totalRounds}\n\n` +
+                `Sharpen your minds! 🧠`
+        });
+        
+        // Start the first round
+        setTimeout(() => startNewMathRound(from, client, session), 2000);
+      }
+    }
+  }, 30000);
+  
+  // Setup game listener
+  setupMathGameListener(from, client);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "endmath",
+  aliases: ["stopmath"],
+  description: "End the current math game",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup, sender } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = mathGameSessions.get(from);
+  if (!gameSession) return reply("❌ No math game is currently running!");
+  
+  // Only host can end game
+  if (gameSession.host !== sender) {
+    return reply("❌ Only the game host can end the game!");
+  }
+  
+  await endMathGameWithResults(from, client, gameSession, true);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "mathplayers",
+  description: "Show current math game players and scores",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = mathGameSessions.get(from);
+  if (!gameSession) return reply("❌ No math game is currently running!");
+  
+  let playersMessage = `📊 *MATH GAME STATUS*\n\n`;
+  playersMessage += `🔄 Round: ${gameSession.currentRound}/${gameSession.totalRounds}\n`;
+  playersMessage += `👥 Players: ${gameSession.players.length}\n`;
+  playersMessage += `🎯 Current Turn: ${gameSession.currentTurn + 1}/${gameSession.players.length}\n\n`;
+  playersMessage += `🏆 *CURRENT SCORES:*\n`;
+  
+  // Sort by score
+  const sortedPlayers = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  const mentions = [];
+  sortedPlayers.forEach(([playerId, score], index) => {
+    const player = gameSession.players.find(p => p.id === playerId);
+    const mention = `@${playerId.split('@')[0]}`;
+    mentions.push(playerId);
+    
+    const turnIndicator = gameSession.players[gameSession.currentPlayerIndex]?.id === playerId ? "👈 (Your Turn)" : "";
+    const roundsPlayed = gameSession.playerRounds.get(playerId) || 0;
+    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "  ";
+    playersMessage += `${medal} ${mention}: ${score} points ${turnIndicator}\n`;
+  });
+  
+  if (gameSession.currentProblem) {
+    const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+    playersMessage += `\n🎯 *Current Turn:* @${currentPlayer?.id.split('@')[0]}`;
+    mentions.push(currentPlayer?.id);
+  }
+  
+  await client.sendMessage(from, {
+    text: playersMessage,
+    mentions
+  });
+});
+
+// Get points based on difficulty
+function getPointsForDifficulty(difficulty) {
+  switch(difficulty.toLowerCase()) {
+    case 'expert': return 30;
+    case 'hard': return 25;
+    case 'medium': return 20;
+    default: return 15; // Easy
+  }
+}
+
+// Setup math game listener
+function setupMathGameListener(groupId, client) {
+  const listener = async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message || msg.key.remoteJid !== groupId) return;
+    
+    const gameSession = mathGameSessions.get(groupId);
+    if (!gameSession) return;
+    
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    const sender = msg.key.participant || msg.key.remoteJid;
+    
+    // Handle join messages during join phase
+    if (gameSession.joinPhase && text.toLowerCase().trim() === "join") {
+      // Check if already joined
+      if (gameSession.players.some(p => p.id === sender)) {
+        await client.sendMessage(groupId, {
+          text: `❌ @${sender.split('@')[0]} is already registered!`,
+          mentions: [sender]
+        });
+        return;
+      }
+      
+      // Add player
+      gameSession.players.push({
+        id: sender,
+        name: sender.split('@')[0],
+        joinedAt: Date.now()
+      });
+      
+      gameSession.scores.set(sender, 0);
+      
+      await client.sendMessage(groupId, {
+        text: `✅ @${sender.split('@')[0]} has joined the math game!\n` +
+              `👥 Total players: ${gameSession.players.length}`,
+        mentions: [sender]
+      });
+      return;
+    }
+    
+    // Handle answers during active game
+    if (!gameSession.joinPhase && gameSession.gameActive && gameSession.currentProblem) {
+      // Check if it's this player's turn
+      const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+      if (!currentPlayer || currentPlayer.id !== sender) return;
+      
+      // Check answer (allow numeric or text answers)
+      const userAnswer = text.trim().replace(/,/g, ''); // Remove commas for numbers like 1,000
+      const correctAnswer = gameSession.currentProblem.answer.toString();
+      
+      // Try to parse numbers
+      const userNum = parseFloat(userAnswer);
+      const correctNum = parseFloat(correctAnswer);
+      
+      const isCorrect = !isNaN(userNum) && !isNaN(correctNum) 
+        ? Math.abs(userNum - correctNum) < 0.0001 // Allow floating point tolerance
+        : userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+      
+      if (isCorrect) {
+        // Calculate points based on difficulty
+        const points = getPointsForDifficulty(gameSession.currentProblem.difficulty);
+        const currentScore = gameSession.scores.get(sender) || 0;
+        gameSession.scores.set(sender, currentScore + points);
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: sender.split('@')[0],
+          correct: true,
+          points: points,
+          problem: gameSession.currentProblem.problem,
+          answer: gameSession.currentProblem.answer,
+          difficulty: gameSession.currentProblem.difficulty,
+          userAnswer: userAnswer
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        await client.sendMessage(groupId, {
+          text: `🎉 *CORRECT!* 🎉\n\n` +
+                `✅ @${sender.split('@')[0]} solved it!\n` +
+                `🧮 Problem: ${gameSession.currentProblem.problem}\n` +
+                `✅ Answer: ${gameSession.currentProblem.answer}\n` +
+                `💰 +${points} points! Total: ${currentScore + points}\n` +
+                `📊 Difficulty: ${gameSession.currentProblem.difficulty.toUpperCase()}\n\n` +
+                `🎯 Round ${gameSession.currentRound} completed!\n` +
+                `Moving to next round...`,
+          mentions: [sender]
+        });
+        
+        // Clear timeout
+        if (gameSession.roundTimeout) {
+          clearTimeout(gameSession.roundTimeout);
+          gameSession.roundTimeout = null;
+        }
+        
+        // Move to next round
+        gameSession.currentRound++;
+        
+        // Check if game is over
+        if (gameSession.currentRound > gameSession.totalRounds) {
+          setTimeout(() => endMathGameWithResults(groupId, client, gameSession, false), 3000);
+        } else {
+          // Start next round after delay
+          setTimeout(() => startNewMathRound(groupId, client, gameSession), 3000);
+        }
+        
+      } else {
+        // Wrong answer - move to next player
+        await client.sendMessage(groupId, {
+          text: `❌ Wrong answer, @${sender.split('@')[0]}!\n` +
+                `↪️ Next player's turn...`,
+          mentions: [sender]
+        });
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: sender.split('@')[0],
+          correct: false,
+          points: 0,
+          problem: gameSession.currentProblem.problem,
+          answer: gameSession.currentProblem.answer,
+          difficulty: gameSession.currentProblem.difficulty,
+          userAnswer: userAnswer
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        // Move to next player in same round
+        moveToNextMathPlayer(groupId, client, gameSession);
+      }
+    }
+  };
+  
+  // Store listener reference
+  mathGameSessions.get(groupId).listener = listener;
+  client.ev.on("messages.upsert", listener);
+}
+
+// Start a new math round
+async function startNewMathRound(groupId, client, gameSession) {
+  if (!gameSession.gameActive) return;
+  
+  // Clear any existing timeout
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  
+  // Get current player
+  const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+  
+  // Get random problem that hasn't been used
+  const availableProblems = mathProblems.filter(p => 
+    !gameSession.problemsUsed.includes(p.problem)
+  );
+  
+  if (availableProblems.length === 0) {
+    // Reset if all problems used
+    gameSession.problemsUsed = [];
+  }
+  
+  const problem = availableProblems[Math.floor(Math.random() * availableProblems.length)];
+  gameSession.problemsUsed.push(problem.problem);
+  gameSession.currentProblem = problem;
+  
+  // Get points for this problem
+  const points = getPointsForDifficulty(problem.difficulty);
+  
+  // Announce new round
+  await client.sendMessage(groupId, {
+    text: `🔄 *ROUND ${gameSession.currentRound}/${gameSession.totalRounds}*\n\n` +
+          `🎯 *Current Player:* @${currentPlayer.id.split('@')[0]}\n\n` +
+          `🧮 *MATH PROBLEM:*\n` +
+          `**${problem.problem}**\n\n` +
+          `📊 *DIFFICULTY:* ${problem.difficulty.toUpperCase()} (${points} points)\n` +
+          `⏰ Time limit: ${problem.timeLimit} seconds\n\n` +
+          `📝 Type your answer in chat!`,
+    mentions: [currentPlayer.id]
+  });
+  
+  // Set timeout for this turn
+  gameSession.roundTimeout = setTimeout(async () => {
+    if (mathGameSessions.has(groupId)) {
+      const session = mathGameSessions.get(groupId);
+      if (session.currentProblem && session.currentProblem.problem === problem.problem) {
+        // Time's up
+        const currentPlayer = session.players[session.currentPlayerIndex];
+        
+        await client.sendMessage(groupId, {
+          text: `⏰ *TIME'S UP!*\n\n` +
+                `@${currentPlayer.id.split('@')[0]} took too long!\n` +
+                `✅ Correct answer: ${problem.answer}\n` +
+                `🧮 Problem: ${problem.problem}\n\n` +
+                `↪️ Round ${session.currentRound} completed\n` +
+                `Moving to next round...`,
+          mentions: [currentPlayer.id]
+        });
+        
+        // Store round result
+        session.roundResults.push({
+          round: session.currentRound,
+          playerId: currentPlayer.id,
+          playerName: currentPlayer.id.split('@')[0],
+          correct: false,
+          points: 0,
+          problem: problem.problem,
+          answer: problem.answer,
+          difficulty: problem.difficulty,
+          timeout: true
+        });
+        
+        // Update player rounds
+        const roundsPlayed = session.playerRounds.get(currentPlayer.id) || 0;
+        session.playerRounds.set(currentPlayer.id, roundsPlayed + 1);
+        
+        // Move to next round
+        session.currentRound++;
+        
+        if (session.currentRound > session.totalRounds) {
+          setTimeout(() => endMathGameWithResults(groupId, client, session, false), 3000);
+        } else {
+          // Move to next player for next round
+          moveToNextMathPlayer(groupId, client, session);
+          setTimeout(() => startNewMathRound(groupId, client, session), 3000);
+        }
+      }
+    }
+  }, problem.timeLimit * 1000);
+}
+
+// Move to next player
+function moveToNextMathPlayer(groupId, client, gameSession) {
+  // Move to next player index
+  gameSession.currentPlayerIndex = (gameSession.currentPlayerIndex + 1) % gameSession.players.length;
+  
+  // Start next player's turn in same round
+  setTimeout(() => startNewMathRound(groupId, client, gameSession), 2000);
+}
+
+// End game and show results
+async function endMathGameWithResults(groupId, client, gameSession, forcedEnd = false) {
+  if (!gameSession.gameActive) return;
+  
+  gameSession.gameActive = false;
+  
+  // Clear timeouts
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  if (gameSession.joinTimeout) {
+    clearTimeout(gameSession.joinTimeout);
+  }
+  
+  // Remove listener
+  if (gameSession.listener) {
+    client.ev.off("messages.upsert", gameSession.listener);
+  }
+  
+  // Prepare final results
+  const scoresArray = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  let resultsMessage = `🏁 *MATH GAME ${forcedEnd ? 'ENDED EARLY' : 'FINISHED'}* 🏁\n\n`;
+  resultsMessage += `🎯 Rounds Played: ${gameSession.currentRound - 1}/${gameSession.totalRounds}\n`;
+  resultsMessage += `👥 Total Players: ${gameSession.players.length}\n\n`;
+  
+  if (scoresArray.length > 0) {
+    resultsMessage += `🏆 *FINAL LEADERBOARD* 🏆\n\n`;
+    
+    const mentions = [];
+    scoresArray.forEach(([playerId, score], index) => {
+      const mention = `@${playerId.split('@')[0]}`;
+      mentions.push(playerId);
+      
+      const medal = index === 0 ? "🥇 *GOLD*" : 
+                    index === 1 ? "🥈 *SILVER*" : 
+                    index === 2 ? "🥉 *BRONZE*" : "   ";
+      resultsMessage += `${medal}\n${mention}: ${score} points\n\n`;
+    });
+    
+    // Check for draw (multiple players with same highest score)
+    if (scoresArray.length > 1) {
+      const highestScore = scoresArray[0][1];
+      const playersWithHighestScore = scoresArray.filter(([_, score]) => score === highestScore);
+      
+      if (playersWithHighestScore.length > 1) {
+        // It's a draw
+        resultsMessage += `🤝 *IT'S A DRAW!* 🤝\n`;
+        resultsMessage += `Multiple players tied with ${highestScore} points!\n\n`;
+        
+        const drawMentions = playersWithHighestScore.map(([playerId]) => `@${playerId.split('@')[0]}`).join(", ");
+        resultsMessage += `🏆 ${drawMentions}`;
+      } else {
+        // Single winner
+        const [winnerId, winnerScore] = scoresArray[0];
+        resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+        resultsMessage += `🏆 @${winnerId.split('@')[0]} wins with ${winnerScore} points!`;
+      }
+    } else if (scoresArray.length === 1) {
+      // Only one player
+      const [winnerId, winnerScore] = scoresArray[0];
+      resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+      resultsMessage += `🏆 @${winnerId.split('@')[0]} wins with ${winnerScore} points!`;
+    }
+    
+    await client.sendMessage(groupId, {
+      text: resultsMessage,
+      mentions
+    });
+  } else {
+    await client.sendMessage(groupId, {
+      text: `🧮 Math game ended with no scores recorded.`
+    });
+  }
+  
+  // Clean up
+  mathGameSessions.delete(groupId);
+}
+
+//========================================================================================================================
+
+
+//========================================================================================================================
+//========================================================================================================================
 keith({
   pattern: "tictactoe",
   aliases: ["ttt", "xoxo"],
