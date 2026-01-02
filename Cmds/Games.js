@@ -59,6 +59,592 @@ async function fetchFlags() {
 fetchFlags();
 //========================================================================================================================
 
+// Game state storage
+const triviaGameSessions = new Map();
+const API_URL = 'https://apiskeith.vercel.app/fun/question';
+
+//========================================================================================================================
+
+keith({
+  pattern: "trivia",
+  aliases: ["quiz", "triviagame"],
+  description: "Start a trivia quiz game in group",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, isGroup, sender, senderName } = conText;
+  
+  if (!isGroup) return reply("❌ This game can only be played in groups!");
+  
+  if (triviaGameSessions.has(from)) {
+    return reply("⚠️ A trivia game is already running! Use `.endtrivia` to stop it.");
+  }
+  
+  // Initialize game session
+  const gameSession = {
+    host: sender,
+    hostName: senderName,
+    players: [], // Array of player objects
+    totalRounds: 10, // Fixed 10 rounds
+    currentRound: 1, // Round counter starts at 1
+    currentQuestion: null,
+    currentOptions: [],
+    gameActive: true,
+    joinPhase: true,
+    currentPlayerIndex: 0,
+    scores: new Map(), // playerId -> score
+    questionsUsed: [],
+    roundTimeout: null,
+    joinTimeout: null,
+    listener: null,
+    roundResults: [], // Store results per round
+    playerRounds: new Map(), // Track rounds played per player
+    currentTurn: 0 // Track total turns
+  };
+  
+  triviaGameSessions.set(from, gameSession);
+  
+  // Send game start message
+  await client.sendMessage(from, {
+    text: `🧠 *TRIVIA QUIZ GAME* 🧠\n\n` +
+          `👤 Host: @${sender.split('@')[0]}\n` +
+          `🔄 Total Rounds: ${gameSession.totalRounds}\n` +
+          `⏰ Join Time: 30 seconds\n\n` +
+          `📝 *HOW TO PLAY:*\n` +
+          `1. Type "join" to register\n` +
+          `2. Each round shows a trivia question\n` +
+          `3. Choose from 4 options (1-4)\n` +
+          `4. Points based on difficulty:\n` +
+          `   • Easy: 10 points\n` +
+          `   • Medium: 15 points\n` +
+          `   • Hard: 20 points\n\n` +
+          `🏆 Winner gets special recognition!\n\n` +
+          `Type *join* now! ⏳`
+  }, { quoted: mek });
+  
+  // Set join timeout
+  gameSession.joinTimeout = setTimeout(async () => {
+    if (triviaGameSessions.has(from)) {
+      const session = triviaGameSessions.get(from);
+      if (session.joinPhase) {
+        session.joinPhase = false;
+        
+        if (session.players.length < 2) {
+          await client.sendMessage(from, {
+            text: "❌ Need at least 2 players to start. Game cancelled."
+          });
+          triviaGameSessions.delete(from);
+          return;
+        }
+        
+        // Initialize player rounds tracking
+        session.players.forEach(player => {
+          session.playerRounds.set(player.id, 0);
+        });
+        
+        // Announce game start
+        await client.sendMessage(from, {
+          text: `🎯 *TRIVIA GAME STARTING!* 🎯\n\n` +
+                `👥 Players: ${session.players.length}\n` +
+                `🔄 Total Rounds: ${session.totalRounds}\n` +
+                `🎯 Round 1/${session.totalRounds}\n\n` +
+                `Good luck everyone! 🍀`
+        });
+        
+        // Start the first round
+        setTimeout(() => startNewTriviaRound(from, client, session), 2000);
+      }
+    }
+  }, 30000);
+  
+  // Setup game listener
+  setupTriviaGameListener(from, client);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "endtrivia",
+  aliases: ["stoptrivia", "endquiz"],
+  description: "End the current trivia game",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup, sender } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = triviaGameSessions.get(from);
+  if (!gameSession) return reply("❌ No trivia game is currently running!");
+  
+  // Only host can end game
+  if (gameSession.host !== sender) {
+    return reply("❌ Only the game host can end the game!");
+  }
+  
+  await endTriviaGameWithResults(from, client, gameSession, true);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "triviaplayers",
+  aliases: ["quizplayers"],
+  description: "Show current trivia game players and scores",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = triviaGameSessions.get(from);
+  if (!gameSession) return reply("❌ No trivia game is currently running!");
+  
+  let playersMessage = `📊 *TRIVIA GAME STATUS*\n\n`;
+  playersMessage += `🔄 Round: ${gameSession.currentRound}/${gameSession.totalRounds}\n`;
+  playersMessage += `👥 Players: ${gameSession.players.length}\n`;
+  playersMessage += `🎯 Current Turn: ${gameSession.currentTurn + 1}/${gameSession.players.length}\n\n`;
+  playersMessage += `🏆 *CURRENT SCORES:*\n`;
+  
+  // Sort by score
+  const sortedPlayers = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  const mentions = [];
+  sortedPlayers.forEach(([playerId, score], index) => {
+    const player = gameSession.players.find(p => p.id === playerId);
+    const mention = `@${playerId.split('@')[0]}`;
+    mentions.push(playerId);
+    
+    const turnIndicator = gameSession.players[gameSession.currentPlayerIndex]?.id === playerId ? "👈 (Your Turn)" : "";
+    const roundsPlayed = gameSession.playerRounds.get(playerId) || 0;
+    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "  ";
+    playersMessage += `${medal} ${mention}: ${score} points ${turnIndicator}\n`;
+  });
+  
+  if (gameSession.currentQuestion) {
+    const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+    playersMessage += `\n🎯 *Current Turn:* @${currentPlayer?.id.split('@')[0]}`;
+    mentions.push(currentPlayer?.id);
+  }
+  
+  await client.sendMessage(from, {
+    text: playersMessage,
+    mentions
+  });
+});
+
+// Fetch question from API
+async function fetchQuestion() {
+  try {
+    const response = await axios.get(API_URL);
+    if (response.data && response.data.status && response.data.result) {
+      const questionData = response.data.result;
+      
+      // Format the question (remove HTML entities)
+      let question = questionData.question
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#039;/g, "'");
+      
+      return {
+        question: question,
+        correctAnswer: questionData.correctAnswer,
+        incorrectAnswers: questionData.incorrectAnswers || [],
+        allAnswers: questionData.allAnswers || [],
+        category: questionData.category,
+        difficulty: questionData.difficulty,
+        type: questionData.type
+      };
+    } else {
+      throw new Error('Invalid API response');
+    }
+  } catch (error) {
+    console.error('❌ Error fetching trivia question:', error.message);
+    return null;
+  }
+}
+
+// Get points based on difficulty
+function getPointsForDifficulty(difficulty) {
+  switch(difficulty.toLowerCase()) {
+    case 'hard': return 20;
+    case 'medium': return 15;
+    default: return 10; // Easy and any other
+  }
+}
+
+// Setup trivia game listener
+function setupTriviaGameListener(groupId, client) {
+  const listener = async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message || msg.key.remoteJid !== groupId) return;
+    
+    const gameSession = triviaGameSessions.get(groupId);
+    if (!gameSession) return;
+    
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const senderName = msg.pushName || "Player";
+    
+    // Handle join messages during join phase
+    if (gameSession.joinPhase && text.toLowerCase().trim() === "join") {
+      // Check if already joined
+      if (gameSession.players.some(p => p.id === sender)) {
+        await client.sendMessage(groupId, {
+          text: `❌ @${sender.split('@')[0]} is already registered!`,
+          mentions: [sender]
+        });
+        return;
+      }
+      
+      // Add player
+      gameSession.players.push({
+        id: sender,
+        name: senderName,
+        joinedAt: Date.now()
+      });
+      
+      gameSession.scores.set(sender, 0);
+      
+      await client.sendMessage(groupId, {
+        text: `✅ @${sender.split('@')[0]} has joined the trivia game!\n` +
+              `👥 Total players: ${gameSession.players.length}`,
+        mentions: [sender]
+      });
+      return;
+    }
+    
+    // Handle answers during active game
+    if (!gameSession.joinPhase && gameSession.gameActive && gameSession.currentQuestion) {
+      // Check if it's this player's turn
+      const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+      if (!currentPlayer || currentPlayer.id !== sender) return;
+      
+      // Parse user input (can be number 1-4 or answer text)
+      const userInput = text.trim();
+      const selectedNumber = parseInt(userInput);
+      
+      let isCorrect = false;
+      let selectedAnswer = "";
+      
+      // Check if input is a number 1-4
+      if (!isNaN(selectedNumber) && selectedNumber >= 1 && selectedNumber <= 4) {
+        // User selected option by number
+        selectedAnswer = gameSession.currentOptions[selectedNumber - 1];
+        isCorrect = selectedAnswer === gameSession.currentQuestion.correctAnswer;
+      } else {
+        // User typed answer (case insensitive)
+        selectedAnswer = userInput;
+        isCorrect = userInput.toLowerCase() === gameSession.currentQuestion.correctAnswer.toLowerCase();
+      }
+      
+      if (isCorrect) {
+        // Calculate points based on difficulty
+        const points = getPointsForDifficulty(gameSession.currentQuestion.difficulty);
+        const currentScore = gameSession.scores.get(sender) || 0;
+        gameSession.scores.set(sender, currentScore + points);
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: senderName,
+          correct: true,
+          points: points,
+          question: gameSession.currentQuestion.question,
+          correctAnswer: gameSession.currentQuestion.correctAnswer,
+          difficulty: gameSession.currentQuestion.difficulty,
+          selectedOption: selectedNumber ? `Option ${selectedNumber}: ${selectedAnswer}` : selectedAnswer
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        await client.sendMessage(groupId, {
+          text: `🎉 *CORRECT!* 🎉\n\n` +
+                `✅ @${sender.split('@')[0]} answered correctly!\n` +
+                `💡 Correct answer: ${gameSession.currentQuestion.correctAnswer}\n` +
+                `💰 +${points} points! Total: ${currentScore + points}\n` +
+                `📊 Difficulty: ${gameSession.currentQuestion.difficulty.toUpperCase()}\n\n` +
+                `🎯 Round ${gameSession.currentRound} completed!\n` +
+                `Moving to next round...`,
+          mentions: [sender]
+        });
+        
+        // Clear timeout
+        if (gameSession.roundTimeout) {
+          clearTimeout(gameSession.roundTimeout);
+          gameSession.roundTimeout = null;
+        }
+        
+        // Move to next round
+        gameSession.currentRound++;
+        
+        // Check if game is over
+        if (gameSession.currentRound > gameSession.totalRounds) {
+          setTimeout(() => endTriviaGameWithResults(groupId, client, gameSession, false), 3000);
+        } else {
+          // Start next round after delay
+          setTimeout(() => startNewTriviaRound(groupId, client, gameSession), 3000);
+        }
+        
+      } else {
+        // Wrong answer
+        let userResponse = `❌ Wrong answer, @${sender.split('@')[0]}!\n`;
+        
+        if (selectedNumber && selectedNumber >= 1 && selectedNumber <= 4) {
+          userResponse += `You selected: ${selectedAnswer}\n`;
+        } else {
+          userResponse += `You answered: ${userInput}\n`;
+        }
+        
+        userResponse += `\n✅ The correct answer was: ${gameSession.currentQuestion.correctAnswer}\n` +
+                       `📊 Difficulty: ${gameSession.currentQuestion.difficulty.toUpperCase()}\n` +
+                       `📚 Category: ${gameSession.currentQuestion.category}\n\n` +
+                       `🎯 Round ${gameSession.currentRound} completed!\n` +
+                       `Moving to next round...`;
+        
+        await client.sendMessage(groupId, {
+          text: userResponse,
+          mentions: [sender]
+        });
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: senderName,
+          correct: false,
+          points: 0,
+          question: gameSession.currentQuestion.question,
+          correctAnswer: gameSession.currentQuestion.correctAnswer,
+          difficulty: gameSession.currentQuestion.difficulty,
+          selectedOption: selectedNumber ? `Option ${selectedNumber}: ${selectedAnswer}` : selectedAnswer
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        // Clear timeout
+        if (gameSession.roundTimeout) {
+          clearTimeout(gameSession.roundTimeout);
+          gameSession.roundTimeout = null;
+        }
+        
+        // Move to next round
+        gameSession.currentRound++;
+        
+        if (gameSession.currentRound > gameSession.totalRounds) {
+          setTimeout(() => endTriviaGameWithResults(groupId, client, gameSession, false), 3000);
+        } else {
+          // Start next round after delay
+          setTimeout(() => startNewTriviaRound(groupId, client, gameSession), 3000);
+        }
+      }
+    }
+  };
+  
+  // Store listener reference
+  triviaGameSessions.get(groupId).listener = listener;
+  client.ev.on("messages.upsert", listener);
+}
+
+// Start a new trivia round
+async function startNewTriviaRound(groupId, client, gameSession) {
+  if (!gameSession.gameActive) return;
+  
+  // Clear any existing timeout
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  
+  // Fetch new question from API
+  const questionData = await fetchQuestion();
+  if (!questionData) {
+    await client.sendMessage(groupId, {
+      text: "❌ Failed to fetch question. Ending game."
+    });
+    endTriviaGameWithResults(groupId, client, gameSession, false);
+    return;
+  }
+  
+  // Store question
+  gameSession.currentQuestion = questionData;
+  
+  // Use the allAnswers array from API (should already be shuffled)
+  gameSession.currentOptions = [...questionData.allAnswers];
+  
+  // Move to next player for each round
+  gameSession.currentPlayerIndex = (gameSession.currentPlayerIndex + 1) % gameSession.players.length;
+  const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+  
+  // Get points for this question
+  const points = getPointsForDifficulty(questionData.difficulty);
+  
+  // Announce new round
+  await client.sendMessage(groupId, {
+    text: `🔄 *ROUND ${gameSession.currentRound}/${gameSession.totalRounds}*\n\n` +
+          `🎯 *Current Player:* @${currentPlayer.id.split('@')[0]}\n\n` +
+          `📚 *CATEGORY:* ${questionData.category}\n` +
+          `📊 *DIFFICULTY:* ${questionData.difficulty.toUpperCase()} (${points} points)\n\n` +
+          `❓ *QUESTION:*\n${questionData.question}\n\n` +
+          `📋 *OPTIONS:*\n` +
+          `1. ${gameSession.currentOptions[0]}\n` +
+          `2. ${gameSession.currentOptions[1]}\n` +
+          `3. ${gameSession.currentOptions[2]}\n` +
+          `4. ${gameSession.currentOptions[3]}\n\n` +
+          `⏰ Time limit: 30 seconds\n` +
+          `📝 Reply with number (1-4) OR type answer!`,
+    mentions: [currentPlayer.id]
+  });
+  
+  // Set timeout for this round
+  gameSession.roundTimeout = setTimeout(async () => {
+    if (triviaGameSessions.has(groupId)) {
+      const session = triviaGameSessions.get(groupId);
+      if (session.currentQuestion && session.currentQuestion.question === questionData.question) {
+        // Time's up
+        const currentPlayer = session.players[session.currentPlayerIndex];
+        
+        await client.sendMessage(groupId, {
+          text: `⏰ *TIME'S UP!*\n\n` +
+                `@${currentPlayer.id.split('@')[0]} took too long!\n` +
+                `✅ Correct answer: ${questionData.correctAnswer}\n` +
+                `📊 Difficulty: ${questionData.difficulty.toUpperCase()}\n` +
+                `📚 Category: ${questionData.category}\n\n` +
+                `🎯 Round ${session.currentRound} completed\n` +
+                `Moving to next round...`,
+          mentions: [currentPlayer.id]
+        });
+        
+        // Store round result
+        session.roundResults.push({
+          round: session.currentRound,
+          playerId: currentPlayer.id,
+          playerName: currentPlayer.name,
+          correct: false,
+          points: 0,
+          question: questionData.question,
+          correctAnswer: questionData.correctAnswer,
+          difficulty: questionData.difficulty,
+          timeout: true
+        });
+        
+        // Update player rounds
+        const roundsPlayed = session.playerRounds.get(currentPlayer.id) || 0;
+        session.playerRounds.set(currentPlayer.id, roundsPlayed + 1);
+        
+        // Move to next round
+        session.currentRound++;
+        
+        if (session.currentRound > session.totalRounds) {
+          setTimeout(() => endTriviaGameWithResults(groupId, client, session, false), 3000);
+        } else {
+          setTimeout(() => startNewTriviaRound(groupId, client, session), 3000);
+        }
+      }
+    }
+  }, 30000);
+}
+
+// End game and show results
+async function endTriviaGameWithResults(groupId, client, gameSession, forcedEnd = false) {
+  if (!gameSession.gameActive) return;
+  
+  gameSession.gameActive = false;
+  
+  // Clear timeouts
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  if (gameSession.joinTimeout) {
+    clearTimeout(gameSession.joinTimeout);
+  }
+  
+  // Remove listener
+  if (gameSession.listener) {
+    client.ev.off("messages.upsert", gameSession.listener);
+  }
+  
+  // Prepare final results
+  const scoresArray = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  let resultsMessage = `🏁 *TRIVIA GAME ${forcedEnd ? 'ENDED EARLY' : 'FINISHED'}* 🏁\n\n`;
+  resultsMessage += `🎯 Rounds Played: ${gameSession.currentRound - 1}/${gameSession.totalRounds}\n`;
+  resultsMessage += `👥 Total Players: ${gameSession.players.length}\n\n`;
+  
+  if (scoresArray.length > 0) {
+    resultsMessage += `🏆 *FINAL LEADERBOARD* 🏆\n\n`;
+    
+    const mentions = [];
+    scoresArray.forEach(([playerId, score], index) => {
+      const mention = `@${playerId.split('@')[0]}`;
+      mentions.push(playerId);
+      
+      const medal = index === 0 ? "🥇 *GOLD*" : 
+                    index === 1 ? "🥈 *SILVER*" : 
+                    index === 2 ? "🥉 *BRONZE*" : "   ";
+      resultsMessage += `${medal}\n${mention}: ${score} points\n\n`;
+    });
+    
+    // Check for draw (multiple players with same highest score)
+    if (scoresArray.length > 1) {
+      const highestScore = scoresArray[0][1];
+      const playersWithHighestScore = scoresArray.filter(([_, score]) => score === highestScore);
+      
+      if (playersWithHighestScore.length > 1) {
+        // It's a draw
+        resultsMessage += `🤝 *IT'S A DRAW!* 🤝\n`;
+        resultsMessage += `Multiple players tied with ${highestScore} points!\n\n`;
+        
+        const drawMentions = playersWithHighestScore.map(([playerId]) => `@${playerId.split('@')[0]}`).join(", ");
+        resultsMessage += `🏆 ${drawMentions}`;
+      } else {
+        // Single winner
+        const [winnerId, winnerScore] = scoresArray[0];
+        resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+        resultsMessage += `🏆 @${winnerId.split('@')[0]} wins with ${winnerScore} points!`;
+      }
+    } else if (scoresArray.length === 1) {
+      // Only one player
+      const [winnerId, winnerScore] = scoresArray[0];
+      resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+      resultsMessage += `🏆 @${winnerId.split('@')[0]} wins with ${winnerScore} points!`;
+    }
+    
+    await client.sendMessage(groupId, {
+      text: resultsMessage,
+      mentions
+    });
+  } else {
+    await client.sendMessage(groupId, {
+      text: `🧠 Trivia game ended with no scores recorded.`
+    });
+  }
+  
+  // Clean up
+  triviaGameSessions.delete(groupId);
+}
+
+//========================================================================================================================
+
+// Quick trivia quiz command
+
+
+//========================================================================================================================
 //========================================================================================================================
 
 keith({
