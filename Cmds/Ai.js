@@ -346,7 +346,7 @@ keith({
   if (!q) return reply("❌ Provide a query");
 
   try {
-    const res = await axios.get(`https://apiskeith.vercel.app/ai/keithai?q=${encodeURIComponent(q)}`);
+    const res = await axios.get(`https://apiskeith.vercel.app/keithai?q=${encodeURIComponent(q)}`);
 
     if (res.data?.status) {
       reply(res.data.result); 
