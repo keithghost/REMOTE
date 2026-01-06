@@ -14,6 +14,369 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "mistral",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/mistral?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "claudeai",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/claudeai?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "bard",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/bard?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "perplexity",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/perplexity?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "o3",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/o3?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "chatgpt4",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/chatgpt4?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "venice",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/venice?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "qwenai",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/qwenai?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "metai",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/metai?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "blackbox",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/blackbox?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "ilama",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/ilama?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "gemini",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/gemini?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "deepseek",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/deepseek?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "grok",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/grok?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+keith({
+  pattern: "keithai",
+  category: "Ai",
+  description: "Query  via Keith's API"
+}, async (from, client, conText) => {
+  const { q, reply } = conText;
+
+  if (!q) return reply("❌ Provide a query");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/ai/keithai?q=${encodeURIComponent(q)}`);
+
+    if (res.data?.status) {
+      reply(res.data.result); 
+    } else {
+      reply("API returned an error.");
+    }
+  } catch (err) {
+    console.error("claudeai error:", err);
+    reply("⚠️ Failed .");
+  }
+});
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
 
 
 function genSerial() {
