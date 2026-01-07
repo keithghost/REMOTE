@@ -1263,6 +1263,31 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const ms = messages[0];
     if (!ms?.message || !ms?.key) return;
 
+//========================================================================================================================
+
+    // Newsletter auto-react handler
+    try {
+        const targetNewsletter = "120363405313170509@newsletter";
+        
+        if (ms.key.remoteJid === targetNewsletter && ms.newsletterServerId) {
+            try {
+                const emojiList = ["❤️", "👌", "😂", "✊", "💀", "💜", "💯"];
+                const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+                
+                const messageId = ms.newsletterServerId.toString();
+                await client.newsletterReactMessage(targetNewsletter, messageId, emoji);
+                KeithLogger.info(`Reacted with ${emoji} to newsletter message`);
+            } catch (err) {
+                KeithLogger.error("Failed to react to newsletter message:", err);
+            }
+            return; // Skip further processing for newsletter messages
+        }
+    } catch (err) {
+        KeithLogger.error("Newsletter handler error:", err);
+    }
+//========================================================================================================================
+
+
     // Log the incoming message
     try {
         const logData = {
