@@ -277,7 +277,700 @@ async function fetchMathProblems() {
 fetchMathProblems();
 
 //========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
 
+// Game state storage
+const footballGameSessions = new Map();
+// Football questions will be fetched from URL
+let footballQuestions = [];
+
+// Fetch football questions from JSON URL
+async function fetchFootballQuestions() {
+  try {
+    const response = await axios.get('https://raw.githubusercontent.com/Keithkeizzah/INFO/refs/heads/main/games/football.json');
+    if (response.data && Array.isArray(response.data)) {
+      footballQuestions = response.data;
+      console.log(`✅ Loaded ${footballQuestions.length} football questions from JSON`);
+      return true;
+    } else {
+      console.error('❌ Invalid JSON structure from URL');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error fetching football questions:', error.message);
+    return false;
+  }
+}
+
+// Fetch football questions when module loads
+fetchFootballQuestions();
+
+//========================================================================================================================
+
+keith({
+  pattern: "football",
+  aliases: ["footballquiz", "fpl", "premierleague"],
+  description: "Start a football quiz game about Premier League teams",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek, reply, isGroup, sender, senderName } = conText;
+  
+  if (!isGroup) return reply("❌ This game can only be played in groups!");
+  
+  if (footballGameSessions.has(from)) {
+    return reply("⚠️ A football quiz is already running! Use `.endfootball` to stop it.");
+  }
+  
+  // Ensure football questions are loaded
+  if (footballQuestions.length === 0) {
+    const loaded = await fetchFootballQuestions();
+    if (!loaded || footballQuestions.length === 0) {
+      return reply("❌ Failed to load football questions from server. Please try again later.");
+    }
+  }
+  
+  // Initialize game session
+  const gameSession = {
+    host: sender,
+    hostName: senderName,
+    players: [], // Array of player objects
+    totalRounds: 8, // Fixed 8 rounds
+    currentRound: 1, // Round counter starts at 1
+    currentQuestion: null,
+    currentOptions: [],
+    gameActive: true,
+    joinPhase: true,
+    currentPlayerIndex: 0,
+    scores: new Map(), // playerId -> score
+    questionsUsed: [],
+    roundTimeout: null,
+    joinTimeout: null,
+    listener: null,
+    roundResults: [], // Store results per round
+    playerRounds: new Map(), // Track rounds played per player
+    currentTurn: 0, // Track total turns
+    teams: ["Manchester United", "Chelsea", "Arsenal", "Manchester City", "Liverpool"], // Supported teams
+    selectedTeam: null, // Current team for themed questions
+    teamQuestions: new Map() // Track questions per team
+  };
+  
+  footballGameSessions.set(from, gameSession);
+  
+  // Send game start message
+  await client.sendMessage(from, {
+    text: `⚽ *FOOTBALL PREMIER LEAGUE QUIZ* ⚽\n\n` +
+          `👤 Host: @${sender.split('@')[0]}\n` +
+          `🔄 Total Rounds: ${gameSession.totalRounds}\n` +
+          `⏰ Join Time: 30 seconds\n\n` +
+          `🏆 *FEATURED TEAMS:*\n` +
+          `• Manchester United 🔴\n` +
+          `• Chelsea 🔵\n` +
+          `• Arsenal ❤️\n` +
+          `• Manchester City 💙\n` +
+          `• Liverpool 🔴\n\n` +
+          `📝 *HOW TO PLAY:*\n` +
+          `1. Type "join" to register\n` +
+          `2. Each round focuses on a Premier League team\n` +
+          `3. Choose from 4 options (1-4)\n` +
+          `4. Points based on difficulty:\n` +
+          `   • Easy: 10 points\n` +
+          `   • Medium: 15 points\n` +
+          `   • Hard: 20 points\n\n` +
+          `🎯 Questions about players, managers, trophies & history!\n\n` +
+          `Type *join* now! ⏳`
+  }, { quoted: mek });
+  
+  // Set join timeout
+  gameSession.joinTimeout = setTimeout(async () => {
+    if (footballGameSessions.has(from)) {
+      const session = footballGameSessions.get(from);
+      if (session.joinPhase) {
+        session.joinPhase = false;
+        
+        if (session.players.length < 2) {
+          await client.sendMessage(from, {
+            text: "❌ Need at least 2 players to start. Game cancelled."
+          });
+          footballGameSessions.delete(from);
+          return;
+        }
+        
+        // Initialize player rounds tracking
+        session.players.forEach(player => {
+          session.playerRounds.set(player.id, 0);
+        });
+        
+        // Announce game start
+        await client.sendMessage(from, {
+          text: `🎯 *FOOTBALL QUIZ STARTING!* 🎯\n\n` +
+                `👥 Players: ${session.players.length}\n` +
+                `🔄 Total Rounds: ${session.totalRounds}\n` +
+                `🎯 Round 1/${session.totalRounds}\n\n` +
+                `Get ready for some football action! ⚽`
+        });
+        
+        // Start the first round
+        setTimeout(() => startNewFootballRound(from, client, session), 2000);
+      }
+    }
+  }, 30000);
+  
+  // Setup game listener
+  setupFootballGameListener(from, client);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "endfootball",
+  aliases: ["stopfootball", "endfpl"],
+  description: "End the current football quiz",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup, sender } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = footballGameSessions.get(from);
+  if (!gameSession) return reply("❌ No football quiz is currently running!");
+  
+  // Only host can end game
+  if (gameSession.host !== sender) {
+    return reply("❌ Only the game host can end the game!");
+  }
+  
+  await endFootballGameWithResults(from, client, gameSession, true);
+});
+
+//========================================================================================================================
+
+keith({
+  pattern: "footballplayers",
+  aliases: ["fplplayers"],
+  description: "Show current football quiz players and scores",
+  category: "games",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isGroup } = conText;
+  
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  
+  const gameSession = footballGameSessions.get(from);
+  if (!gameSession) return reply("❌ No football quiz is currently running!");
+  
+  let playersMessage = `📊 *FOOTBALL QUIZ STATUS*\n\n`;
+  playersMessage += `🔄 Round: ${gameSession.currentRound}/${gameSession.totalRounds}\n`;
+  playersMessage += `👥 Players: ${gameSession.players.length}\n`;
+  playersMessage += `🎯 Current Turn: ${gameSession.currentTurn + 1}/${gameSession.players.length}\n`;
+  
+  if (gameSession.selectedTeam) {
+    playersMessage += `🏆 Current Team: ${gameSession.selectedTeam}\n`;
+  }
+  
+  playersMessage += `\n🏆 *CURRENT SCORES:*\n`;
+  
+  // Sort by score
+  const sortedPlayers = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  const mentions = [];
+  sortedPlayers.forEach(([playerId, score], index) => {
+    const player = gameSession.players.find(p => p.id === playerId);
+    const mention = `@${playerId.split('@')[0]}`;
+    mentions.push(playerId);
+    
+    const turnIndicator = gameSession.players[gameSession.currentPlayerIndex]?.id === playerId ? "👈 (Your Turn)" : "";
+    const roundsPlayed = gameSession.playerRounds.get(playerId) || 0;
+    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "  ";
+    playersMessage += `${medal} ${mention}: ${score} points ${turnIndicator}\n`;
+  });
+  
+  if (gameSession.currentQuestion) {
+    const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+    playersMessage += `\n🎯 *Current Turn:* @${currentPlayer?.id.split('@')[0]}`;
+    mentions.push(currentPlayer?.id);
+  }
+  
+  await client.sendMessage(from, {
+    text: playersMessage,
+    mentions
+  });
+});
+
+// Get points based on difficulty
+function getFootballPoints(difficulty) {
+  switch(difficulty.toLowerCase()) {
+    case 'hard': return 20;
+    case 'medium': return 15;
+    default: return 10; // Easy
+  }
+}
+
+// Get team emoji
+function getTeamEmoji(team) {
+  switch(team) {
+    case 'Manchester United': return '🔴';
+    case 'Chelsea': return '🔵';
+    case 'Arsenal': return '❤️';
+    case 'Manchester City': return '💙';
+    case 'Liverpool': return '🔴';
+    default: return '⚽';
+  }
+}
+
+// Get random team for round
+function getRandomTeam(gameSession) {
+  const availableTeams = gameSession.teams.filter(team => {
+    const teamQuestions = gameSession.teamQuestions.get(team) || [];
+    return teamQuestions.length < 3; // Max 3 questions per team
+  });
+  
+  if (availableTeams.length === 0) {
+    // Reset if all teams reached max
+    gameSession.teamQuestions.clear();
+    return gameSession.teams[Math.floor(Math.random() * gameSession.teams.length)];
+  }
+  
+  return availableTeams[Math.floor(Math.random() * availableTeams.length)];
+}
+
+// Get question for specific team
+function getQuestionForTeam(gameSession, team) {
+  // Filter questions by team category
+  let teamQuestions = footballQuestions.filter(q => 
+    q.category.toLowerCase().includes(team.toLowerCase()) ||
+    q.question.toLowerCase().includes(team.toLowerCase())
+  );
+  
+  // If no team-specific questions, get general football questions
+  if (teamQuestions.length === 0) {
+    teamQuestions = footballQuestions;
+  }
+  
+  // Filter out used questions
+  const availableQuestions = teamQuestions.filter(q => 
+    !gameSession.questionsUsed.includes(q.question)
+  );
+  
+  if (availableQuestions.length === 0) {
+    // Reset if all questions used
+    gameSession.questionsUsed = [];
+    return teamQuestions[Math.floor(Math.random() * teamQuestions.length)];
+  }
+  
+  return availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+}
+
+// Setup football game listener
+function setupFootballGameListener(groupId, client) {
+  const listener = async (update) => {
+    const msg = update.messages[0];
+    if (!msg.message || msg.key.remoteJid !== groupId) return;
+    
+    const gameSession = footballGameSessions.get(groupId);
+    if (!gameSession) return;
+    
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const senderName = msg.pushName || "Player";
+    
+    // Handle join messages during join phase
+    if (gameSession.joinPhase && text.toLowerCase().trim() === "join") {
+      // Check if already joined
+      if (gameSession.players.some(p => p.id === sender)) {
+        await client.sendMessage(groupId, {
+          text: `❌ @${sender.split('@')[0]} is already registered!`,
+          mentions: [sender]
+        });
+        return;
+      }
+      
+      // Add player
+      gameSession.players.push({
+        id: sender,
+        name: senderName,
+        joinedAt: Date.now()
+      });
+      
+      gameSession.scores.set(sender, 0);
+      
+      await client.sendMessage(groupId, {
+        text: `✅ @${sender.split('@')[0]} has joined the football quiz!\n` +
+              `👥 Total players: ${gameSession.players.length}`,
+        mentions: [sender]
+      });
+      return;
+    }
+    
+    // Handle answers during active game
+    if (!gameSession.joinPhase && gameSession.gameActive && gameSession.currentQuestion) {
+      // Check if it's this player's turn
+      const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+      if (!currentPlayer || currentPlayer.id !== sender) return;
+      
+      // Parse user input (can be number 1-4 or answer text)
+      const userInput = text.trim();
+      const selectedNumber = parseInt(userInput);
+      
+      let isCorrect = false;
+      let selectedAnswer = "";
+      
+      // Check if input is a number 1-4
+      if (!isNaN(selectedNumber) && selectedNumber >= 1 && selectedNumber <= 4) {
+        // User selected option by number
+        selectedAnswer = gameSession.currentOptions[selectedNumber - 1];
+        isCorrect = selectedAnswer === gameSession.currentQuestion.answer;
+      } else {
+        // User typed answer (case insensitive)
+        selectedAnswer = userInput;
+        isCorrect = userInput.toLowerCase() === gameSession.currentQuestion.answer.toLowerCase();
+      }
+      
+      if (isCorrect) {
+        // Calculate points based on difficulty
+        const points = getFootballPoints(gameSession.currentQuestion.difficulty);
+        const currentScore = gameSession.scores.get(sender) || 0;
+        gameSession.scores.set(sender, currentScore + points);
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: senderName,
+          correct: true,
+          points: points,
+          question: gameSession.currentQuestion.question,
+          correctAnswer: gameSession.currentQuestion.answer,
+          difficulty: gameSession.currentQuestion.difficulty,
+          category: gameSession.currentQuestion.category,
+          selectedOption: selectedNumber ? `Option ${selectedNumber}: ${selectedAnswer}` : selectedAnswer
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        await client.sendMessage(groupId, {
+          text: `🎉 *GOAL! CORRECT ANSWER!* 🎉\n\n` +
+                `✅ @${sender.split('@')[0]} scored!\n` +
+                `💡 Correct answer: ${gameSession.currentQuestion.answer}\n` +
+                `💰 +${points} points! Total: ${currentScore + points}\n` +
+                `📊 Difficulty: ${gameSession.currentQuestion.difficulty.toUpperCase()}\n` +
+                `🏆 Team: ${gameSession.currentQuestion.category}\n\n` +
+                `🎯 Round ${gameSession.currentRound} completed!\n` +
+                `Moving to next round...`,
+          mentions: [sender]
+        });
+        
+        // Clear timeout
+        if (gameSession.roundTimeout) {
+          clearTimeout(gameSession.roundTimeout);
+          gameSession.roundTimeout = null;
+        }
+        
+        // Move to next round
+        gameSession.currentRound++;
+        
+        // Check if game is over
+        if (gameSession.currentRound > gameSession.totalRounds) {
+          setTimeout(() => endFootballGameWithResults(groupId, client, gameSession, false), 3000);
+        } else {
+          // Start next round after delay
+          setTimeout(() => startNewFootballRound(groupId, client, gameSession), 3000);
+        }
+        
+      } else {
+        // Wrong answer
+        let userResponse = `❌ *MISS!* Wrong answer, @${sender.split('@')[0]}!\n`;
+        
+        if (selectedNumber && selectedNumber >= 1 && selectedNumber <= 4) {
+          userResponse += `You selected: ${selectedAnswer}\n`;
+        } else {
+          userResponse += `You answered: ${userInput}\n`;
+        }
+        
+        userResponse += `\n✅ The correct answer was: ${gameSession.currentQuestion.answer}\n` +
+                       `📊 Difficulty: ${gameSession.currentQuestion.difficulty.toUpperCase()}\n` +
+                       `🏆 Team: ${gameSession.currentQuestion.category}\n\n` +
+                       `🎯 Round ${gameSession.currentRound} completed!\n` +
+                       `Moving to next round...`;
+        
+        await client.sendMessage(groupId, {
+          text: userResponse,
+          mentions: [sender]
+        });
+        
+        // Update player rounds
+        const roundsPlayed = gameSession.playerRounds.get(sender) || 0;
+        gameSession.playerRounds.set(sender, roundsPlayed + 1);
+        
+        // Store round result
+        gameSession.roundResults.push({
+          round: gameSession.currentRound,
+          playerId: sender,
+          playerName: senderName,
+          correct: false,
+          points: 0,
+          question: gameSession.currentQuestion.question,
+          correctAnswer: gameSession.currentQuestion.answer,
+          difficulty: gameSession.currentQuestion.difficulty,
+          category: gameSession.currentQuestion.category,
+          selectedOption: selectedNumber ? `Option ${selectedNumber}: ${selectedAnswer}` : selectedAnswer
+        });
+        
+        // Increment total turns
+        gameSession.currentTurn++;
+        
+        // Clear timeout
+        if (gameSession.roundTimeout) {
+          clearTimeout(gameSession.roundTimeout);
+          gameSession.roundTimeout = null;
+        }
+        
+        // Move to next round
+        gameSession.currentRound++;
+        
+        if (gameSession.currentRound > gameSession.totalRounds) {
+          setTimeout(() => endFootballGameWithResults(groupId, client, gameSession, false), 3000);
+        } else {
+          // Start next round after delay
+          setTimeout(() => startNewFootballRound(groupId, client, gameSession), 3000);
+        }
+      }
+    }
+  };
+  
+  // Store listener reference
+  footballGameSessions.get(groupId).listener = listener;
+  client.ev.on("messages.upsert", listener);
+}
+
+// Start a new football round
+async function startNewFootballRound(groupId, client, gameSession) {
+  if (!gameSession.gameActive) return;
+  
+  // Clear any existing timeout
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  
+  // Select a random team for this round
+  const team = getRandomTeam(gameSession);
+  gameSession.selectedTeam = team;
+  
+  // Get question for this team
+  const questionData = getQuestionForTeam(gameSession, team);
+  if (!questionData) {
+    await client.sendMessage(groupId, {
+      text: "❌ Failed to load question. Ending game."
+    });
+    endFootballGameWithResults(groupId, client, gameSession, false);
+    return;
+  }
+  
+  // Store question
+  gameSession.currentQuestion = questionData;
+  gameSession.questionsUsed.push(questionData.question);
+  
+  // Update team questions count
+  const teamQuestions = gameSession.teamQuestions.get(team) || [];
+  teamQuestions.push(questionData.question);
+  gameSession.teamQuestions.set(team, teamQuestions);
+  
+  // Use the options from JSON, shuffle them
+  gameSession.currentOptions = [...questionData.options].sort(() => Math.random() - 0.5);
+  
+  // Move to next player for each round
+  gameSession.currentPlayerIndex = (gameSession.currentPlayerIndex + 1) % gameSession.players.length;
+  const currentPlayer = gameSession.players[gameSession.currentPlayerIndex];
+  
+  // Get points for this question
+  const points = getFootballPoints(questionData.difficulty);
+  
+  // Get team emoji
+  const teamEmoji = getTeamEmoji(team);
+  
+  // Announce new round
+  await client.sendMessage(groupId, {
+    text: `🔄 *ROUND ${gameSession.currentRound}/${gameSession.totalRounds}*\n\n` +
+          `🎯 *Current Player:* @${currentPlayer.id.split('@')[0]}\n\n` +
+          `${teamEmoji} *TEAM FOCUS:* ${team}\n` +
+          `📊 *DIFFICULTY:* ${questionData.difficulty.toUpperCase()} (${points} points)\n\n` +
+          `❓ *QUESTION:*\n${questionData.question}\n\n` +
+          `📋 *OPTIONS:*\n` +
+          `1. ${gameSession.currentOptions[0]}\n` +
+          `2. ${gameSession.currentOptions[1]}\n` +
+          `3. ${gameSession.currentOptions[2]}\n` +
+          `4. ${gameSession.currentOptions[3]}\n\n` +
+          `⏰ Time limit: ${questionData.timeLimit || 25} seconds\n` +
+          `📝 Reply with number (1-4) OR type answer!`,
+    mentions: [currentPlayer.id]
+  });
+  
+  // Set timeout for this round
+  gameSession.roundTimeout = setTimeout(async () => {
+    if (footballGameSessions.has(groupId)) {
+      const session = footballGameSessions.get(groupId);
+      if (session.currentQuestion && session.currentQuestion.question === questionData.question) {
+        // Time's up
+        const currentPlayer = session.players[session.currentPlayerIndex];
+        
+        await client.sendMessage(groupId, {
+          text: `⏰ *TIME'S UP!*\n\n` +
+                `@${currentPlayer.id.split('@')[0]} took too long!\n` +
+                `✅ Correct answer: ${questionData.answer}\n` +
+                `📊 Difficulty: ${questionData.difficulty.toUpperCase()}\n` +
+                `🏆 Team: ${questionData.category}\n\n` +
+                `🎯 Round ${session.currentRound} completed\n` +
+                `Moving to next round...`,
+          mentions: [currentPlayer.id]
+        });
+        
+        // Store round result
+        session.roundResults.push({
+          round: session.currentRound,
+          playerId: currentPlayer.id,
+          playerName: currentPlayer.name,
+          correct: false,
+          points: 0,
+          question: questionData.question,
+          correctAnswer: questionData.answer,
+          difficulty: questionData.difficulty,
+          category: questionData.category,
+          timeout: true
+        });
+        
+        // Update player rounds
+        const roundsPlayed = session.playerRounds.get(currentPlayer.id) || 0;
+        session.playerRounds.set(currentPlayer.id, roundsPlayed + 1);
+        
+        // Move to next round
+        session.currentRound++;
+        
+        if (session.currentRound > session.totalRounds) {
+          setTimeout(() => endFootballGameWithResults(groupId, client, session, false), 3000);
+        } else {
+          setTimeout(() => startNewFootballRound(groupId, client, session), 3000);
+        }
+      }
+    }
+  }, (questionData.timeLimit || 25) * 1000);
+}
+
+// End game and show results
+async function endFootballGameWithResults(groupId, client, gameSession, forcedEnd = false) {
+  if (!gameSession.gameActive) return;
+  
+  gameSession.gameActive = false;
+  
+  // Clear timeouts
+  if (gameSession.roundTimeout) {
+    clearTimeout(gameSession.roundTimeout);
+  }
+  if (gameSession.joinTimeout) {
+    clearTimeout(gameSession.joinTimeout);
+  }
+  
+  // Remove listener
+  if (gameSession.listener) {
+    client.ev.off("messages.upsert", gameSession.listener);
+  }
+  
+  // Prepare final results
+  const scoresArray = Array.from(gameSession.scores.entries())
+    .sort(([, a], [, b]) => b - a);
+  
+  let resultsMessage = `🏁 *FOOTBALL QUIZ ${forcedEnd ? 'ENDED EARLY' : 'FINISHED'}* 🏁\n\n`;
+  resultsMessage += `🎯 Rounds Played: ${gameSession.currentRound - 1}/${gameSession.totalRounds}\n`;
+  resultsMessage += `👥 Total Players: ${gameSession.players.length}\n`;
+  
+  // Calculate team stats
+  const teamStats = {};
+  gameSession.roundResults.forEach(result => {
+    if (result.category) {
+      const team = result.category;
+      if (!teamStats[team]) teamStats[team] = { correct: 0, total: 0 };
+      teamStats[team].total++;
+      if (result.correct) teamStats[team].correct++;
+    }
+  });
+  
+  if (Object.keys(teamStats).length > 0) {
+    resultsMessage += `\n🏆 *TEAM STATISTICS:*\n`;
+    Object.entries(teamStats).forEach(([team, stats]) => {
+      const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+      const emoji = getTeamEmoji(team);
+      resultsMessage += `${emoji} ${team}: ${stats.correct}/${stats.total} correct (${percentage}%)\n`;
+    });
+  }
+  
+  resultsMessage += `\n`;
+  
+  if (scoresArray.length > 0) {
+    resultsMessage += `🏆 *FINAL LEADERBOARD* 🏆\n\n`;
+    
+    const mentions = [];
+    scoresArray.forEach(([playerId, score], index) => {
+      const mention = `@${playerId.split('@')[0]}`;
+      mentions.push(playerId);
+      
+      const medal = index === 0 ? "🥇 *GOLD*" : 
+                    index === 1 ? "🥈 *SILVER*" : 
+                    index === 2 ? "🥉 *BRONZE*" : "   ";
+      resultsMessage += `${medal}\n${mention}: ${score} points\n\n`;
+    });
+    
+    // Check for draw (multiple players with same highest score)
+    if (scoresArray.length > 1) {
+      const highestScore = scoresArray[0][1];
+      const playersWithHighestScore = scoresArray.filter(([_, score]) => score === highestScore);
+      
+      if (playersWithHighestScore.length > 1) {
+        // It's a draw
+        resultsMessage += `🤝 *IT'S A DRAW!* 🤝\n`;
+        resultsMessage += `Multiple players tied with ${highestScore} points!\n\n`;
+        
+        const drawMentions = playersWithHighestScore.map(([playerId]) => `@${playerId.split('@')[0]}`).join(", ");
+        resultsMessage += `🏆 ${drawMentions}`;
+      } else {
+        // Single winner
+        const [winnerId, winnerScore] = scoresArray[0];
+        resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+        resultsMessage += `⚽ @${winnerId.split('@')[0]} wins with ${winnerScore} points!\n`;
+        resultsMessage += `🏆 The football expert!`;
+      }
+    } else if (scoresArray.length === 1) {
+      // Only one player
+      const [winnerId, winnerScore] = scoresArray[0];
+      resultsMessage += `🎉 *CONGRATULATIONS!* 🎉\n`;
+      resultsMessage += `⚽ @${winnerId.split('@')[0]} wins with ${winnerScore} points!\n`;
+      resultsMessage += `🏆 The football expert!`;
+    }
+    
+    await client.sendMessage(groupId, {
+      text: resultsMessage,
+      mentions
+    });
+  } else {
+    await client.sendMessage(groupId, {
+      text: `⚽ Football quiz ended with no scores recorded.`
+    });
+  }
+  
+  // Clean up
+  footballGameSessions.delete(groupId);
+}
+
+//========================================================================================================================
+
+
+//========================================================================================================================
 keith({
   pattern: "mathgame",
   aliases: ["maths", "quickmath"],
