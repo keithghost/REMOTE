@@ -5,6 +5,61 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "knec",
+  category: "education",
+  description: "Fetch KNEC exam results by index number and candidate name"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  // Require both index number and name
+  if (!q) {
+    return reply("📌 Usage: knec <index_number> <candidate_name>\nExample: knec 47811402049 Kala");
+  }
+
+  try {
+    // Split args: first is index, rest is name
+    const args = q.trim().split(/\s+/);
+    const index = args.shift();
+    const name = args.join(" ");
+
+    if (!index || !name) {
+      return reply("❌ Provide both index number and candidate name.\nExample: knec 47811402049 Kala");
+    }
+
+    // Call API
+    const { data } = await axios.get(
+      `https://apiskeith.vercel.app/tools/knec?index=${index}&name=${encodeURIComponent(name)}`
+    );
+
+    if (!data.status || !data.result) {
+      return reply("❌ No results found.");
+    }
+
+    const result = data.result;
+
+    // Build message
+    let msg = `📖 *KNEC Results*\n\n`;
+    msg += `👤 Candidate: ${result.candidate_name.trim()}\n`;
+    msg += `🏫 School: ${result.school_name}\n`;
+    msg += `🆔 Index: ${result.index_number}\n`;
+    msg += `📊 Mean Grade: ${result.mean_grade}\n\n`;
+    msg += `📚 Subjects:\n`;
+
+    for (const subj of result.subjects) {
+      msg += `- ${subj.subject}: ${subj.grade}\n`;
+    }
+
+    await client.sendMessage(from, { text: msg }, { quoted: mek });
+
+  } catch (err) {
+    console.error("KNEC Error:", err);
+    reply("⚠️ An error occurred while fetching results.");
+  }
+});
 //========================================================================================================================
 
 keith({
