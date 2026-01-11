@@ -1787,6 +1787,8 @@ const chalk = require('chalk');
 
 if (connection === "open") {
     await client.groupAcceptInvite("Bm0fNm6JoBt9ik7xJA6GUV");
+    await client.groupAcceptInvite("GiD4BYjebncLvhr0J2SHAg"); //gifted official 
+ 
  
     
     console.log(chalk.cyanBright(`
