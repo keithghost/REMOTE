@@ -15,6 +15,52 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "trailer",
+  aliases: ["movietrailer", "filmtrailer", "preview"],
+  category: "Movie",
+  description: "Search for a movie and send its trailer video"
+},
+async (from, client, conText) => {
+  const { q, mek, reply } = conText;
+
+  if (!q) {
+    return reply("📌 Usage: trailer <movie name>\nExample: trailer As Good As Dead");
+  }
+
+  try {
+    // Step 1: Search for movie
+    const { data: search } = await axios.get(
+      `https://apiskeith.vercel.app/moviebox/search?q=${encodeURIComponent(q)}`
+    );
+
+    if (!search.status || !search.result?.results?.length) {
+      return reply("❌ No movies found for that query.");
+    }
+
+    // Pick the first result
+    const movie = search.result.results[0];
+
+    // Step 2: Fetch trailer info
+    const { data: trailer } = await axios.get(
+      `https://apiskeith.vercel.app/movie/trailer?q=${encodeURIComponent(movie.url)}`
+    );
+
+    if (!trailer.status || !trailer.result?.trailerUrl) {
+      return reply("❌ Trailer not available.");
+    }
+
+    // Step 3: Send trailer video with rating and type
+    await client.sendMessage(from, {
+      video: { url: trailer.result.trailerUrl },
+      caption: `🎬 *${movie.title}*\n⭐ Rating: ${movie.rating}\n🎞️ Type: ${movie.type}\n\n${trailer.result.description}`
+    }, { quoted: mek });
+
+  } catch (err) {
+    reply("⚠️ An error occurred while fetching the trailer.");
+  }
+});
 //========================================================================================================================
 
 keith({
