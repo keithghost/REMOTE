@@ -61,3 +61,33 @@ keith({
     await reply("❌ Failed to send Playfy APK. Error: " + err.message);
   }
 });
+//const { keith } = require("../commandHandler");
+
+keith({
+  pattern: "sportzfy",
+  description: "Download Sportzfy Mod APK",
+  category: "Moded-APK",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { mek } = conText;
+
+  try {
+    await client.sendMessage(from, {
+      document: { url: "https://sportzfy.com/wp-content/apk/Sportzfy_v11(09-01-2026)_New_Latest_Version.apk" },
+      mimetype: "application/vnd.android.package-archive",
+      fileName: "Sportzfy-Mod.apk",
+      contextInfo: {
+        externalAdReply: {
+          title: "Sportzfy Mod APK",
+          body: "Latest version download",
+          thumbnailUrl: "https://files.catbox.moe/es8de1.jpg", // you can swap thumbnail if you want
+          sourceUrl: "https://sportzfy.com/wp-content/apk/Sportzfy_v11(09-01-2026)_New_Latest_Version.apk",
+          mediaType: 1,
+          renderLargerThumbnail: true
+        }
+      }
+    }, { quoted: mek });
+  } catch (err) {
+    // Silent fail, no reply/console since you prefer clean
+  }
+});
