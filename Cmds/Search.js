@@ -4,6 +4,153 @@ const { keith } = require('../commandHandler');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "citizen",
+  aliases: ["citizendigital", "citizen-tv"],
+  category: "news",
+  description: "Get latest Citizen Digital news"
+},
+async (from, client, conText) => {
+  const { mek } = conText;
+
+  try {
+    const apiUrl = "https://apiskeith.vercel.app/news/citizen";
+    const res = await axios.get(apiUrl, { timeout: 100000 });
+    
+    if (!res.data?.status) throw new Error("API returned false status");
+    
+    const data = res.data.result;
+    
+    // Get news items from various sections
+    const pinnedStories = data.pinnedStories || [];
+    const topStories = data.topStories || [];
+    
+    // Combine all stories, giving priority to pinned ones
+    const allStories = [...pinnedStories, ...topStories];
+    
+    if (!allStories.length) throw new Error("No news available");
+    
+    // Remove duplicates by URL
+    const uniqueStories = Array.from(new Map(allStories.map(item => [item.url, item])).values());
+    
+    // Filter stories with images
+    const storiesWithImages = uniqueStories.filter(story => 
+      story.image || story.thumbnail || story.articleDetails?.featuredImage?.url
+    );
+    
+    if (storiesWithImages.length === 0) throw new Error("No stories with images available");
+    
+    const cards = await Promise.all(storiesWithImages.slice(0, 10).map(async (story, i) => {
+      try {
+        // Determine which image to use (priority: image > thumbnail > featuredImage)
+        let imageUrl = story.image || story.thumbnail;
+        if (!imageUrl && story.articleDetails?.featuredImage?.url) {
+          imageUrl = story.articleDetails.featuredImage.url;
+        }
+        
+        if (!imageUrl) return null;
+
+        const imageMessage = await generateWAMessageContent({ 
+          image: { url: imageUrl } 
+        }, {
+          upload: client.waUploadToServer
+        });
+
+        // Get timestamp
+        let timestamp = "";
+        if (story.timestamp) {
+          timestamp = ` • ⏰ ${story.timestamp}`;
+        } else if (story.articleDetails?.publishedDate) {
+          const date = new Date(story.articleDetails.publishedDate);
+          timestamp = ` • 📅 ${date.toLocaleDateString()}`;
+        }
+
+        return {
+          header: {
+            title: `📰 ${story.title.substring(0, 60)}${story.title.length > 60 ? '...' : ''}`,
+            hasMediaAttachment: true,
+            imageMessage: imageMessage.imageMessage
+          },
+          body: {
+            text: story.excerpt || 
+                  story.articleDetails?.summary?.substring(0, 120) || 
+                  story.title.substring(0, 100) || 
+                  "Citizen Digital News"
+          },
+          footer: { 
+            text: `🏷️ ${story.category || "News"}${timestamp}` 
+          },
+          nativeFlowMessage: {
+            buttons: [
+              {
+                name: "cta_url",
+                buttonParamsJson: JSON.stringify({
+                  display_text: "📖 Read Full Story",
+                  url: story.url
+                })
+              },
+              {
+                name: "cta_copy",
+                buttonParamsJson: JSON.stringify({
+                  display_text: "📋 Copy Link",
+                  copy_code: story.url
+                })
+              }
+            ]
+          }
+        };
+      } catch (imgErr) {
+        console.log(`Failed to load image for ${story.title}:`, imgErr.message);
+        return null;
+      }
+    }));
+
+    // Filter out failed cards
+    const validCards = cards.filter(card => card !== null);
+
+    if (validCards.length === 0) {
+      // Fallback to simple text message
+      const newsList = uniqueStories.slice(0, 10).map((story, i) => 
+        `${i+1}. ${story.title}\n⏰ ${story.timestamp || "Recent"}\n🔗 ${story.url}\n`
+      ).join('\n');
+      
+      return await client.sendMessage(from, {
+        text: `📺 *${data.siteName || "Citizen Digital"}*\n\n${newsList}\n\n🌐 Website: ${data.url}\n🕐 Updated: ${new Date(data.lastUpdated).toLocaleString()}`,
+      }, { quoted: mek });
+    }
+
+    const message = generateWAMessageFromContent(from, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: {
+            body: { 
+              text: `📺 *${data.siteName || "Citizen Digital"}*\n\nLatest breaking news and updates from Kenya's leading digital news platform.\n\n🔹 Pinned: ${pinnedStories.length} stories\n🔹 Top Stories: ${topStories.length} articles`
+            },
+            footer: { 
+              text: `🌐 ${data.url} • 🕐 Updated: ${new Date(data.lastUpdated).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` 
+            },
+            carouselMessage: { cards: validCards }
+          }
+        }
+      }
+    }, { quoted: mek });
+
+    await client.relayMessage(from, message.message, { messageId: message.key.id });
+
+  } catch (err) {
+    console.error("Citizen command error:", err);
+    
+    // Simple error message
+    await client.sendMessage(from, {
+      text: `❌ Failed to fetch Citizen Digital news.\n\nError: ${err.message}\n\nTry again or check:\n🔗 https://www.citizen.digital/`,
+    }, { quoted: mek });
+  }
+});
 //========================================================================================================================
 
 
