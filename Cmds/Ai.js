@@ -847,7 +847,7 @@ keith({
 //========================================================================================================================
 
 keith({
-  pattern: "vision",
+  pattern: "vision2",
   aliases: ["imgai", "analyze", "geminivision"],
   description: "Analyze quoted image using Gemini Vision AI",
   category: "Ai",
