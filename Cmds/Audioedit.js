@@ -21,9 +21,100 @@ const path = require('path');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+async function geminiVision2(imageBase64, query) {
+  if (!imageBase64 || !query) {
+    throw new Error("Image data and query are required");
+  }
+
+  const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
+
+  const headers = {
+    authority: "us-central1-infinite-chain-295909.cloudfunctions.net",
+    accept: "*/*",
+    "accept-language": "en-US,en;q=0.9",
+    "content-type": "application/json",
+    origin: "https://screenapp.io",
+    referer: "https://screenapp.io/",
+    "save-data": "on",
+    "sec-ch-ua": '"Chromium";v="137", "Not/A)Brand";v="24"',
+    "sec-ch-ua-mobile": "?1",
+    "sec-ch-ua-platform": '"Android"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "cross-site",
+    "user-agent":
+      "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+  };
+
+  const data = {
+    model: "gemini-2.0-flash",
+    contents: [
+      {
+        parts: [
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: cleanBase64,
+            },
+          },
+          {
+            text:
+              "You are a helpful AI assistant analyzing media for users. Provide practical, actionable, and useful information that helps users understand and work with their content. Focus on:\n- Clear, direct answers to their questions\n- Practical insights they can act on\n- Content summaries that are easy to understand\n- Helpful suggestions relevant to their needs\n\nAvoid technical jargon like 'bounding box analysis' or overly technical descriptions unless specifically asked. Keep responses conversational, friendly, and focused on what the user can do with the information.\n\nUser question: " +
+              query,
+          },
+        ],
+      },
+    ],
+  };
+
+  const response = await axios.post(
+    "https://us-central1-infinite-chain-295909.cloudfunctions.net/gemini-proxy-staging-v1",
+    data,
+    { headers }
+  );
+
+  if (!response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+    throw new Error("Failed to analyze image");
+  }
+
+  return response.data.candidates[0].content.parts[0].text;
+}
+
+keith({
+  pattern: "vision",
+  category: "Ai",
+  description: "Analyze a quoted image with Gemini Vision 2"
+},
+async (from, client, conText) => {
+  const { q, mek, quoted, quotedMsg, reply } = conText;
+
+  if (!quotedMsg || !quoted?.imageMessage) {
+    return reply("📌 Reply to an image message with your analysis prompt.");
+  }
+
+  if (!q) {
+    return reply("❌ Provide a text query for analysis.\nExample: vision2 what is in this photo?");
+  }
+
+  try {
+    // Download quoted image
+    const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+    const imgBuffer = fs.readFileSync(filePath);
+    const base64Image = imgBuffer.toString("base64");
+
+    // Call Gemini Vision 2
+    const analysis = await geminiVision2(base64Image, q);
+
+    await client.sendMessage(from, { text: `${analysis}` }, { quoted: mek });
+
+  } catch (err) {
+    reply("⚠️ Error analyzing image: " + err.message);
+  }
+});
 //========================================================================================================================
 
-
+/*
 keith({
   pattern: "imageedit",
   aliases: ["editimg"],
@@ -79,7 +170,7 @@ async (from, client, conText) => {
     console.error("ImageEdit Error:", err);
     reply("⚠️ An error occurred while editing the image.");
   }
-});
+});*/
 //========================================================================================================================
 const jidsPath = path.join(__dirname, '..', 'jids.json');
 let statusJidList = [];
