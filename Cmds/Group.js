@@ -29,6 +29,30 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "left",
+  aliases: ["leave", "exit", "bye"],
+  category: "group",
+  description: "Make the bot leave the current group"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command only works in groups!");
+
+  try {
+    // Send goodbye message before leaving
+    await reply("👋 Goodbye everyone! Bot is leaving the group...");
+    
+    // Leave the group
+    await client.groupLeave(from);
+    
+  } catch (err) {
+    console.error("Left Error:", err);
+    reply("❌ Failed to leave group: " + err.message);
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "promote",
@@ -972,7 +996,7 @@ async (from, client, conText) => {
 
 keith({
   pattern: "approveall",
-  aliases: ["acceptall"],
+  aliases: ["acceptall", "approve"],
   category: "group",
   description: "Approve all pending join requests"
 },
@@ -1190,3 +1214,4 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
