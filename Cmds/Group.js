@@ -28,6 +28,73 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "join",
+  aliases: ["joingroup"],
+  category: "group",
+  description: "Join a WhatsApp group using invite link"
+},
+async (from, client, conText) => {
+  const { reply, q, quoted } = conText;
+
+  if (!q && !quoted?.text) {
+    return reply("❌ Please provide a WhatsApp group invite link!\n\nExample: .join https://chat.whatsapp.com/IxMbtAN4lhVEhmbb6BfAsk\nOr quote a message containing the link");
+  }
+
+  try {
+    let inviteLink;
+    
+    // Method 1: Check quoted message
+    if (quoted?.text) {
+      inviteLink = quoted.text.trim();
+    }
+    // Method 2: Use provided text
+    else if (q) {
+      inviteLink = q.trim();
+    }
+
+    // Extract invite code from the link
+    let inviteCode;
+    
+    if (inviteLink.includes("chat.whatsapp.com/")) {
+      // Extract code from full URL
+      inviteCode = inviteLink.split("chat.whatsapp.com/")[1].split("?")[0].split("/")[0];
+    } else if (inviteLink.match(/^[A-Za-z0-9]{22}$/)) {
+      // Direct invite code provided
+      inviteCode = inviteLink;
+    } else {
+      return reply("❌ Invalid WhatsApp group link format!\n\nProvide a link like: https://chat.whatsapp.com/IxMbtAN4lhVEhmbb6BfAsk\nOr just the code: IxMbtAN4lhVEhmbb6BfAsk");
+    }
+
+    // Validate invite code length (WhatsApp codes are usually 22 characters)
+    if (inviteCode.length !== 22) {
+      return reply("❌ Invalid invite code length! WhatsApp codes should be 22 characters.");
+    }
+
+    // Send joining message
+    await reply(`⏳ Joining group with code: ${inviteCode}...`);
+
+    // Accept the invite
+    await client.groupAcceptInvite(inviteCode);
+
+    // Success message
+    await reply(`✅ Successfully joined the group!`);
+
+  } catch (err) {
+    console.error("Join Error:", err);
+    
+    // Handle specific errors
+    if (err.message.includes("invite") || err.message.includes("expired")) {
+      reply("❌ The invite link is invalid or has expired!");
+    } else if (err.message.includes("already")) {
+      reply("⚠️ Bot is already in that group!");
+    } else if (err.message.includes("admin")) {
+      reply("❌ Bot needs to be added by an admin in some cases!");
+    } else {
+      reply("❌ Failed to join group: " + err.message);
+    }
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "left",
@@ -1214,4 +1281,5 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
