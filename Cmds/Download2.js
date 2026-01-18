@@ -132,7 +132,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
 
-keith({
+/*keith({
   pattern: "porn", 
   aliases: ["xvideo", "xvid"],
   category: "Downloader",
@@ -182,7 +182,7 @@ async (from, client, conText) => {
   } catch (error) {
     console.error("Video site download error:", error);
   }
-});
+});*/
 //========================================================================================================================
 keith({
   pattern: "pinterest",
