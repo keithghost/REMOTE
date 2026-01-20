@@ -3,7 +3,7 @@ const { keith } = require('../commandHandler');
 const axios = require('axios');
 
 // helper function
-const fetchLogoUrl = async (url, name) => {
+/*const fetchLogoUrl = async (url, name) => {
   try {
     const response = await axios.get(
       `https://apiskeith.vercel.app/logo/ephoto?url=${url}&name=${encodeURIComponent(name)}`
@@ -18,6 +18,19 @@ const fetchLogoUrl = async (url, name) => {
     return null;
   } catch (error) {
     console.error("Error fetching logo:", error);
+    return null;
+  }
+};*/
+const fetchLogoUrl = async (url, name) => {
+  try {
+    const response = await axios.get(
+      `https://apiskeith.vercel.app/logo/ephoto?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`
+    );
+
+    const { result } = response.data || {};
+    return result?.download_url || null;
+  } catch (error) {
+    console.error("Error fetching logo:", error.message);
     return null;
   }
 };
