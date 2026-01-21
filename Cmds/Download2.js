@@ -468,8 +468,6 @@ async (from, client, conText) => {
     console.error("SoundCloud download error:", error);
   }
 });
-
-
 //========================================================================================================================
 
 
@@ -490,14 +488,10 @@ async (from, client, conText) => {
     const apiUrl = `https://apiskeith.vercel.app/download/tiktokdl3?url=${encodeURIComponent(q)}`;
     const response = await axios.get(apiUrl, { timeout: 100000 });
 
-    const result = response.data?.result;
-    const urls = result?.downloadUrls;
-
-    if (!urls || !urls.mp4 || !urls.mp4[0]) {
-      return reply("❌ No SD video found for this TikTok link.");
+    const videoUrl = response.data?.result;
+    if (!videoUrl) {
+      return reply("❌ No video found for this TikTok link.");
     }
-
-    const videoUrl = urls.mp4[0];
 
     await client.sendMessage(
       from,
@@ -516,4 +510,11 @@ async (from, client, conText) => {
 
 
 //========================================================================================================================
+
+
+
+
+
+
+
 
