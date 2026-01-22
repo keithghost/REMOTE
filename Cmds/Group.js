@@ -27,6 +27,60 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "creategc",
+  aliases: ["creategroup"],
+  category: "group",
+  description: "Create a new WhatsApp group with optional participants"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser, sender } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!q) return reply(`✏️ Usage: .creategc GroupName\nOr: .creategc GroupName 1234567890,9876543210`);
+
+  try {
+    let groupName = q;
+    let participants = [sender]; // Always add creator
+    
+    // Check if phone numbers are provided
+    const parts = q.split(/\s+/);
+    if (parts.length > 1 && parts[parts.length - 1].match(/\d{10,}/)) {
+      // Extract group name (everything except last part with numbers)
+      groupName = parts.slice(0, -1).join(' ');
+      const numbers = parts[parts.length - 1].split(',');
+      
+      // Validate and add phone numbers
+      for (const num of numbers) {
+        const cleanNum = num.replace(/[^0-9]/g, '');
+        if (cleanNum.length >= 10) {
+          participants.push(cleanNum + '@s.whatsapp.net');
+        }
+      }
+    }
+    
+    // Create group
+    const group = await client.groupCreate(groupName, participants);
+    
+    // Get group invite code
+    const inviteCode = await client.groupInviteCode(group.id);
+    
+    // Format success message
+    const memberCount = participants.length;
+    const teks = `✅ *Group Created!*\n\n` +
+                `*Name*: ${groupName}\n` +
+                `*Members*: ${memberCount}\n` +
+                `*Link*: https://chat.whatsapp.com/${inviteCode}\n\n` +
+                `The group has been created with you as the admin.`;
+
+    // Send to current chat
+    await reply(teks);
+
+  } catch (err) {
+    console.error("CreateGC Error:", err);
+    reply(`❌ Failed to create group: ${err.message}`);
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "join",
@@ -1225,6 +1279,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
