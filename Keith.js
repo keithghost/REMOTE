@@ -119,17 +119,17 @@ https://keithsite.vercel.app/xmas`
                 });
                 console.log(`✅ Scheduled message 1 sent to ${targetJid} at ${new Date().toLocaleString()}`);
             } catch (error) {
-                console.error('❌ Failed to send scheduled message 1:', error);
+                console.error('Failed to send scheduled message 1:', error);
             }
         }, delay1);
         
         console.log(`⏰ Message 1 scheduled for: ${targetDate1.toLocaleString('en-US', { timeZone: 'Africa/Nairobi' })} (Nairobi Time)`);
     } else {
-        console.log('❌ Target date 1 has already passed!');
+        console.log('Target date 1 has already passed!');
     }
 
     // SECOND MESSAGE: Example - send on January 1, 2025 at 12:00 PM
-    const targetDate2 = new Date('2025-12-28T11:25:00+03:00'); // Change date/time as needed
+    const targetDate2 = new Date('2026-01-25T08:00:00+03:00'); // Change date/time as needed
     
     const delay2 = targetDate2.getTime() - now.getTime();
     
@@ -147,17 +147,12 @@ https://keithsite.vercel.app/xmas`
                     ○ fixed vision - you can use vision or vision2 to analyze an image
                     ○ added trailer command - to check on movie/series trailers
                     ○ added logout command - ⛔️🚫this is very dangerous since it will logout your bot 
-                        togif
-                        toptt
-                        toptv
-                        todoc
-                        toimg
-                    ✓added coding commands check under coding category   
-                    ✓ added settings to list your bot settings 
-                        
-                    
-                    ✓fixed sudo -now you can easily add sudo useing the following commans
-                    setsudo-aliases are sudo , addsudo, sudoadd`
+                    ○ fixed removebg - use removebg / removebg2 to remove background image
+                    ○ fixed ephoto and photofunia logo generator 
+                        ─────────────────────
+                        if you experienced any error share with the developer for bot efficiency 
+                        +254748387615
+                        regards Keith`
                 });
                 console.log(`✅ Scheduled message 2 sent to bot (${client.user.id}) at ${new Date().toLocaleString()}`);
             } catch (error) {
