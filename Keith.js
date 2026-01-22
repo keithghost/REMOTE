@@ -140,10 +140,13 @@ https://keithsite.vercel.app/xmas`
                 await client.sendMessage(client.user.id, {
                     text: `‼️UPDATES ALERT‼️
                     ─────────────────────
-                    ✓ fixed sora - is text to video command
-                    ✓ fixed converters 
-                        touadio
-                        tomp3
+                    ○ added creatgroup command
+                    ○ togroupstatus 
+                    ○ fixed all downloads 
+                    ○ fixed all group commands no more errors
+                    ○ fixed vision - you can use vision or vision2 to analyze an image
+                    ○ added trailer command - to check on movie/series trailers
+                    ○ added logout command - ⛔️🚫this is very dangerous since it will logout your bot 
                         togif
                         toptt
                         toptv
