@@ -13,6 +13,142 @@ const mime = require('mime-types');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+const axios = require('axios');
+
+const STYLES = {
+  flataipro: 'Flat AI Pro',
+  flatai: 'Flat AI Base',
+  runware_quality: 'Standard',
+  runware_new_quality: 'Quality+',
+  realistic: 'Realistic',
+  photo_skin: 'Real Skin',
+  cinema: 'Cinematic',
+  retro_anime: 'Retro Anime',
+  'ghibli-style': 'Ghibli Style',
+  midjourney_art: 'Midjourney Art',
+  fantasy_armor: 'Fantasy Armor',
+  robot_cyborg: 'Robot & Cyborg',
+  disney_princess: 'Princess',
+  amateurp: 'Daily Life',
+  scifi_enviroments: 'Sci-Fi Environments',
+  mythic_fantasy: 'Mythic Fantasy',
+  pixel_art: 'Pixel Art',
+  watercolor_painting: 'Watercolor Painting',
+  diesel_punk: 'Diesel Punk',
+  architectural: 'Architectural',
+  style_1930s: '1930s',
+  flat_anime: 'Flat Anime',
+  mystical_realms: 'Mystical Realms',
+  ecommerce: 'E-Commerce',
+  cinema_style: 'Cinema'
+};
+
+async function getNonce() {
+  try {
+    const { data } = await axios.get('https://flatai.org/ai-image-generator-free-no-signup/', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10)'
+      }
+    });
+
+    const nonce =
+      data.match(/ai_generate_image_nonce["']\s*:\s*["']([a-f0-9]{10})["']/i)?.[1] ||
+      data.match(/"nonce"\s*:\s*"([a-f0-9]{10})"/i)?.[1];
+    
+    if (!nonce) throw new Error('Nonce not found');
+    return nonce;
+  } catch (error) {
+    console.error('GetNonce Error:', error);
+    throw new Error('Failed to get nonce');
+  }
+}
+
+// Main AI Image Generator Command
+keith({
+  pattern: "aiphoto",
+  aliases: ["flatai", "generate"],
+  category: "Aiphoto",
+  description: "Generate AI images with various styles"
+},
+async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+
+  if (!q) {
+    const styleList = Object.entries(STYLES)
+      .map(([key, name]) => `• ${key}: ${name}`)
+      .join('\n');
+    
+    return reply(`🎨 *AI Photo Generator*\n\n*Usage:* .aiphoto prompt | style\n*Example:* .aiphoto cute cat | ghibli-style\n\n*Available Styles:*\n${styleList}\n\n*Quick Examples:*\n.aiphoto anime girl | retro_anime\n.aiphoto fantasy landscape | mythic_fantasy\n.aiphoto portrait | realistic`);
+  }
+
+  try {
+    await reply("🎨 Generating AI image...");
+
+    // Parse prompt and style
+    const parts = q.split('|').map(p => p.trim());
+    const prompt = parts[0];
+    const style = parts[1] || 'realistic'; // Default style
+    
+    if (!prompt) {
+      return reply("❌ Please provide a prompt!\nExample: .aiphoto beautiful sunset");
+    }
+
+    // Validate style
+    if (!STYLES[style]) {
+      const validStyles = Object.keys(STYLES).join(', ');
+      return reply(`❌ Invalid style! Available: ${validStyles}`);
+    }
+
+    // Get nonce
+    const nonce = await getNonce();
+
+    // Prepare request
+    const body = new URLSearchParams({
+      action: 'ai_generate_image',
+      nonce,
+      prompt,
+      aspect_ratio: '1:1',
+      seed: Math.floor(Math.random() * 4294967295),
+      style_model: style
+    }).toString();
+
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 10)',
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest',
+      'Origin': 'https://flatai.org',
+      'Referer': 'https://flatai.org/ai-image-generator-free-no-signup/'
+    };
+
+    // Generate image
+    const response = await axios.post(
+      'https://flatai.org/wp-admin/admin-ajax.php',
+      body,
+      { headers, timeout: 30000 }
+    );
+
+    if (!response.data?.success) {
+      throw new Error(response.data?.data?.message || 'Generation failed');
+    }
+
+    const imageUrl = response.data.data.images?.[0];
+    if (!imageUrl) {
+      throw new Error('No image URL received');
+    }
+
+    // Send the generated image
+    await client.sendMessage(from, {
+      image: { url: imageUrl },
+      caption: `🖼️ *AI Generated Image*\n\n*Prompt:* ${prompt}\n*Style:* ${STYLES[style]}\n*Model:* flatai.org`
+    }, { quoted: mek });
+
+  } catch (error) {
+    console.error("AIPhoto Error:", error);
+    reply(`❌ Failed to generate image: ${error.message}`);
+  }
+});
+
+
 //========================================================================================================================
 keith({
   pattern: "mistral",
