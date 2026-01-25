@@ -426,37 +426,48 @@ keith({
 keith({
   pattern: "toimg",
   aliases: ["sticker2img", "webp2png"],
-  description: "Convert quoted sticker to image",
+  description: "Convert quoted sticker to image or video if animated",
   category: "Converter",
   filename: __filename
 }, async (from, client, conText) => {
-  const { quotedMsg, mek, reply, keithRandom } = conText;
+  const { quotedMsg, mek, reply } = conText;
 
   if (!quotedMsg?.stickerMessage) {
     return reply("❌ Quote a sticker to convert.");
   }
 
   try {
-    const media = await client.downloadAndSaveMediaMessage(quotedMsg.stickerMessage);
-    const output = await keithRandom('.png');
+    // Download sticker and save to temp file
+    const mediaPath = await client.downloadAndSaveMediaMessage(quotedMsg.stickerMessage);
 
-    exec(`ffmpeg -i ${media} ${output}`, async (err) => {
-      fs.unlinkSync(media);
-      if (err) return reply("❌ Conversion failed.");
+    // Check if sticker is animated
+    const isAnimated = quotedMsg.stickerMessage.isAnimated || quotedMsg.stickerMessage.isAnimatedSticker;
 
-      const buffer = fs.readFileSync(output);
+    if (isAnimated) {
+      // Send back as video
       await client.sendMessage(from, {
-        image: buffer,
+        video: fs.readFileSync(mediaPath),
+        mimetype: "video/mp4",
+        caption: "🎞️ Converted from animated sticker"
+      }, { quoted: mek });
+    } else {
+      // Send back as image
+      await client.sendMessage(from, {
+        image: fs.readFileSync(mediaPath),
         caption: "🖼️ Converted from sticker"
       }, { quoted: mek });
+    }
 
-      fs.unlinkSync(output);
-    });
+    // Clean up temp file
+    fs.unlinkSync(mediaPath);
+
   } catch (e) {
     console.error("toimg error:", e);
-    await reply("❌ Unable to convert the sticker." + e );
+    await reply("❌ Unable to convert the sticker. " + e.message);
   }
 });
+
+
 //==================================================================================================================
 keith({
   pattern: "amplify",
@@ -507,6 +518,7 @@ keith({
     await reply("❌ An error occurred while processing the media.");
   }
 });
+
 
 
 
