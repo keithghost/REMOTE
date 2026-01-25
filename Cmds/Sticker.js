@@ -211,6 +211,85 @@ keith({
   }
 });
 //========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+//========================================================================================================================
+
+// Circle pattern
+keith({
+  pattern: "circle",
+  aliases: ["stickercircle"],
+  description: "Quote a sticker and resend it as a circle style",
+  category: "Sticker",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, pushName, mek, reply } = conText;
+
+  if (!quotedMsg?.stickerMessage) {
+    return reply("❌ Quote a sticker to convert.");
+  }
+
+  try {
+    const media = quotedMsg.stickerMessage;
+    const result = await client.downloadAndSaveMediaMessage(media);
+
+    const sticker = new Sticker(result, {
+      pack: pushName,
+      author: pushName,
+      type: StickerTypes.CIRCLE,
+      categories: ["⭕"],
+      id: "circle-123",
+      quality: 70,
+      background: "transparent"
+    });
+
+    const buffer = await sticker.toBuffer();
+    await client.sendMessage(from, { sticker: buffer }, { quoted: mek });
+    fs.unlinkSync(result);
+  } catch (err) {
+    console.error("circle error:", err);
+    await reply("❌ Failed to convert sticker to circle.");
+  }
+});
+//========================================================================================================================
+
+// Rounded pattern
+keith({
+  pattern: "rounded",
+  aliases: ["stickerrounded"],
+  description: "Quote a sticker and resend it as a rounded style",
+  category: "Sticker",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { quotedMsg, pushName, mek, reply } = conText;
+
+  if (!quotedMsg?.stickerMessage) {
+    return reply("❌ Quote a sticker to convert.");
+  }
+
+  try {
+    const media = quotedMsg.stickerMessage;
+    const result = await client.downloadAndSaveMediaMessage(media);
+
+    const sticker = new Sticker(result, {
+      pack: pushName,
+      author: pushName,
+      type: StickerTypes.ROUNDED,
+      categories: ["🔵"],
+      id: "rounded-123",
+      quality: 70,
+      background: "transparent"
+    });
+
+    const buffer = await sticker.toBuffer();
+    await client.sendMessage(from, { sticker: buffer }, { quoted: mek });
+    fs.unlinkSync(result);
+  } catch (err) {
+    console.error("rounded error:", err);
+    await reply("❌ Failed to convert sticker to rounded.");
+  }
+});
+//========================================================================================================================
 keith({
   pattern: "take",
   aliases: ["restick", "grabsticker"],
