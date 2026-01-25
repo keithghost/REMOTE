@@ -215,18 +215,20 @@ keith({
 //========================================================================================================================
 //========================================================================================================================
 
-// Circle pattern
+
+//========================================================================================================================
+// From Sticker.js
+
 keith({
   pattern: "circle",
-  aliases: ["stickercircle"],
-  description: "Quote a sticker and resend it as a circle style",
+  description: "Quote a sticker and resend it with your packname and author",
   category: "Sticker",
   filename: __filename
 }, async (from, client, conText) => {
-  const { quotedMsg, pushName, mek, reply } = conText;
+  const { quotedMsg, pushName, author, mek, reply } = conText;
 
   if (!quotedMsg?.stickerMessage) {
-    return reply("❌ Quote a sticker to convert.");
+    return reply("❌ Quote a sticker to restick.");
   }
 
   try {
@@ -237,34 +239,33 @@ keith({
       pack: pushName,
       author: pushName,
       type: StickerTypes.CIRCLE,
-      categories: ["⭕"],
-      id: "circle-123",
+      categories: ["🤩", "🎉"],
+      id: "restick-123",
       quality: 70,
       background: "transparent"
     });
 
     const buffer = await sticker.toBuffer();
     await client.sendMessage(from, { sticker: buffer }, { quoted: mek });
-    fs.unlinkSync(result);
   } catch (err) {
-    console.error("circle error:", err);
-    await reply("❌ Failed to convert sticker to circle.");
+    console.error("take error:", err);
+    await reply("❌ Failed to restick the quoted sticker.");
   }
 });
 //========================================================================================================================
+// From Sticker.js
 
-// Rounded pattern
 keith({
-  pattern: "rounded",
-  aliases: ["stickerrounded"],
-  description: "Quote a sticker and resend it as a rounded style",
+  pattern: "round",
+  aliases: ["rounded"],
+  description: "Quote a sticker and resend it with your packname and author",
   category: "Sticker",
   filename: __filename
 }, async (from, client, conText) => {
-  const { quotedMsg, pushName, mek, reply } = conText;
+  const { quotedMsg, pushName, author, mek, reply } = conText;
 
   if (!quotedMsg?.stickerMessage) {
-    return reply("❌ Quote a sticker to convert.");
+    return reply("❌ Quote a sticker to restick.");
   }
 
   try {
@@ -275,20 +276,23 @@ keith({
       pack: pushName,
       author: pushName,
       type: StickerTypes.ROUNDED,
-      categories: ["🔵"],
-      id: "rounded-123",
+      categories: ["🤩", "🎉"],
+      id: "restick-123",
       quality: 70,
       background: "transparent"
     });
 
     const buffer = await sticker.toBuffer();
     await client.sendMessage(from, { sticker: buffer }, { quoted: mek });
-    fs.unlinkSync(result);
   } catch (err) {
-    console.error("rounded error:", err);
-    await reply("❌ Failed to convert sticker to rounded.");
+    console.error("take error:", err);
+    await reply("❌ Failed to restick the quoted sticker.");
   }
 });
+//========================================================================================================================
+//=======================
+//========================================================================================================================
+//=======================
 //========================================================================================================================
 keith({
   pattern: "take",
