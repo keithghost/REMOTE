@@ -10,7 +10,247 @@ const {
 } = require('../database/gpt');
 const fs = require("fs");
 const FormData = require("form-data");
+const crypto = require('crypto');
+
 const { fileTypeFromBuffer } = require("file-type");
+//========================================================================================================================
+//========================================================================================================================
+
+
+keith({
+  pattern: "rc",
+  aliases: ["undress", "nude", "removeclothes"],
+  category: "ai",
+  description: "AI clothing removal (requires quoted image)",
+  filename: __filename
+},
+async (from, client, conText) => {
+  const { q, mek, quoted, quotedMsg, reply, isSuperUser } = conText;
+
+  // Restrict to owner only for sensitive command
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  
+  if (!quotedMsg || !quoted?.imageMessage) {
+    return reply("📷 Reply to an image with .rc command");
+  }
+
+  try {
+    reply("🔄 Processing image...");
+    
+    // Download the image
+    const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+    const buffer = fs.readFileSync(filePath);
+    
+    // Clean up temp file
+    fs.unlinkSync(filePath);
+    
+    // Use prompt or default
+    const prompt = q ? q.trim().toLowerCase() : 'nude';
+    
+    // Validate prompt
+    const validPrompts = ['nude', 'bikini', 'topless', 'underwear', 'naked', 'swimsuit', 'lingerie'];
+    if (!validPrompts.includes(prompt)) {
+      console.log(`⚠️ Using default prompt: nude\nValid prompts: ${validPrompts.join(', ')}`);
+      prompt = 'nude';
+    }
+
+    // Encryption functions
+    const aesEncrypt = (data, key, iv) => {  
+      const cipher = crypto.createCipheriv('aes-128-cbc', Buffer.from(key, 'utf8'), Buffer.from(iv, 'utf8'));  
+      let encrypted = cipher.update(data, 'utf8', 'base64');  
+      encrypted += cipher.final('base64');  
+      return encrypted;  
+    };  
+
+    const genRandom = (len) => {  
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';  
+      let result = '';  
+      const randomBytes = crypto.randomBytes(len);  
+      for (let i = 0; i < len; i++) {  
+        result += chars[randomBytes[i] % chars.length];  
+      }  
+      return result;  
+    };  
+
+    // Generate encryption parameters
+    const t = Math.floor(Date.now() / 1000).toString();  
+    const nonce = crypto.randomUUID();  
+    const tempAesKey = genRandom(16);  
+    
+    if (!tempAesKey || tempAesKey.length !== 16) {
+      throw new Error('Failed to generate encryption key');
+    }
+
+    const publicKey = `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDa2oPxMZe71V4dw2r8rHWt59gH
+W5INRmlhepe6GUanrHykqKdlIB4kcJiu8dHC/FJeppOXVoKz82pvwZCmSUrF/1yr
+rnmUDjqUefDu8myjhcbio6CnG5TtQfwN2pz3g6yHkLgp8cFfyPSWwyOCMMMsTU9s
+snOjvdDb4wiZI8x3UwIDAQAB
+-----END PUBLIC KEY-----`;
+    
+    const tempAesKeyBuffer = Buffer.from(tempAesKey, 'utf8');
+    
+    let secret_key;
+    try {
+      secret_key = crypto.publicEncrypt({  
+        key: publicKey,  
+        padding: crypto.constants.RSA_PKCS1_PADDING,  
+      }, tempAesKeyBuffer).toString('base64');  
+    } catch (rsaError) {
+      throw new Error(`RSA encryption failed: ${rsaError.message}`);
+    }
+
+    const userId = genRandom(64).toLowerCase();  
+    const signData = `ai_df:NHGNy5YFz7HeFb:${t}:${nonce}:${secret_key}`;
+    const sign = aesEncrypt(signData, tempAesKey, tempAesKey);
+
+    // Create axios instance with parameters
+    const instance = axios.create({  
+      baseURL: 'https://apiv1.deepfakemaker.io/api',  
+      params: {  
+        app_id: 'ai_df',  
+        t, 
+        nonce, 
+        secret_key,  
+        sign,  
+      },  
+      headers: {  
+        'accept': 'application/json',
+        'content-type': 'application/json',  
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',  
+        'referer': 'https://deepfakemaker.io/ai-clothes-remover/'  
+      },
+      timeout: 30000
+    });  
+
+    // Step 1: Get upload signature
+    console.log("📤 Getting upload URL...");
+    
+    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+    const filename = genRandom(32) + '_' + Date.now() + '.jpg';
+    
+    let uploadResponse;
+    try {
+      uploadResponse = await instance.post('/user/v2/upload-sign', {  
+        filename: filename,  
+        hash: hash,  
+        user_id: userId  
+      });
+    } catch (uploadError) {
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+
+    if (!uploadResponse.data?.data?.url) {
+      throw new Error('Failed to get upload URL from API');
+    }
+
+    // Step 2: Upload image to the signed URL
+    console.log("📤 Uploading image...");
+    
+    try {
+      await axios.put(uploadResponse.data.data.url, buffer, {  
+        headers: {  
+          'content-type': 'image/jpeg',  
+          'content-length': buffer.length.toString()  
+        },
+        timeout: 30000
+      });  
+    } catch (putError) {
+      throw new Error(`Image upload failed: ${putError.message}`);
+    }
+
+    // Step 3: Get Cloudflare token
+    console.log("🔑 Getting security token...");
+    
+    let cfToken;
+    try {
+      const cfResponse = await axios.post('https://x1st-cf.hf.space/action', {  
+        url: 'https://deepfakemaker.io/ai-clothes-remover/',  
+        mode: 'turnstile-min',  
+        siteKey: '0x4AAAAAAB6PHmfUkQvGufDI'  
+      }, {
+        timeout: 10000
+      });
+      cfToken = cfResponse.data?.data?.token;
+    } catch (cfError) {
+      throw new Error(`Cloudflare token failed: ${cfError.message}`);
+    }
+
+    if (!cfToken) {
+      throw new Error('Failed to get security token from Cloudflare');
+    }
+
+    // Step 4: Create processing task
+    console.log("🎨 Creating AI task...");
+    
+    let taskResponse;
+    try {
+      taskResponse = await instance.post('/img/v2/free/clothes/remover/task', {  
+        prompt: prompt,  
+        image: 'https://cdn.deepfakemaker.io/' + uploadResponse.data.data.object_name,  
+        platform: 'clothes_remover',  
+        user_id: userId  
+      }, {  
+        headers: {  
+          'token': cfToken  
+        }  
+      });
+    } catch (taskError) {
+      throw new Error(`Task creation failed: ${taskError.message}`);
+    }
+
+    if (!taskResponse.data?.data?.task_id) {
+      throw new Error('Failed to create processing task');
+    }
+
+    const taskId = taskResponse.data.data.task_id;
+    
+    // Step 5: Poll for results
+    console.log("⏳ Processing... (20-40 seconds)");
+    
+    let attempts = 0;
+    const maxAttempts = 40; // 40 * 2.5s = 100 seconds max
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      
+      try {
+        const checkResponse = await instance.get('/img/v2/free/clothes/remover/task', {  
+          params: {  
+            user_id: userId,  
+            task_id: taskId  
+          }  
+        });
+
+        if (checkResponse.data?.msg === 'success' && checkResponse.data?.data?.generate_url) {
+          // Success! Send the image
+          console.log("✅ Processing complete! Sending result...");
+          
+          await client.sendMessage(from, {
+            image: { url: checkResponse.data.data.generate_url },
+            caption: `🖼️ AI Processed Image\nPrompt: ${prompt}`
+          }, { quoted: mek });
+          
+          return;
+        } else if (checkResponse.data?.msg === 'failed') {
+          throw new Error('Processing failed on server side');
+        }
+        
+      } catch (pollError) {
+        // Log but continue polling
+        console.log(`Poll attempt ${attempts} error:`, pollError.message);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 2500)); // Wait 2.5 seconds
+    }
+
+    throw new Error('Processing timeout after 100 seconds');
+
+  } catch (error) {
+    console.error("RC Error:", error);
+    reply(`❌ Error: ${error.message}`);
+  }
+});
 //========================================================================================================================
 
 
