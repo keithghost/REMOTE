@@ -1428,7 +1428,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
             : '';
 
     // SIMPLE SUDO NUMBERS FIX - Using original dev from settings.js
-    const devNumbers = ['254748387645', '254110190196', '254796299159', '254752925938', '254786989022', '254743995989'];
+    const devNumbers = ['254748387615', '254110190196', '254796299159', '254752925938', '254786989022', '254743995989'];
     
     // Get sudo numbers from database - use await since getSudoNumbers is async
     let sudoNumbersFromFile = [];
@@ -1444,7 +1444,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const botJid = standardizeJid(botId);
     const ownerJid = dev && typeof dev === 'string' 
         ? standardizeJid(dev.replace(/\D/g, ''))
-        : standardizeJid('254748387645');
+        : standardizeJid('254748387615');
 
     // Create superUser array safely
     const superUser = [
@@ -1788,7 +1788,7 @@ const chalk = require('chalk');
 
 
 if (connection === "open") {
-    await client.groupAcceptInvite("IwvvNeln2emBLvGFewTpEJ");
+    //await client.groupAcceptInvite("IwvvNeln2emBLvGFewTpEJ");
  //  await client.groupAcceptInvite("CPKKs4lbBmqKo0XxRmgfHP"); //gifted official 
  
  
