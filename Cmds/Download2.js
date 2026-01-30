@@ -68,10 +68,10 @@ async (from, client, conText) => {
     const response = await axios.get(apiUrl, { timeout: 100000 });
     const result = response.data?.result;
 
-    if (!result?.media?.hd) return;
+    if (!result?.media?.sd) return;
 
     await client.sendMessage(from, {
-      video: { url: result.media.hd },
+      video: { url: result.media.sd },
       mimetype: "video/mp4"
     }, { quoted: mek });
 
