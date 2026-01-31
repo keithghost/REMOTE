@@ -199,13 +199,7 @@ keith({
     return reply("This command only works in groups!");
   }
 
-  if (!isAdmin) {
-    const userNumber = sender.split('@')[0];
-    return client.sendMessage(from, { 
-      text: `@${userNumber} you are not an admin`, 
-      mentions: [`${userNumber}@s.whatsapp.net`]
-    }, { quoted: mek });
-  }
+  
 
   if (!isBotAdmin) {
     const userNumber = sender.split('@')[0];
@@ -293,13 +287,6 @@ async (from, client, conText) => {
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return reply("This command only works in groups!");
 
-  if (!isAdmin) {
-    const userNumber = sender.split('@')[0];
-    return client.sendMessage(from, {
-      text: `@${userNumber} you are not an admin`,
-      mentions: [`${userNumber}@s.whatsapp.net`]
-    }, { quoted: mek });
-  }
 
   if (!isBotAdmin) {
     const userNumber = sender.split('@')[0];
@@ -385,13 +372,7 @@ async (from, client, conText) => {
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return reply("This command only works in groups!");
 
-  if (!isAdmin) {
-    const userNumber = sender.split('@')[0];
-    return client.sendMessage(from, {
-      text: `@${userNumber} you are not an admin`,
-      mentions: [`${userNumber}@s.whatsapp.net`]
-    }, { quoted: mek });
-  }
+  
 
   if (!isBotAdmin) {
     const userNumber = sender.split('@')[0];
@@ -868,13 +849,7 @@ async (from, client, conText) => {
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return reply("Groups Only Command only");
 
-  if (!isAdmin) {
-    const userNumber = sender.split('@')[0];
-    return client.sendMessage(from, {
-      text: `@${userNumber} you are not an admin`,
-      mentions: [`${userNumber}@s.whatsapp.net`]
-    });
-  }
+  
 
   if (!isBotAdmin) {
     const userNumber = sender.split('@')[0];
@@ -915,13 +890,6 @@ async (from, client, conText) => {
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return reply("Groups Only Command only");
 
-  if (!isAdmin) {
-    const userNumber = sender.split('@')[0];
-    return client.sendMessage(from, {
-      text: `@${userNumber} you are not an admin`,
-      mentions: [`${userNumber}@s.whatsapp.net`]
-    });
-  }
 
   if (!isBotAdmin) {
     const userNumber = sender.split('@')[0];
@@ -1069,7 +1037,7 @@ async (from, client, conText) => {
   const { reply, isGroup, isAdmin, isBotAdmin } = conText;
 
   if (!isGroup) return reply("This command is meant for groups");
-  if (!isAdmin) return reply("You need admin privileges");
+//  if (!isAdmin) return reply("You need admin privileges");
   if (!isBotAdmin) return reply("I need admin privileges");
 
   const responseList = await client.groupRequestParticipantsList(from);
@@ -1215,13 +1183,7 @@ async (from, client, conText) => {
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return client.sendMessage(from, { text: "Groups Only Command only" });
 
-  if (!isAdmin) {
-    const userNumber = sender.split('@')[0];
-    return client.sendMessage(from, {
-      text: `@${userNumber} you are not an admin`,
-      mentions: [`${userNumber}@s.whatsapp.net`]
-    });
-  }
+  
 
   if (!isBotAdmin) {
     const userNumber = sender.split('@')[0];
@@ -1252,13 +1214,7 @@ async (from, client, conText) => {
   if (!isSuperUser) return reply("❌ Owner Only Command!");
   if (!isGroup) return client.sendMessage(from, { text: "Groups Only Command only" });
 
-  if (!isAdmin) {
-    const userNumber = sender.split('@')[0];
-    return client.sendMessage(from, {
-      text: `@${userNumber} you are not an admin`,
-      mentions: [`${userNumber}@s.whatsapp.net`]
-    });
-  }
+  
 
   if (!isBotAdmin) {
     const userNumber = sender.split('@')[0];
@@ -1279,6 +1235,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
