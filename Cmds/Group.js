@@ -26,6 +26,74 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "togroupstatus",
+  aliases: ["groupstatus", "statusgroup"],
+  category: "group",
+  description: "Send quoted text or media to group status",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, quoted, quotedMsg, mek, reply, isSuperUser } = conText;
+
+  // ✅ Superuser check from context
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q && !quotedMsg) {
+    return reply(
+      "📌 Usage:\n" +
+      "• togroupstatus <text>\n" +
+      "• Reply to an image/video/audio/document/sticker with togroupstatus <caption>\n" +
+      "• Or just togroupstatus to forward quoted media without caption"
+    );
+  }
+
+  try {
+    let payload = { groupStatusMessage: {} };
+
+    if (quotedMsg) {
+      // Handle quoted media types
+      if (quoted?.imageMessage) {
+        const caption = q || quoted.imageMessage.caption || "";
+        const filePath = await client.downloadAndSaveMediaMessage(quoted.imageMessage);
+        payload.groupStatusMessage.image = { url: filePath };
+        if (caption) payload.groupStatusMessage.caption = caption;
+      } else if (quoted?.videoMessage) {
+        const caption = q || quoted.videoMessage.caption || "";
+        const filePath = await client.downloadAndSaveMediaMessage(quoted.videoMessage);
+        payload.groupStatusMessage.video = { url: filePath };
+        if (caption) payload.groupStatusMessage.caption = caption;
+      } else if (quoted?.audioMessage) {
+        const filePath = await client.downloadAndSaveMediaMessage(quoted.audioMessage);
+        payload.groupStatusMessage.audio = { url: filePath };
+      } else if (quoted?.documentMessage) {
+        const filePath = await client.downloadAndSaveMediaMessage(quoted.documentMessage);
+        payload.groupStatusMessage.document = { url: filePath };
+      } else if (quoted?.stickerMessage) {
+        const filePath = await client.downloadAndSaveMediaMessage(quoted.stickerMessage);
+        payload.groupStatusMessage.sticker = { url: filePath };
+      } else if (quoted?.conversation || quoted?.extendedTextMessage?.text) {
+        payload.groupStatusMessage.text =
+          quoted.conversation || quoted.extendedTextMessage.text;
+      }
+
+      // If user supplied caption with quoted media
+      if (q && !payload.groupStatusMessage.caption) {
+        payload.groupStatusMessage.caption = q;
+      }
+    } else {
+      // Plain text status
+      payload.groupStatusMessage.text = q;
+    }
+
+    await client.sendMessage(from, payload, { quoted: mek });
+    await reply("✅ Group status sent.");
+  } catch (err) {
+    console.error("togroupstatus error:", err);
+    await reply(`❌ Error sending group status: ${err.message}`);
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "creategc",
@@ -1235,6 +1303,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
