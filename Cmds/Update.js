@@ -1,4 +1,3 @@
-
 const { keith } = require('../commandHandler');
 const { database } = require('../settings');
 const { DataTypes } = require('sequelize');
@@ -44,13 +43,20 @@ async function setCurrentHash(hash) {
   }, { where: { id: 1 } });
 }
 
-// File Sync
+// File Sync with database preservation
 async function syncFiles(source, target) {
-  const preserve = ['app.json', 'settings.js', 'set.env'];
+  const preserveFiles = ['app.json', 'settings.js', 'set.env'];
+  const preserveFolders = ['database', 'backups', 'logs'];
+  
   const items = await fs.readdir(source);
 
   for (const item of items) {
-    if (preserve.includes(item)) continue;
+    // Skip preserved files
+    if (preserveFiles.includes(item)) continue;
+    
+    // Skip preserved folders
+    if (preserveFolders.includes(item)) continue;
+    
     const srcPath = path.join(source, item);
     const destPath = path.join(target, item);
     const stat = await fs.lstat(srcPath);
@@ -62,6 +68,26 @@ async function syncFiles(source, target) {
       await fs.copy(srcPath, destPath);
     }
   }
+}
+
+// Backup database before update (optional safety)
+async function backupDatabase() {
+  const backupDir = path.join(__dirname, '..', 'backups');
+  const dbDir = path.join(__dirname, '..', 'database');
+  
+  if (await fs.pathExists(dbDir)) {
+    await fs.ensureDir(backupDir);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = path.join(backupDir, `backup-${timestamp}.zip`);
+    
+    const zip = new AdmZip();
+    zip.addLocalFolder(dbDir, 'database');
+    zip.writeZip(backupPath);
+    
+    console.log(`📦 Database backed up to: ${backupPath}`);
+    return backupPath;
+  }
+  return null;
 }
 
 // Update Command
@@ -91,6 +117,10 @@ keith({
       return reply("✅ Already running the latest version!");
     }
 
+    // Create backup before updating
+    await reply("💾 Creating database backup...");
+    await backupDatabase();
+
     await reply("⬇️ Downloading update...");
     const zipUrl = `https://github.com/${repo}/archive/${commit.sha}.zip`;
     const zipPath = path.join(__dirname, '..', 'temp_update.zip');
@@ -118,14 +148,21 @@ keith({
       .find(name => name.startsWith('KEITH-MD-'));
     const updateSrc = path.join(extractPath, extractedFolder);
 
-    await reply("🔄 Applying update...");
+    await reply("🔄 Applying update (preserving database)...");
     await syncFiles(updateSrc, path.join(__dirname, '..'));
     await setCurrentHash(commit.sha);
 
-    await reply("✅ Update complete! Restarting...");
+    await reply("🧹 Cleaning up temporary files...");
     fs.unlinkSync(zipPath);
     fs.removeSync(extractPath);
-    process.exit(0);
+
+    await reply("✅ Update complete! Restarting in 3 seconds...");
+    
+    // Give time for message to be sent
+    setTimeout(() => {
+      process.exit(0);
+    }, 3000);
+    
   } catch (err) {
     console.error("❗ Update failed:", err);
     await reply(`❌ Update failed: ${err.message}`);
