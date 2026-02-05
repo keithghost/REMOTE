@@ -18,7 +18,232 @@ const { getPresenceSettings, updatePresenceSettings } = require('../database/pre
 const { updateSettings, getSettings } = require('../database/settings');
 const { getGroupEventsSettings, updateGroupEventsSettings } = require('../database/groupevents');
 const { getAntiCallSettings, updateAntiCallSettings } = require('../database/anticall');
+// From Owner.js
 
+//const { keith } = require("../commandHandler");
+const {
+  initNotesDB,
+  addNote,
+  removeNote,
+  getNotes,
+  getNote,
+  clearNotes,
+  updateNote
+} = require("../database/notes");
+
+// ✅ Initialize notes table on startup
+initNotesDB().catch(err => {
+  console.error("Failed to initialize notes database:", err);
+});
+
+// Unicode box separators
+const BOX_TOP    = "╭━━━━━━━━━━━━━━━╮";
+const BOX_MIDDLE = "├━━━━━━━━━━━━━━━┤";
+const BOX_BOTTOM = "╰━━━━━━━━━━━━━━━╯";
+
+function formatDate(dateObj) {
+  return new Date(dateObj).toLocaleString("en-GB", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+// ➕ Add note
+keith({
+  pattern: "note",
+  aliases: ["addnote", "newnote"],
+  category: "Owner",
+  description: "Add a new note (usage: .note <title>|<content> or reply to text with .note <title>)",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, quotedMsg, reply, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ Owner only command!");
+
+  try {
+    let title, content;
+
+    if (quotedMsg) {
+      const quotedText = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text;
+      if (!quotedText) return reply("❌ Quoted message has no text.");
+      if (!q) return reply("📌 Usage when quoting: .note <title>");
+      title = q.trim();
+      content = quotedText;
+    } else {
+      if (!q || !q.includes("|")) {
+        return reply("📌 Usage: .note <title>|<content> or reply to text with .note <title>");
+      }
+      [title, content] = q.split("|").map(s => s.trim());
+    }
+
+    const note = await addNote(title, content);
+    reply(`✅ Note added:\n${BOX_TOP}\n│ ID: ${note.id}\n${BOX_MIDDLE}\n│ Title: ${note.title}\n${BOX_BOTTOM}`);
+  } catch (err) {
+    reply(`❌ Failed to add note: ${err.message}`);
+  }
+});
+
+// 📋 List notes
+keith({
+  pattern: "listnote",
+  aliases: ["notes", "shownotes"],
+  category: "Owner",
+  description: "List all notes",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, mek, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ Owner only command!");
+
+  try {
+    const notes = await getNotes(); // ascending order
+    if (!notes.length) return reply("📭 No notes found.");
+
+    const formatted = notes.map((n, idx) =>
+      `${BOX_TOP}\n│ ${idx + 1}. ${n.title}\n${BOX_MIDDLE}\n│ ${formatDate(n.createdAt)}\n${BOX_BOTTOM}`
+    ).join("\n\n");
+
+    const caption = `📒 *Your Notes* (${notes.length} total)\n\n${formatted}\n\n📌 *Reply with a number to view a note*`;
+
+    const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+    const messageId = sent.key.id;
+
+    client.ev.on("messages.upsert", async (update) => {
+      const msg = update.messages[0];
+      if (!msg.message) return;
+
+      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      const chatId = msg.key.remoteJid;
+
+      if (!isReply || !responseText) return;
+
+      const index = parseInt(responseText.trim());
+      if (isNaN(index) || index < 1 || index > notes.length) {
+        return client.sendMessage(chatId, {
+          text: `❌ Invalid number. Please reply with a number between 1 and ${notes.length}.`,
+          quoted: msg
+        });
+      }
+
+      await client.sendMessage(chatId, { react: { text: "📝", key: msg.key } });
+
+      try {
+        const note = notes[index - 1];
+        if (!note) {
+          return client.sendMessage(chatId, {
+            text: `❌ Note #${index} not found.`,
+            quoted: msg
+          });
+        }
+
+        // ✅ Only return the plain note content
+        await client.sendMessage(chatId, { text: note.content }, { quoted: msg });
+      } catch (err) {
+        console.error("Error fetching note:", err);
+        await client.sendMessage(chatId, {
+          text: `❌ Error fetching note #${index}: ${err.message}`,
+          quoted: msg
+        });
+      }
+    });
+  } catch (err) {
+    reply(`❌ Failed to list notes: ${err.message}`);
+  }
+});
+
+// 👁️ View note
+keith({
+  pattern: "viewnote",
+  aliases: ["shownote", "getnote"],
+  category: "Owner",
+  description: "View a note by ID (usage: .viewnote <id>)",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ Owner only command!");
+  if (!q) return reply("📌 Usage: .viewnote <id>");
+  try {
+    const note = await getNote(Number(q));
+    if (!note) return reply("❌ Note not found.");
+    reply(note.content); // plain content only
+  } catch (err) {
+    reply(`❌ Failed to get note: ${err.message}`);
+  }
+});
+
+// ✏️ Update note
+keith({
+  pattern: "updatenote",
+  aliases: ["editnote"],
+  category: "Owner",
+  description: "Update a note (usage: .updatenote <id>|<new content> or reply to text with .updatenote <id>)",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, quotedMsg, reply, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ Owner only command!");
+
+  try {
+    let id, content;
+
+    if (quotedMsg) {
+      const quotedText = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text;
+      if (!quotedText) return reply("❌ Quoted message has no text.");
+      if (!q) return reply("📌 Usage when quoting: .updatenote <id>");
+      id = Number(q.trim());
+      content = quotedText;
+    } else {
+      if (!q || !q.includes("|")) return reply("📌 Usage: .updatenote <id>|<new content>");
+      [id, content] = q.split("|").map(s => s.trim());
+      id = Number(id);
+    }
+
+    const updated = await updateNote(id, { content });
+    reply(`✅ Note updated:\n${BOX_TOP}\n│ ${updated.id}. ${updated.title}\n${BOX_MIDDLE}\n│ ${formatDate(updated.createdAt)}\n${BOX_BOTTOM}`);
+  } catch (err) {
+    reply(`❌ Failed to update note: ${err.message}`);
+  }
+});
+
+// 🗑️ Remove note
+keith({
+  pattern: "removenote",
+  aliases: ["deletenote"],
+  category: "Owner",
+  description: "Remove a note by ID (usage: .removenote <id>)",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ Owner only command!");
+  if (!q) return reply("📌 Usage: .removenote <id>");
+  try {
+    const removed = await removeNote(Number(q));
+    if (!removed) return reply("❌ Note not found.");
+    reply(`🗑️ Note ${q} removed.`);
+  } catch (err) {
+    reply(`❌ Failed to remove note: ${err.message}`);
+  }
+});
+
+// 🧹 Clear notes
+keith({
+  pattern: "clearnotes",
+  aliases: ["resetnotes"],
+  category: "Owner",
+  description: "Clear all notes",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+  if (!isSuperUser) return reply("❌ Owner only command!");
+  try {
+    await clearNotes();
+    reply("🗑️ All notes cleared.");
+  } catch (err) {
+    reply(`❌ Failed to clear notes: ${err.message}`);
+  }
+});
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
