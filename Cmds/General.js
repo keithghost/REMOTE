@@ -132,7 +132,7 @@ keith({
 //========================================================================================================================
 //const { keith } = require("../commandHandler");
 
-/*keith({
+keith({
   pattern: "groupanon",
   aliases: ["ganon", "grouptext"],
   description: "Send custom text or quoted media anonymously to one or more groups",
@@ -283,7 +283,7 @@ keith({
     console.error("anon command error:", err);
     reply("❌ Failed to send your message.");
   }
-});*/
+});
 //========================================================================================================================
 
 //const { keith } = require("../commandHandler");
