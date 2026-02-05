@@ -31,7 +31,7 @@ const {
   updateNote
 } = require("../database/notes");
 
-// ✅ Initialize notes table on startup
+// ✅ Initialize notes table on startupp
 initNotesDB().catch(err => {
   console.error("Failed to initialize notes database:", err);
 });
