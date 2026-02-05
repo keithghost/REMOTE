@@ -64,7 +64,7 @@ keith({
   description: "Add a new note (usage: .note <title>|<content> or reply to text with .note <title>)",
   filename: __filename
 }, async (from, client, conText) => {
-  const { q, quotedMsg, reply, isSuperUser } = conText;
+  const { q, quotedMsg, reply, isSuperUser, timeZone } = conText;
   if (!isSuperUser) return reply("❌ Owner only command!");
 
   try {
@@ -252,7 +252,7 @@ keith({
 //const { keith } = require('../commandHandler');
 
 keith({
-  pattern: "anticall",8
+  pattern: "anticall",
   aliases: ["callset", "anticallsetting"],
   description: "Manage anti-call settings",
   category: "Settings",
