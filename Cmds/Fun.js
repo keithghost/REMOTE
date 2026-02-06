@@ -14,6 +14,129 @@ const axios = require('axios');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+const BOX_TOP    = "╭━━━━━━━━━━━━━━━╮";
+const BOX_MIDDLE = "├━━━━━━━━━━━━━━━┤";
+const BOX_BOTTOM = "╰━━━━━━━━━━━━━━━╯";
+
+// 🎬 Search dramas
+keith({
+  pattern: "drama",
+  aliases: ["dramasearch", "dramas"],
+  category: "Movie",
+  description: "Search drama movies (usage: .drama <keyword>)",
+  filename: __filename
+}, async (from, client, conText) => {
+  const { q, reply, mek } = conText;
+  if (!q) return reply("📌 Usage: .drama <keyword>");
+
+  try {
+    const res = await axios.get(`https://apiskeith.vercel.app/dramabox/search?q=${encodeURIComponent(q)}`);
+    const results = res.data.result;
+    if (!results || !results.length) return reply("📭 No dramas found.");
+
+    const formatted = results.map((d, idx) =>
+      `${BOX_TOP}\n│ ${idx + 1}. ${d.title}\n│ Id ${d.book_id}\n${BOX_MIDDLE}\n│ Views: ${d.views}\n${BOX_BOTTOM}`
+    ).join("\n\n");
+
+    const caption = `🎬 *Drama Search Results* (${results.length} total)\n\n${formatted}\n\n📌 *Reply with a number to view episodes*`;
+
+    const sent = await client.sendMessage(from, { text: caption }, { quoted: mek });
+    const messageId = sent.key.id;
+
+    // Listen for replies to search results
+    client.ev.on("messages.upsert", async (update) => {
+      const msg = update.messages[0];
+      if (!msg.message) return;
+
+      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      const chatId = msg.key.remoteJid;
+
+      if (!isReply || !responseText) return;
+
+      const index = parseInt(responseText.trim());
+      if (isNaN(index) || index < 1 || index > results.length) {
+        return client.sendMessage(chatId, {
+          text: `❌ Invalid number. Please reply with a number between 1 and ${results.length}.`,
+          quoted: msg
+        });
+      }
+
+      await client.sendMessage(chatId, { react: { text: "🎬", key: msg.key } });
+
+      try {
+        const drama = results[index - 1];
+        const detailRes = await axios.get(`https://apiskeith.vercel.app/dramabox/detail?bookId=${drama.book_id}`);
+        const detail = detailRes.data.result;
+
+        // ✅ Show drama details with image
+        await client.sendMessage(chatId, {
+          image: { url: detail.thumbnail },
+          caption: `🎬 *${detail.title}*\n\n📝 ${detail.description}\n📅 Uploaded: ${detail.upload_date}`
+        }, { quoted: msg });
+
+        const episodes = detail.episode_list;
+        const epFormatted = episodes.map((ep, idx) =>
+          `${BOX_TOP}\n│ ${idx + 1}. Episode ${ep.episode}\n│ Id ${ep.id}\n${BOX_BOTTOM}`
+        ).join("\n\n");
+
+        const epCaption = `📺 *${detail.title}* — Episodes (${episodes.length} total)\n\n${epFormatted}\n\n📌 *Reply with an episode number to get stream*`;
+
+        const epSent = await client.sendMessage(chatId, { text: epCaption }, { quoted: msg });
+        const epMessageId = epSent.key.id;
+
+        // Listen for replies to episode list
+        client.ev.on("messages.upsert", async (epUpdate) => {
+          const epMsg = epUpdate.messages[0];
+          if (!epMsg.message) return;
+
+          const epResponse = epMsg.message.conversation || epMsg.message.extendedTextMessage?.text;
+          const isEpReply = epMsg.message.extendedTextMessage?.contextInfo?.stanzaId === epMessageId;
+          const epChatId = epMsg.key.remoteJid;
+
+          if (!isEpReply || !epResponse) return;
+
+          const epIndex = parseInt(epResponse.trim());
+          if (isNaN(epIndex) || epIndex < 1 || epIndex > episodes.length) {
+            return client.sendMessage(epChatId, {
+              text: `❌ Invalid episode number. Please reply with a number between 1 and ${episodes.length}.`,
+              quoted: epMsg
+            });
+          }
+
+          await client.sendMessage(epChatId, { react: { text: "📺", key: epMsg.key } });
+
+          try {
+            const episode = episodes[epIndex - 1];
+            const streamRes = await axios.get(`https://apiskeith.vercel.app/dramabox/stream?bookId=${drama.book_id}&episode=${episode.episode}`);
+            const stream = streamRes.data.result;
+
+            // ✅ Send video directly with video/mp4 mimetype
+            await client.sendMessage(epChatId, {
+              video: { url: stream.video_url },
+              mimetype: "video/mp4",
+              caption: `▶️ *${detail.title}* — Episode ${episode.episode}`
+            }, { quoted: epMsg });
+          } catch (err) {
+            await client.sendMessage(epChatId, {
+              text: `❌ Error fetching stream: ${err.message}`,
+              quoted: epMsg
+            });
+          }
+        });
+      } catch (err) {
+        await client.sendMessage(chatId, {
+          text: `❌ Error fetching drama detail: ${err.message}`,
+          quoted: msg
+        });
+      }
+    });
+  } catch (err) {
+    reply(`❌ Failed to search dramas: ${err.message}`);
+  }
+});
 //========================================================================================================================
 
 keith({
