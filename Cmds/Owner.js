@@ -31,6 +31,46 @@ const util = require('util');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "setgpp",
+  aliases: ["setgpp", "groupfullpp", "gupdateprofile", "gfullpp"],
+  category: "group",
+  description: "Set group profile picture (raw upload, no resizing)"
+},
+async (from, client, conText) => {
+  const { reply, quoted, isSuperUser, isGroup } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command can only be used in a group!");
+
+  let tempFilePath;
+  try {
+    const quotedImg = quoted?.imageMessage || quoted?.message?.imageMessage;
+    if (!quotedImg) return reply("📸 Quote an image to set as group profile picture.");
+
+    // Download quoted image directly
+    tempFilePath = await client.downloadAndSaveMediaMessage(quotedImg, 'temp_media');
+
+    // Get group metadata
+    const metadata = await client.groupMetadata(from);
+    const groupId = metadata.id;
+
+    // ✅ Upload image as-is (no resizing)
+    if (client.updateProfilePicture) {
+      await client.updateProfilePicture(groupId, { url: tempFilePath });
+      await fs.unlink(tempFilePath);
+      return reply("✅ Group profile picture updated successfully");
+    }
+
+    reply("❌ updateProfilePicture method not available in this Baileys version.");
+
+  } catch (err) {
+    console.error("gpp error:", err);
+    if (tempFilePath) await fs.unlink(tempFilePath).catch(() => {});
+    reply(`❌ Failed to update group profile picture.\nError: ${err.message}`);
+  }
+});
+
 //========================================================================================================================
 
 
