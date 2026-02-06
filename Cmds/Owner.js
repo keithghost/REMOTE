@@ -33,7 +33,7 @@ const util = require('util');
 //========================================================================================================================
 keith({
   pattern: "setgpp",
-  aliases: ["setgpp", "groupfullpp", "gupdateprofile", "gfullpp"],
+  aliases: ["gcpic", "groupfullpp", "gupdateprofile", "gfullpp"],
   category: "group",
   description: "Set group profile picture (raw upload, no resizing)"
 },
