@@ -2,7 +2,7 @@ const { keith } = require('../commandHandler');
 const { getBinaryNodeChild, getBinaryNodeChildren, S_WHATSAPP_NET } = require('@whiskeysockets/baileys');
 const axios = require('axios');
 const fs = require('fs');
-
+const fs = require('fs/promises');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
@@ -698,53 +698,47 @@ async (from, client, conText) => {
 
 
 
+
 keith({
-  pattern: "gcpic",
-  aliases: ["setgcpic", "groupfullpp"],
+  pattern: "setgpp",
+  aliases: ["setgpp", "groupfullpp", "gupdateprofile", "gfullpp"],
   category: "group",
-  description: "Set group profile picture from a quoted image"
+  description: "Set group profile picture (raw upload, no resizing)"
 },
 async (from, client, conText) => {
-  const { reply, quoted, isSuperUser, isGroup, isBotAdmin } = conText;
+  const { reply, quoted, isSuperUser, isGroup } = conText;
 
   if (!isSuperUser) return reply("❌ Owner Only Command!");
-  if (!isGroup) return reply("❌ This command only works in groups!");
-  if (!isBotAdmin) return reply("❌ Bot must be an admin to update group profile.");
+  if (!isGroup) return reply("❌ This command can only be used in a group!");
 
   let tempFilePath;
-
   try {
-    // Check if quoted message contains an image
     const quotedImg = quoted?.imageMessage || quoted?.message?.imageMessage;
     if (!quotedImg) return reply("📸 Quote an image to set as group profile picture.");
 
-    // Download quoted image
+    // Download quoted image directly
     tempFilePath = await client.downloadAndSaveMediaMessage(quotedImg, 'temp_media');
 
-    // Resize to fit WhatsApp requirements
-    const image = await Jimp.read(tempFilePath);
-    const resized = await image.scaleToFit(720, 720);
-    const buffer = await resized.getBufferAsync(Jimp.MIME_JPEG);
+    // Get group metadata
+    const metadata = await client.groupMetadata(from);
+    const groupId = metadata.id;
 
-    // Build IQ node for group profile update
-    const iqNode = {
-      tag: "iq",
-      attrs: { to: S_WHATSAPP_NET, type: "set", xmlns: "w:profile:picture", target: from },
-      content: [{ tag: "picture", attrs: { type: "image" }, content: buffer }]
-    };
+    // ✅ Upload image as-is (no resizing)
+    if (client.updateProfilePicture) {
+      await client.updateProfilePicture(groupId, { url: tempFilePath });
+      await fs.unlink(tempFilePath);
+      return reply("✅ Group profile picture updated successfully");
+    }
 
-    await client.query(iqNode);
-
-    // Clean up
-    await fs.unlink(tempFilePath);
-    reply("✅ Group profile picture updated successfully (full image).");
+    reply("❌ updateProfilePicture method not available in this Baileys version.");
 
   } catch (err) {
-    console.error("gcpic error:", err);
+    console.error("gpp error:", err);
     if (tempFilePath) await fs.unlink(tempFilePath).catch(() => {});
     reply(`❌ Failed to update group profile picture.\nError: ${err.message}`);
   }
 });
+
 //========================================================================================================================
 
 
@@ -1269,6 +1263,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
