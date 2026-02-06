@@ -520,41 +520,7 @@ async (from, client, conText) => {
 });
 //========================================================================================================================
  
-// From Group.js
 
-keith({
-  pattern: "listonline",
-  aliases: ["online", "isonline"],
-  category: "group",
-  description: "List group members and trigger presence update"
-},
-async (from, client, conText) => {
-  const { reply, isGroup } = conText;
-
-  if (!isGroup) return reply("❌ This command only works in groups!");
-
-  try {
-    const metadata = await client.groupMetadata(from);
-    const members = metadata.participants.map(p => p.id);
-
-    // Trigger presence update for each member
-    for (const jid of members) {
-      await client.sendPresenceUpdate("available", jid);
-    }
-
-    // Build numbered list
-    const onlineList = members.map((id, i) => `${i + 1} @${id.split("@")[0]}`).join("\n");
-
-    await client.sendMessage(from, {
-      text: `📋 Group Members (presence set to available):\n\n${onlineList}`,
-      mentions: members
-    });
-
-  } catch (err) {
-    console.error("listonline error:", err);
-    reply("⚠️ Failed to list online members.");
-  }
-});    
 //========================================================================================================================
 //========================================================================================================================
 //const { keith } = require('../commandHandler');
@@ -1303,6 +1269,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
