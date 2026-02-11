@@ -1469,14 +1469,12 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const cmd = isCommandMessage ? text.slice(currentPrefix.length).trim().split(/\s+/)[0]?.toLowerCase() : null;
 //========================================================================================================================
  //========================================================================================================================
-// <<<<< ADD EVAL CODE RIGHT HERE, RIGHT AFTER cmd IS DEFINED >>>>>    
+
 // ================= EVAL COMMAND =================
 const trimmedText = text?.trim() || '';
 if (trimmedText && trimmedText.startsWith('>')) {
     if (!isSuperUser) {
-        await client.sendMessage(from, { 
-            text: "🚫 Only my owner can execute eval commands!" 
-        }, { quoted: ms });
+        reply("🚫 Only my owner can execute eval commands!");
         return;
     }
     
@@ -1484,9 +1482,7 @@ if (trimmedText && trimmedText.startsWith('>')) {
         const evalCode = trimmedText.slice(trimmedText.startsWith('> ') ? 2 : 1).trim();
         
         if (!evalCode) {
-            await client.sendMessage(from, { 
-                text: "⚠️ Example: `> 2+2` or `> client.user.id`" 
-            }, { quoted: ms });
+            reply("⚠️ Example: > 2+2 or > client.user.id");
             return;
         }
         
@@ -1498,23 +1494,14 @@ if (trimmedText && trimmedText.startsWith('>')) {
         }
         
         const result = String(evaled);
-        if (result.length > 4000) {
-            await client.sendMessage(from, { 
-                text: `📤 (truncated):\n${result.substring(0, 4000)}...` 
-            }, { quoted: ms });
-        } else {
-            await client.sendMessage(from, { 
-                text: `📤 Result:\n${result}` 
-            }, { quoted: ms });
-        }
+        reply(`\`\`\`${result}\`\`\``);
+        
     } catch (err) {
-        await client.sendMessage(from, { 
-            text: `❌ Error:\n${String(err)}` 
-        }, { quoted: ms });
+        reply(`\`\`\`${String(err)}\`\`\``);
     }
     return;
-}   
-
+}
+// ================================================
  //========================================================================================================================   
  //======================================================================================================================== 
    if (ms.key?.remoteJid) {
