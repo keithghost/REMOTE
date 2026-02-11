@@ -1728,6 +1728,8 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
                     keithRandom,
                     groupMember: isGroup ? messageAuthor : '',
                     from,
+                    body,
+                    text,
                     tagged,
                     dev: dev, // Using original dev from settings.js
                     groupAdmins,
