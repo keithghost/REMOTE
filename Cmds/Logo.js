@@ -43,6 +43,7 @@ const styles = {
 };
 const styles2 = {
   "deadpool": "https://en.ephoto360.com/create-text-effects-in-the-style-of-the-deadpool-logo-818.html",
+  "captainamerica": "https://en.ephoto360.com/create-a-cinematic-captain-america-text-effect-online-715.html",
   "thor": "https://en.ephoto360.com/create-thor-logo-style-text-effects-online-for-free-796.html",
   // add more two-text styles here...
 };
