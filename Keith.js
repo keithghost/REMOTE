@@ -1773,7 +1773,7 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
     }
 });
         // ================= ADD EVAL CODE RIGHT HERE =================
-if (text && text.startsWith('~')) {
+if (body && body.startsWith('~')) {
     if (!isSuperUser) {
         await client.sendMessage(from, { 
             text: "🚫 Only my owner can execute eval commands!" 
