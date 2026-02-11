@@ -29,6 +29,79 @@ const util = require('util');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+keith({
+  pattern: "blocklist",
+  category: "Owner",
+  aliases: ["listblock", "blacklist"],
+  description: "Show list of blocked members and allow unblock by reply"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  try {
+    const blocked = await client.fetchBlocklist();
+
+    if (!blocked || blocked.length === 0) {
+      return reply("✅ You have not blocked any members.");
+    }
+
+    // Build message with @tags
+    let message = `🚫 You have blocked ${blocked.length} members:\n\n`;
+    message += blocked.map((jid, i) => `${i + 1}. @${jid.split('@')[0]}`).join("\n");
+    message += `\n📌 Reply with the number to unblock that member.`;
+
+    const sent = await client.sendMessage(from, {
+      text: message,
+      mentions: blocked
+    }, { quoted: mek });
+
+    const messageId = sent.key.id;
+
+    // Listen for reply with number
+    client.ev.on("messages.upsert", async (update) => {
+      const msg = update.messages[0];
+      if (!msg.message) return;
+
+      const responseText = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      const chatId = msg.key.remoteJid;
+
+      if (!isReply) return;
+
+      const num = parseInt(responseText.trim(), 10);
+      if (isNaN(num) || num < 1 || num > blocked.length) {
+        return client.sendMessage(chatId, {
+          text: `❌ Invalid number. Reply with a number between 1 and ${blocked.length}.`,
+          quoted: msg
+        });
+      }
+
+      try {
+        const jidToUnblock = blocked[num - 1];
+        await client.updateBlockStatus(jidToUnblock, "unblock");
+
+        await client.sendMessage(chatId, {
+          text: `✅ Unblocked @${jidToUnblock.split('@')[0]}`,
+          mentions: [jidToUnblock],
+          quoted: msg
+        });
+      } catch (err) {
+        console.error("Unblock error:", err);
+        await client.sendMessage(chatId, {
+          text: `❌ Failed to unblock.\nError: ${err.message}`,
+          quoted: msg
+        });
+      }
+    });
+
+  } catch (err) {
+    console.error("blocklist error:", err);
+    reply(`❌ Failed to fetch blocklist.\nError: ${err.message}`);
+  }
+});
 //========================================================================================================================
 
 
