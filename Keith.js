@@ -1469,13 +1469,9 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const cmd = isCommandMessage ? text.slice(currentPrefix.length).trim().split(/\s+/)[0]?.toLowerCase() : null;
 //========================================================================================================================
  //========================================================================================================================
-
-
-//========================================================================================================================
-// <<<<< ADD EVAL CODE RIGHT HERE, RIGHT AFTER cmd IS DEFINED >>>>>    
 // ================= EVAL COMMAND =================
 const trimmedText = text?.trim() || '';
-if (trimmedText && trimmedText.startsWith('>')) {
+if (trimmedText && trimmedText.startsWith('~')) {
     if (!isSuperUser) {
         await client.sendMessage(from, { 
             text: "🚫 Only my owner can execute eval commands!" 
@@ -1484,11 +1480,11 @@ if (trimmedText && trimmedText.startsWith('>')) {
     }
     
     try {
-        const evalCode = trimmedText.slice(trimmedText.startsWith('> ') ? 2 : 1).trim();
+        const evalCode = trimmedText.slice(trimmedText.startsWith('~ ') ? 2 : 1).trim();
         
         if (!evalCode) {
             await client.sendMessage(from, { 
-                text: "⚠️ Example: `~ 2+2` or `> client.user.id`" 
+                text: "⚠️ Example: `~ 2+2` or `~ client.user.id`" 
             }, { quoted: ms });
             return;
         }
@@ -1501,18 +1497,19 @@ if (trimmedText && trimmedText.startsWith('>')) {
         }
         
         const result = String(evaled);
-    
-            await client.sendMessage(from, { 
-                text: `${result}` 
-            }, { quoted: ms });
-        }
+        await client.sendMessage(from, { 
+            text: result 
+        }, { quoted: ms });
+        
     } catch (err) {
         await client.sendMessage(from, { 
-            text: `${String(err)}` 
+            text: String(err) 
         }, { quoted: ms });
     }
     return;
 }
+// ================================================
+
 
  //========================================================================================================================   
  //======================================================================================================================== 
