@@ -4,7 +4,7 @@ const axios = require('axios');
 const fetchLogoUrl = async (url, name) => {
   try {
     const response = await axios.get(
-      `https://apiskeith.vercel.app/logo/ephoto?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`
+      `https://apiskeith.top/logo/ephoto?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`
     );
 
     const { result } = response.data || {};
