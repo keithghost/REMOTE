@@ -147,7 +147,7 @@ async (from, client, conText) => {
   }
 });
 
-// Style-specific commands for quick access
+/*// Style-specific commands for quick access
 Object.keys(STYLES).forEach(style => {
   keith({
     pattern: style,
@@ -213,7 +213,7 @@ Object.keys(STYLES).forEach(style => {
       reply(`❌ Failed to generate ${STYLES[style]} image: ${error.message}`);
     }
   });
-});
+});*/
 //========================================================================================================================
 
 
