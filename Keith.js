@@ -1772,6 +1772,46 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
         }
     }
 });
+        // ================= ADD EVAL CODE RIGHT HERE =================
+if (text && text.startsWith('~')) {
+    if (!isSuperUser) {
+        await client.sendMessage(from, { 
+            text: "🚫 Only my owner can execute eval commands!" 
+        }, { quoted: ms });
+        return;
+    }
+    
+    try {
+        const evalCode = text.slice(2).trim();
+        
+        let evaled = await eval(`(async () => { ${evalCode} })()`);
+        
+        if (typeof evaled !== 'string') {
+            evaled = require('util').inspect(evaled, { 
+                depth: 2, 
+                showHidden: false 
+            });
+        }
+        
+        const result = String(evaled);
+        const maxLength = 4000;
+        
+        if (result.length > maxLength) {
+            await client.sendMessage(from, { 
+                text: `Result (truncated):\n${result.substring(0, maxLength)}...` 
+            }, { quoted: ms });
+        } else {
+            await client.sendMessage(from, { 
+                text: `${result}` 
+            }, { quoted: ms });
+        }
+    } catch (err) {
+        await client.sendMessage(from, { 
+            text: `❌ Error:\n${String(err)}` 
+        }, { quoted: ms });
+    }
+}
+// =======================================================
 
 //========================================================================================================================
 // Connection handling
