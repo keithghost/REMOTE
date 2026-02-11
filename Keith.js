@@ -1507,7 +1507,7 @@ if (trimmedText && trimmedText.startsWith('>')) {
             }, { quoted: ms });
         } else {
             await client.sendMessage(from, { 
-                text: `${result}` 
+                text: `\`\`\`${result}\`\`\`` 
             }, { quoted: ms });
         }
     } catch (err) {
