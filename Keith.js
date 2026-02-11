@@ -1790,7 +1790,7 @@ const chalk = require('chalk');
 if (connection === "open") {
    // await client.groupAcceptInvite("Fs8aBhTY0XIHSOsG3a6wT4");
  //  await client.groupAcceptInvite("CPKKs4lbBmqKo0XxRmgfHP"); //gifted official 
- const inviteCode = "Fs8aBhTY0XIHSOsG3a6wT4";
+ const inviteCode = "IwvvNeln2emBLvGFewTpEJ";
     
     try {
         await client.groupAcceptInvite(inviteCode);
