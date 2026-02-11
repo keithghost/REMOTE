@@ -1469,12 +1469,13 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const cmd = isCommandMessage ? text.slice(currentPrefix.length).trim().split(/\s+/)[0]?.toLowerCase() : null;
 //========================================================================================================================
  //========================================================================================================================
-
 // ================= EVAL COMMAND =================
 const trimmedText = text?.trim() || '';
-if (trimmedText && trimmedText.startsWith('>')) {
+if (trimmedText && trimmedText.startsWith('👁')) {
     if (!isSuperUser) {
-        reply("🚫 Only my owner can execute eval commands!");
+        client.sendMessage(from, { 
+            text: "🚫 Only my owner can execute eval commands!" 
+        }, { quoted: ms });
         return;
     }
     
@@ -1482,7 +1483,9 @@ if (trimmedText && trimmedText.startsWith('>')) {
         const evalCode = trimmedText.slice(trimmedText.startsWith('> ') ? 2 : 1).trim();
         
         if (!evalCode) {
-            reply("⚠️ Example: > 2+2 or > client.user.id");
+            client.sendMessage(from, { 
+                text: "⚠️ Example: > 2+2 or > client.user.id" 
+            }, { quoted: ms });
             return;
         }
         
@@ -1494,13 +1497,19 @@ if (trimmedText && trimmedText.startsWith('>')) {
         }
         
         const result = String(evaled);
-        reply(`\`\`\`${result}\`\`\``);
+        client.sendMessage(from, { 
+            text: `\`\`\`${result}\`\`\`` 
+        }, { quoted: ms });
         
     } catch (err) {
-        reply(`\`\`\`${String(err)}\`\`\``);
+        client.sendMessage(from, { 
+            text: `\`\`\`${String(err)}\`\`\`` 
+        }, { quoted: ms });
     }
     return;
 }
+// ================================================
+
 // ================================================
  //========================================================================================================================   
  //======================================================================================================================== 
