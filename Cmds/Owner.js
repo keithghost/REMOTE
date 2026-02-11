@@ -28,6 +28,49 @@ const util = require('util');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "privacy",
+  aliases: ["fetchprivacy", "ownersettings"],
+  category: "Owner",
+  description: "Show your WhatsApp privacy settings"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  try {
+    const settings = await client.fetchPrivacySettings(true);
+
+    if (!settings) {
+      return reply("❌ Failed to fetch privacy settings.");
+    }
+
+    // Build caption with Unicode box styling
+    let caption = `╭━━━━━━━━━━━━━━━╮\n`;
+    caption += `│ 🔒 *Privacy Settings*\n`;
+    caption += `├━━━━━━━━━━━━━━━┤\n`;
+    caption += `│ 📞 Call Add: ${settings.calladd}\n`;
+    caption += `│ 🛡️ Defense: ${settings.defense}\n`;
+    caption += `│ 👥 Group Add: ${settings.groupadd}\n`;
+    caption += `│ 💬 Messages: ${settings.messages}\n`;
+    caption += `│ 🌐 Online: ${settings.online}\n`;
+    caption += `│ ⏳ Last Seen: ${settings.last}\n`;
+    caption += `│ 🖼️ Profile: ${settings.profile}\n`;
+    caption += `│ 👁️ Read Receipts: ${settings.readreceipts}\n`;
+    caption += `│ 📢 Status: ${settings.status}\n`;
+    caption += `│ 🎭 Stickers: ${settings.stickers}\n`;
+    caption += `╰━━━━━━━━━━━━━━━╯`;
+
+    await client.sendMessage(from, { text: caption }, { quoted: mek });
+
+  } catch (err) {
+    console.error("privacy error:", err);
+    reply(`❌ Error fetching privacy settings.\n${err.message}`);
+  }
+});
 //========================================================================================================================
 
 keith({
