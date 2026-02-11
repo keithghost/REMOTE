@@ -1469,11 +1469,15 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const cmd = isCommandMessage ? text.slice(currentPrefix.length).trim().split(/\s+/)[0]?.toLowerCase() : null;
 //========================================================================================================================
  //========================================================================================================================
+
+
+//========================================================================================================================
+// <<<<< ADD EVAL CODE RIGHT HERE, RIGHT AFTER cmd IS DEFINED >>>>>    
 // ================= EVAL COMMAND =================
 const trimmedText = text?.trim() || '';
-if (trimmedText && trimmedText.startsWith('👁')) {
+if (trimmedText && trimmedText.startsWith('>')) {
     if (!isSuperUser) {
-        client.sendMessage(from, { 
+        await client.sendMessage(from, { 
             text: "🚫 Only my owner can execute eval commands!" 
         }, { quoted: ms });
         return;
@@ -1483,8 +1487,8 @@ if (trimmedText && trimmedText.startsWith('👁')) {
         const evalCode = trimmedText.slice(trimmedText.startsWith('> ') ? 2 : 1).trim();
         
         if (!evalCode) {
-            client.sendMessage(from, { 
-                text: "⚠️ Example: > 2+2 or > client.user.id" 
+            await client.sendMessage(from, { 
+                text: "⚠️ Example: `> 2+2` or `> client.user.id`" 
             }, { quoted: ms });
             return;
         }
@@ -1497,20 +1501,23 @@ if (trimmedText && trimmedText.startsWith('👁')) {
         }
         
         const result = String(evaled);
-        client.sendMessage(from, { 
-            text: `\`\`\`${result}\`\`\`` 
-        }, { quoted: ms });
-        
+        if (result.length > 4000) {
+            await client.sendMessage(from, { 
+                text: `${result.substring(0, 4000)}...` 
+            }, { quoted: ms });
+        } else {
+            await client.sendMessage(from, { 
+                text: `${result}` 
+            }, { quoted: ms });
+        }
     } catch (err) {
-        client.sendMessage(from, { 
-            text: `\`\`\`${String(err)}\`\`\`` 
+        await client.sendMessage(from, { 
+            text: `${String(err)}` 
         }, { quoted: ms });
     }
     return;
 }
-// ================================================
 
-// ================================================
  //========================================================================================================================   
  //======================================================================================================================== 
    if (ms.key?.remoteJid) {
