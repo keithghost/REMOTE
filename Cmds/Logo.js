@@ -1,5 +1,19 @@
 const { keith } = require('../commandHandler');
+const axios = require('axios');
 
+const fetchLogoUrl = async (url, name) => {
+  try {
+    const response = await axios.get(
+      `https://apiskeith.vercel.app/logo/ephoto?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`
+    );
+
+    const { result } = response.data || {};
+    return result?.download_url || null;
+  } catch (error) {
+    console.error("Error fetching logo:", error.message);
+    return null;
+  }
+};
 // Map of styles to their Ephoto URLs
 const styles = {
   "1917": "https://en.ephoto360.com/1917-style-text-effect-523.html",
