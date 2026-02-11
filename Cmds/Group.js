@@ -25,6 +25,34 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "rgpp",
+  aliases: ["removegpp", "deletegpp", "cleargpp"],
+  category: "group",
+  description: "Remove group profile picture"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser, isGroup } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isGroup) return reply("❌ This command can only be used in a group!");
+
+  try {
+    // ✅ Get group metadata directly
+    const metadata = await client.groupMetadata(from);
+    const groupId = metadata.id;
+
+    // ✅ Remove group profile picture
+    await client.removeProfilePicture(groupId);
+
+    reply("🗑️ Group profile picture removed successfully!");
+  } catch (err) {
+    console.error("rgpp error:", err);
+    reply(`❌ Failed to remove group profile picture.\nError: ${err.message}`);
+  }
+});
 //========================================================================================================================
 
 
@@ -1224,6 +1252,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
