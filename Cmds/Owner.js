@@ -30,6 +30,44 @@ const util = require('util');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "rpp",
+  aliases: ["removepic", "deletepp", "clearpp"],
+  category: "Owner",
+  description: "Remove your own profile picture"
+},
+async (from, client, conText) => {
+  const { reply, isSuperUser } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  try {
+    // ✅ Proper IQ node for removal: include <picture> with empty content
+    const iqNode = {
+      tag: "iq",
+      attrs: {
+        to: S_WHATSAPP_NET,
+        type: "set",
+        xmlns: "w:profile:picture"
+      },
+      content: [
+        {
+          tag: "picture",
+          attrs: { type: "image" },
+          content: [] // empty signals removal
+        }
+      ]
+    };
+
+    await client.query(iqNode);
+    reply("🗑️ Profile picture removed successfully!");
+  } catch (err) {
+    console.error("rpp error:", err);
+    reply(`❌ Failed to remove profile picture.\nError: ${err.message}`);
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "setgpp",
