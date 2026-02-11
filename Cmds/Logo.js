@@ -8,39 +8,33 @@ const styles = {
   // add more styles here...
 };
 
-keith({
-  pattern: "styles",
-  category: "ephoto",
-  description: "Generate text logo using Ephoto styles"
-},
-async (from, client, conText) => {
-  const { q, mek, reply } = conText;
+// Loop through styles and register each as a command
+for (const [pattern, url] of Object.entries(styles)) {
+  keith({
+    pattern,
+    category: "ephoto",
+    description: `Generate text logo using Ephoto style: ${pattern}`
+  },
+  async (from, client, conText) => {
+    const { q, mek, reply } = conText;
 
-  // Expect input like: .styles <style> <text>
-  const args = q?.trim().split(/\s+/);
-  if (!args || args.length < 2) {
-    return reply("_Usage: .styles <style> <text>_\nAvailable styles: " + Object.keys(styles).join(", "));
-  }
-
-  const styleKey = args[0].toLowerCase();
-  const text = args.slice(1).join(" ");
-
-  if (!styles[styleKey]) {
-    return reply("_Unknown style. Available styles: " + Object.keys(styles).join(", ") + "_");
-  }
-
-  try {
-    const logoUrl = await fetchLogoUrl(styles[styleKey], text);
-
-    if (logoUrl) {
-      await client.sendMessage(from, {
-        image: { url: logoUrl }
-      }, { quoted: mek });
-    } else {
-      reply("_Unable to fetch logo. Please try again later._");
+    if (!q) {
+      return reply(`_Please provide text to create logo_\nUsage: .${pattern} <text>`);
     }
-  } catch (error) {
-    console.error("styles command error:", error);
-    reply(`❌ An error occurred:\n${error.message}`);
-  }
-});
+
+    try {
+      const logoUrl = await fetchLogoUrl(url, q);
+
+      if (logoUrl) {
+        await client.sendMessage(from, {
+          image: { url: logoUrl }
+        }, { quoted: mek });
+      } else {
+        reply("_Unable to fetch logo. Please try again later._");
+      }
+    } catch (error) {
+      console.error(`${pattern} logo command error:`, error);
+      reply(`❌ An error occurred:\n${error.message}`);
+    }
+  });
+}
