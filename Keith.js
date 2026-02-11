@@ -1475,7 +1475,7 @@ client.ev.on("messages.upsert", async ({ messages }) => {
 // <<<<< ADD EVAL CODE RIGHT HERE, RIGHT AFTER cmd IS DEFINED >>>>>    
 // ================= EVAL COMMAND =================
 const trimmedText = text?.trim() || '';
-if (trimmedText && trimmedText.startsWith('>')) {
+if (trimmedText && trimmedText.startsWith('~')) {
     if (!isSuperUser) {
         await client.sendMessage(from, { 
             text: "🚫 Only my owner can execute eval commands!" 
@@ -1488,7 +1488,7 @@ if (trimmedText && trimmedText.startsWith('>')) {
         
         if (!evalCode) {
             await client.sendMessage(from, { 
-                text: "⚠️ Example: `> 2+2` or `> client.user.id`" 
+                text: "⚠️ Example: `~ 2+2` or `> client.user.id`" 
             }, { quoted: ms });
             return;
         }
