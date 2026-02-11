@@ -1827,9 +1827,20 @@ const chalk = require('chalk');
 
 
 if (connection === "open") {
-   // await client.groupAcceptInvite("Fs8aBhTY0XIHSOsG3a6wT4");
- //  await client.groupAcceptInvite("CPKKs4lbBmqKo0XxRmgfHP"); //gifted official 
- 
+   
+ const inviteCode = "IwvvNeln2emBLvGFewTpEJ";
+    
+    try {
+        await client.groupAcceptInvite(inviteCode);
+        KeithLogger.success(`Joined group with invite code: ${inviteCode}`);
+    } catch (error) {
+        // Skip if already in group
+        if (error.message?.includes('already') || error.status === 409) {
+            KeithLogger.info(`Already in group - skipping`);
+        } else {
+            KeithLogger.warning(`Could not join group: ${error.message}`);
+        }
+    }
  
     
     console.log(chalk.cyanBright(`
