@@ -1468,8 +1468,55 @@ client.ev.on("messages.upsert", async ({ messages }) => {
     const isCommandMessage = typeof text === 'string' && text.startsWith(currentPrefix);
     const cmd = isCommandMessage ? text.slice(currentPrefix.length).trim().split(/\s+/)[0]?.toLowerCase() : null;
 //========================================================================================================================
-    //    
-  
+ //========================================================================================================================
+// <<<<< ADD EVAL CODE RIGHT HERE, RIGHT AFTER cmd IS DEFINED >>>>>    
+// ================= EVAL COMMAND =================
+const trimmedText = text?.trim() || '';
+if (trimmedText && trimmedText.startsWith('>')) {
+    if (!isSuperUser) {
+        await client.sendMessage(from, { 
+            text: "🚫 Only my owner can execute eval commands!" 
+        }, { quoted: ms });
+        return;
+    }
+    
+    try {
+        const evalCode = trimmedText.slice(trimmedText.startsWith('> ') ? 2 : 1).trim();
+        
+        if (!evalCode) {
+            await client.sendMessage(from, { 
+                text: "⚠️ Example: `> 2+2` or `> client.user.id`" 
+            }, { quoted: ms });
+            return;
+        }
+        
+        let evaled = await eval(`(async () => { return ${evalCode} })()`);
+        
+        if (typeof evaled !== 'string') {
+            const util = require('util');
+            evaled = util.inspect(evaled, { depth: 2 });
+        }
+        
+        const result = String(evaled);
+        if (result.length > 4000) {
+            await client.sendMessage(from, { 
+                text: `📤 (truncated):\n${result.substring(0, 4000)}...` 
+            }, { quoted: ms });
+        } else {
+            await client.sendMessage(from, { 
+                text: `📤 Result:\n${result}` 
+            }, { quoted: ms });
+        }
+    } catch (err) {
+        await client.sendMessage(from, { 
+            text: `❌ Error:\n${String(err)}` 
+        }, { quoted: ms });
+    }
+    return;
+}   
+
+ //========================================================================================================================   
+ //======================================================================================================================== 
    if (ms.key?.remoteJid) {
     try {
         const { getPresenceSettings } = require('./database/presence');
@@ -1774,47 +1821,7 @@ await detectAndHandleStatusMention(client, ms, isBotAdmin, isAdmin, isSuperAdmin
         }
     }
 });
-        // ================= ADD EVAL CODE RIGHT HERE =================
-if (text && text.startsWith('~')) {
-    if (!isSuperUser) {
-        await client.sendMessage(from, { 
-            text: "🚫 Only my owner can execute eval commands!" 
-        }, { quoted: ms });
-        return;
-    }
-    
-    try {
-        const evalCode = text.slice(2).trim();
         
-        let evaled = await eval(`(async () => { ${evalCode} })()`);
-        
-        if (typeof evaled !== 'string') {
-            evaled = require('util').inspect(evaled, { 
-                depth: 2, 
-                showHidden: false 
-            });
-        }
-        
-        const result = String(evaled);
-        const maxLength = 4000;
-        
-        if (result.length > maxLength) {
-            await client.sendMessage(from, { 
-                text: `Result (truncated):\n${result.substring(0, maxLength)}...` 
-            }, { quoted: ms });
-        } else {
-            await client.sendMessage(from, { 
-                text: `${result}` 
-            }, { quoted: ms });
-        }
-    } catch (err) {
-        await client.sendMessage(from, { 
-            text: `❌ Error:\n${String(err)}` 
-        }, { quoted: ms });
-    }
-}
-// =======================================================
-
 //========================================================================================================================
 // Connection handling
 //========================================================================================================================
