@@ -27,6 +27,276 @@ const util = require('util');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+const { keith } = require('../commandHandler');
+//========================================================================================================================
+//========================================================================================================================
+
+
+
+keith({
+  pattern: "disappearing",
+  aliases: ["updatedisappearing", "ephemeral"],
+  category: "Owner",
+  description: "Update your WhatsApp default disappearing messages duration"
+},
+async (from, client, conText) => {
+  const { q, reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q) {
+    return reply("📌 Usage: .disappearing <0|86400|604800|7776000>\n\nValues:\n0 = Remove\n86400 = 24h\n604800 = 7d\n7776000 = 90d");
+  }
+
+  const value = parseInt(q.trim(), 10);
+  const validValues = [0, 86400, 604800, 7776000];
+
+  if (!validValues.includes(value)) {
+    return reply("❌ Invalid value.\nAvailable options: 0, 86400, 604800, 7776000");
+  }
+
+  try {
+    await client.updateDefaultDisappearingMode(value);
+
+    // Map seconds to human-readable label
+    const labels = {
+      0: "Removed (No disappearing messages)",
+      86400: "24 hours",
+      604800: "7 days",
+      7776000: "90 days"
+    };
+
+    await client.sendMessage(from, {
+      text: `✅ Default disappearing messages updated to: *${labels[value]}*`
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("disappearing error:", err);
+    reply(`❌ Error updating disappearing messages.\n${err.message}`);
+  }
+});
+//========================================================================================================================
+//========================================================================================================================
+
+
+keith({
+  pattern: "groupprivacy",
+  aliases: ["updategroupprivacy"],
+  category: "Owner",
+  description: "Update your WhatsApp Group Add privacy setting"
+},
+async (from, client, conText) => {
+  const { q, reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q) {
+    return reply("📌 Usage: .groupprivacy <all|contacts|contact_blacklist>");
+  }
+
+  const value = q.trim().toLowerCase();
+  const validValues = ["all", "contacts", "contact_blacklist"];
+
+  if (!validValues.includes(value)) {
+    return reply(`❌ Invalid value.\nAvailable options: ${validValues.join(", ")}`);
+  }
+
+  try {
+    await client.updateGroupsAddPrivacy(value);
+
+    await client.sendMessage(from, {
+      text: `✅ Group Add privacy updated to: *${value}*`
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("groupprivacy error:", err);
+    reply(`❌ Error updating Group Add privacy.\n${err.message}`);
+  }
+});
+
+//========================================================================================================================
+//========================================================================================================================
+
+keith({
+  pattern: "readreceipts",
+  aliases: ["updatereadreceipts"],
+  category: "Owner",
+  description: "Update your WhatsApp Read Receipts privacy setting"
+},
+async (from, client, conText) => {
+  const { q, reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q) {
+    return reply("📌 Usage: .readreceipts <all|none>");
+  }
+
+  const value = q.trim().toLowerCase();
+  const validValues = ["all", "none"];
+
+  if (!validValues.includes(value)) {
+    return reply(`❌ Invalid value.\nAvailable options: ${validValues.join(", ")}`);
+  }
+
+  try {
+    await client.updateReadReceiptsPrivacy(value);
+
+    await client.sendMessage(from, {
+      text: `✅ Read Receipts privacy updated to: *${value}*`
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("readreceipts privacy error:", err);
+    reply(`❌ Error updating Read Receipts privacy.\n${err.message}`);
+  }
+});
+
+//========================================================================================================================
+//========================================================================================================================
+
+keith({
+  pattern: "statusprivacy",
+  aliases: ["updatestatusprivacy"],
+  category: "Owner",
+  description: "Update your WhatsApp Status privacy setting"
+},
+async (from, client, conText) => {
+  const { q, reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q) {
+    return reply("📌 Usage: .statusprivacy <all|contacts|contact_blacklist|none>");
+  }
+
+  const value = q.trim().toLowerCase();
+  const validValues = ["all", "contacts", "contact_blacklist", "none"];
+
+  if (!validValues.includes(value)) {
+    return reply(`❌ Invalid value.\nAvailable options: ${validValues.join(", ")}`);
+  }
+
+  try {
+    await client.updateStatusPrivacy(value);
+
+    await client.sendMessage(from, {
+      text: `✅ Status privacy updated to: *${value}*`
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("statusprivacy error:", err);
+    reply(`❌ Error updating Status privacy.\n${err.message}`);
+  }
+});
+
+//========================================================================================================================
+//========================================================================================================================
+
+
+keith({
+  pattern: "profileprivacy",
+  aliases: ["updateprofileprivacy"],
+  category: "Owner",
+  description: "Update your WhatsApp Profile Picture privacy setting"
+},
+async (from, client, conText) => {
+  const { q, reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q) {
+    return reply("📌 Usage: .profileprivacy <all|contacts|contact_blacklist|none>");
+  }
+
+  const value = q.trim().toLowerCase();
+  const validValues = ["all", "contacts", "contact_blacklist", "none"];
+
+  if (!validValues.includes(value)) {
+    return reply(`❌ Invalid value.\nAvailable options: ${validValues.join(", ")}`);
+  }
+
+  try {
+    await client.updateProfilePicturePrivacy(value);
+
+    await client.sendMessage(from, {
+      text: `✅ Profile Picture privacy updated to: *${value}*`
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("profileprivacy error:", err);
+    reply(`❌ Error updating Profile Picture privacy.\n${err.message}`);
+  }
+});
+
+//========================================================================================================================
+//========================================================================================================================
+
+keith({
+  pattern: "updateonline",
+  aliases: ["online"],
+  category: "Owner",
+  description: "Update your WhatsApp Online privacy setting"
+},
+async (from, client, conText) => {
+  const { q, reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q) {
+    return reply("📌 Usage: .online <all|match_last_seen>");
+  }
+
+  const value = q.trim().toLowerCase();
+  const validValues = ["all", "match_last_seen"];
+
+  if (!validValues.includes(value)) {
+    return reply(`❌ Invalid value.\nAvailable options: ${validValues.join(", ")}`);
+  }
+
+  try {
+    await client.updateOnlinePrivacy(value);
+
+    await client.sendMessage(from, {
+      text: `✅ Online privacy updated to: *${value}*`
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("online privacy error:", err);
+    reply(`❌ Error updating Online privacy.\n${err.message}`);
+  }
+});
+
+//========================================================================================================================
+//========================================================================================================================
+
+keith({
+  pattern: "lastseen",
+  aliases: ["updatelastseen"],
+  category: "Owner",
+  description: "Update your WhatsApp Last Seen privacy setting"
+},
+async (from, client, conText) => {
+  const { q, reply, isSuperUser, mek } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+
+  if (!q) {
+    return reply("📌 Usage: .lastseen <all|contacts|contact_blacklist|none>");
+  }
+
+  const value = q.trim().toLowerCase();
+  const validValues = ["all", "contacts", "contact_blacklist", "none"];
+
+  if (!validValues.includes(value)) {
+    return reply(`❌ Invalid value.\nAvailable options: ${validValues.join(", ")}`);
+  }
+
+  try {
+    await client.updateLastSeenPrivacy(value);
+
+    await client.sendMessage(from, {
+      text: `✅ Last Seen privacy updated to: *${value}*`
+    }, { quoted: mek });
+  } catch (err) {
+    console.error("lastseen error:", err);
+    reply(`❌ Error updating Last Seen privacy.\n${err.message}`);
+  }
+});
 //========================================================================================================================
 
 
