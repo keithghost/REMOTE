@@ -1031,6 +1031,11 @@ async function sendDeletedMessageNotification(client, settings, {
     }
     else if (settings.includeMedia) {
         try {
+            const docMessage = deletedMsg.message?.documentMessage || 
+                              deletedMsg.message?.ephemeralMessage?.message?.documentMessage ||
+                              deletedMsg.message?.viewOnceMessage?.message?.documentMessage ||
+                              deletedMsg.message?.viewOnceMessageV2?.message?.documentMessage;
+            
             if (deletedMsg.message.imageMessage) {
                 const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.imageMessage);
                 await client.sendMessage(targetJid, {
@@ -1040,17 +1045,17 @@ async function sendDeletedMessageNotification(client, settings, {
                     contextInfo
                 });
             }
-            else if (deletedMsg.message.documentMessage) {
-            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.documentMessage);
-            await client.sendMessage(targetJid, {
-                document: { url: buffer },
-                fileName: deletedMsg.message.documentMessage.fileName || 'document',
-                mimetype: deletedMsg.message.documentMessage.mimetype || 'application/octet-stream',
-                caption: notification,
-                mentions: [deleterJid, senderJid],
-                contextInfo
-            });
-        }   
+            else if (docMessage) {
+                const buffer = await client.downloadAndSaveMediaMessage(docMessage);
+                await client.sendMessage(targetJid, {
+                    document: { url: buffer },
+                    fileName: docMessage.fileName || 'document',
+                    mimetype: docMessage.mimetype || 'application/octet-stream',
+                    caption: notification,
+                    mentions: [deleterJid, senderJid],
+                    contextInfo
+                });
+            }       
             else if (deletedMsg.message.videoMessage) {
                 const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.videoMessage);
                 await client.sendMessage(targetJid, {
