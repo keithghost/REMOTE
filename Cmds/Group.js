@@ -24,6 +24,31 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "rejectall",
+  aliases: ["declineall", "reject"],
+  category: "group",
+  description: "Reject all pending join requests"
+},
+async (from, client, conText) => {
+  const { reply, isGroup, isAdmin, isBotAdmin } = conText;
+
+  if (!isGroup) return reply("This command is meant for groups");
+  // if (!isAdmin) return reply("You need admin privileges");
+  if (!isBotAdmin) return reply("I need admin privileges");
+
+  const responseList = await client.groupRequestParticipantsList(from);
+
+  if (!responseList.length) return reply("There are no pending join requests at this time.");
+
+  for (const participant of responseList) {
+    await client.groupRequestParticipantsUpdate(from, [participant.jid], "reject");
+  }
+
+  reply("❌ All pending participants have been rejected.");
+});
 //========================================================================================================================
 
 
@@ -1252,6 +1277,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
