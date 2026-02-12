@@ -1040,6 +1040,17 @@ async function sendDeletedMessageNotification(client, settings, {
                     contextInfo
                 });
             }
+            else if (deletedMsg.message.documentMessage) {
+            const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.documentMessage);
+            await client.sendMessage(targetJid, {
+                document: { url: buffer },
+                fileName: deletedMsg.message.documentMessage.fileName || 'document',
+                mimetype: deletedMsg.message.documentMessage.mimetype || 'application/octet-stream',
+                caption: notification,
+                mentions: [deleterJid, senderJid],
+                contextInfo
+            });
+        }   
             else if (deletedMsg.message.videoMessage) {
                 const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.videoMessage);
                 await client.sendMessage(targetJid, {
