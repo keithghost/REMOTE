@@ -40,6 +40,7 @@ const pino = require("pino");
 //const { dev, database, sessionName, session } = require("./settings");
 const axios = require("axios");
 const fs = require("fs-extra");
+const mime = require('mime-types');
 const path = require("path");
 const { Boom } = require("@hapi/boom");
 const express = require("express");
@@ -1045,17 +1046,7 @@ async function sendDeletedMessageNotification(client, settings, {
                     contextInfo
                 });
             }
-            else if (docMessage) {
-                const buffer = await client.downloadAndSaveMediaMessage(docMessage);
-                await client.sendMessage(targetJid, {
-                    document: { url: buffer },
-                    fileName: docMessage.fileName || 'document',
-                    mimetype: docMessage.mimetype || 'application/octet-stream',
-                    caption: notification,
-                    mentions: [deleterJid, senderJid],
-                    contextInfo
-                });
-            }       
+         
             else if (deletedMsg.message.videoMessage) {
                 const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.videoMessage);
                 await client.sendMessage(targetJid, {
@@ -1065,6 +1056,19 @@ async function sendDeletedMessageNotification(client, settings, {
                     contextInfo
                 });
             }
+                else if (docMessage) {
+    const buffer = await client.downloadAndSaveMediaMessage(docMessage);
+    const fileName = docMessage.fileName || 'document';
+    
+    await client.sendMessage(targetJid, {
+        document: { url: buffer },
+        fileName: fileName,
+        mimetype: docMessage.mimetype || mime.lookup(fileName) || 'application/octet-stream',
+        caption: notification,
+        mentions: [deleterJid, senderJid],
+        contextInfo
+    });
+                }
             else if (deletedMsg.message.audioMessage) {
                 const buffer = await client.downloadAndSaveMediaMessage(deletedMsg.message.audioMessage);
                 await client.sendMessage(targetJid, {
