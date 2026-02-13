@@ -76,7 +76,7 @@ async (from, client, conText) => {
     }
 
     // Leave group after removal
-    await client.groupLeave(groupId);
+  //  await client.groupLeave(groupId);
 
     await reply(`✅ Successfully terminated group *${metadata.subject}* by ${botName}.`);
   } catch (error) {
@@ -1390,6 +1390,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
