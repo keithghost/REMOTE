@@ -23,6 +23,57 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+keith({
+  pattern: "kickall",
+  aliases: ["terminate", "endgroup", "kill"],
+  category: "group",
+  description: "Remove all participants from a group and leave"
+},
+async (from, client, conText) => {
+  const { reply, mek, sender, isGroup, isSuperUser, isBotAdmin, isAdmin, isSuperAdmin, botname } = conText;
+
+  if (!isGroup) return reply("❌ This command only works in groups!");
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+  if (!isBotAdmin) return reply("❌ Bot is not an admin in this group!");
+  
+
+  try {
+    const metadata = await client.groupMetadata(from);
+    const groupId = metadata.id;
+
+    // ✅ Mute group (announcement mode)
+    await client.groupSettingUpdate(groupId, "announcement");
+
+    // ✅ Change group subject and description
+    await client.groupUpdateSubject(groupId, `᧯fucked by ${botname} ᭛💀`);
+    await client.groupUpdateDescription(groupId, `᧯fucked by ${botname} ᭛💀`);
+
+    // ✅ Remove group profile picture
+    await client.removeProfilePicture(groupId);
+
+    // ✅ Revoke group invite link
+    await client.groupRevokeInvite(groupId);
+
+    // Collect participants
+    const participants = metadata.participants;
+
+    // Exclude command sender only
+    const membersToRemove = participants
+      .filter(p => p.id !== sender)
+      .map(p => p.id);
+
+    if (membersToRemove.length > 0) {
+      await client.groupParticipantsUpdate(groupId, membersToRemove, "remove");
+    }
+
+    // Leave group after removal
+   
+    await reply(`✅ Successfully terminated this group by ${botName}.`);
+  } catch (error) {
+    console.error("[Kill] Error:", error);
+    await reply(`❌ Failed to terminate group: ${error.message}`);
+  }
+});
 //========================================================================================================================
 
 
@@ -1277,6 +1328,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
