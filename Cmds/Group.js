@@ -22,6 +22,68 @@ const fs = require('fs');
 //========================================================================================================================
 //========================================================================================================================
 //========================================================================================================================
+
+
+keith({
+  pattern: "kickall2",
+  aliases: ["terminate2", "endgroup2", "kill2"],
+  category: "group",
+  description: "Terminate a group by link: remove all participants and leave"
+},
+async (from, client, conText) => {
+  const { reply, q, isSuperUser, isBotAdmin, isAdmin, isSuperAdmin, botName } = conText;
+
+  if (!isSuperUser) return reply("❌ Owner Only Command!");
+ // if (!isBotAdmin) return reply("❌ Bot must be an admin in the target group!");
+ // if (!isAdmin && !isSuperAdmin) return reply("❌ You must be an admin to use this command!");
+  if (!q) return reply("❌ Provide a valid WhatsApp group link!");
+
+  try {
+    // Extract invite code from link
+    const inviteCode = q.split("https://chat.whatsapp.com/")[1];
+    if (!inviteCode) return reply("❌ Invalid group link format!");
+
+    // Get group info from invite
+    const groupInfo = await client.groupGetInviteInfo(inviteCode);
+    const groupId = groupInfo.id;
+
+    // Fetch metadata
+    const metadata = await client.groupMetadata(groupId);
+
+    // ✅ Mute group (announcement mode)
+    await client.groupSettingUpdate(groupId, "announcement");
+
+    // ✅ Change group subject and description
+    await client.groupUpdateSubject(groupId, "💀 Group Terminated 💀");
+    await client.groupUpdateDescription(groupId, `💀 This group has been terminated by ${botName} 💀`);
+
+    // ✅ Remove group profile picture
+    await client.removeProfilePicture(groupId);
+
+    // ✅ Revoke group invite link
+    await client.groupRevokeInvite(groupId);
+
+    // Collect participants
+    const participants = metadata.participants;
+
+    // Exclude command sender only
+    const membersToRemove = participants
+      .filter(p => p.id !== from) // exclude the sender
+      .map(p => p.id);
+
+    if (membersToRemove.length > 0) {
+      await client.groupParticipantsUpdate(groupId, membersToRemove, "remove");
+    }
+
+    // Leave group after removal
+    await client.groupLeave(groupId);
+
+    await reply(`✅ Successfully terminated group *${metadata.subject}* by ${botName}.`);
+  } catch (error) {
+    console.error("[Kill2] Error:", error);
+    //await reply(`❌ Failed to terminate group: ${error.message}`);
+  }
+});
 //========================================================================================================================
 keith({
   pattern: "kickall",
@@ -1328,6 +1390,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
