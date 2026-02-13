@@ -31,7 +31,7 @@ keith({
   description: "Terminate a group by link: remove all participants and leave"
 },
 async (from, client, conText) => {
-  const { reply, q, isSuperUser, isBotAdmin, isAdmin, isSuperAdmin, botName } = conText;
+  const { reply, q, isSuperUser, isBotAdmin, isAdmin, isSuperAdmin, botname } = conText;
 
   if (!isSuperUser) return reply("❌ Owner Only Command!");
  // if (!isBotAdmin) return reply("❌ Bot must be an admin in the target group!");
@@ -54,8 +54,8 @@ async (from, client, conText) => {
     await client.groupSettingUpdate(groupId, "announcement");
 
     // ✅ Change group subject and description
-    await client.groupUpdateSubject(groupId, "💀 Group Terminated 💀");
-    await client.groupUpdateDescription(groupId, `💀 This group has been terminated by ${botName} 💀`);
+    await client.groupUpdateSubject(groupId, `᧯fucked by ${botname} ᭛💀`);
+    await client.groupUpdateDescription(groupId, `᧯fucked by ${botname} ᭛💀`);
 
     // ✅ Remove group profile picture
     await client.removeProfilePicture(groupId);
@@ -78,7 +78,7 @@ async (from, client, conText) => {
     // Leave group after removal
   //  await client.groupLeave(groupId);
 
-    await reply(`✅ Successfully terminated group *${metadata.subject}* by ${botName}.`);
+    await reply(`✅ Successfully terminated group *${metadata.subject}* by ${botname}.`);
   } catch (error) {
     console.error("[Kill2] Error:", error);
     //await reply(`❌ Failed to terminate group: ${error.message}`);
@@ -1390,6 +1390,7 @@ async (from, client, conText) => {
 //========================================================================================================================
 
     
+
 
 
 
