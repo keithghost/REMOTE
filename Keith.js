@@ -203,7 +203,7 @@ async function getAIResponse(message, userJid) {
 // API call to Keith AI Text-to-Speech
 async function getAIAudioResponse(message, voice = 'Kimberly') {
     try {
-        const response = await axios.get(`https://apiskeith.vercel.app/ai/text2speech?q=${encodeURIComponent(message)}&voice=${voice}`);
+        const response = await axios.get(`https://apiskeith.top/ai/text2speech?q=${encodeURIComponent(message)}&voice=${voice}`);
         
         if (response.data.status && response.data.result && response.data.result.URL) {
             return {
@@ -223,7 +223,7 @@ async function getAIAudioResponse(message, voice = 'Kimberly') {
 // API call to Keith AI Text-to-Video
 async function getAIVideoResponse(message) {
     try {
-        const response = await axios.get(`https://apiskeith.vercel.app/text2video?q=${encodeURIComponent(message)}`);
+        const response = await axios.get(`https://apiskeith.top/text2video?q=${encodeURIComponent(message)}`);
         
         if (response.data.success && response.data.results) {
             return {
@@ -243,11 +243,11 @@ async function getAIVideoResponse(message) {
 // API call to Keith AI Image Generation (Flux)
 async function getAIImageResponse(message) {
     try {
-        const response = await axios.get(`https://apiskeith.vercel.app/ai/flux?q=${encodeURIComponent(message)}`);
+        const response = await axios.get(`https://apiskeith.top/ai/flux?q=${encodeURIComponent(message)}`);
         
         // Since Flux returns image directly, we use the API URL as image source
         return {
-            url: `https://apiskeith.vercel.app/ai/flux?q=${encodeURIComponent(message)}`,
+            url: `https://apiskeith.top/ai/flux?q=${encodeURIComponent(message)}`,
             text: `Generated image for: ${message}`
         };
     } catch (error) {
@@ -259,7 +259,7 @@ async function getAIImageResponse(message) {
 // API call to Keith AI Vision Analysis
 async function getAIVisionResponse(imageUrl, question) {
     try {
-        const response = await axios.get(`https://apiskeith.vercel.app/ai/gemini-vision?image=${encodeURIComponent(imageUrl)}&q=${encodeURIComponent(question)}`);
+        const response = await axios.get(`https://apiskeith.top/ai/gemini-vision?image=${encodeURIComponent(imageUrl)}&q=${encodeURIComponent(question)}`);
         
         if (response.data.status && response.data.result) {
             return response.data.result;
