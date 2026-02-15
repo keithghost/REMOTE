@@ -525,7 +525,7 @@ keith({
 
   } catch (error) {
     console.error("gpt error:", error);
-    /^await react("❌");
+    //await react("❌");
     await reply(`❌ Error: ${error.message}`);
   }
 });
