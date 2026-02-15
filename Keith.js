@@ -186,7 +186,7 @@ async function getAIResponse(message, userJid) {
 
         const fullMessage = context + `Current: ${message}`;
         
-        const response = await axios.get(`https://apiskeith.vercel.app/keithai?q=${encodeURIComponent(fullMessage)}`);
+        const response = await axios.get(`https://apiskeith.top/keithai?q=${encodeURIComponent(fullMessage)}`);
         
         if (response.data.status && response.data.result) {
             return response.data.result;
