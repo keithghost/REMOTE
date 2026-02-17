@@ -45,7 +45,7 @@ async function setCurrentHash(hash) {
 
 // File Sync with preservation rules
 async function syncFiles(source, target) {
-  const preserveFiles = ['app.json', 'settings.js', 'set.env'];
+  const preserveFiles = ['app.json', 'set.env'];
   const preserveFolders = ['backups', 'logs']; // Removed 'database' from here
   
   const items = await fs.readdir(source);
