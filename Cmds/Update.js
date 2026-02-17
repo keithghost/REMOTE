@@ -6,7 +6,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const axios = require('axios');
 
-// DB Model
+// DB Model for tracking updates
 const UpdateDB = database.define('bot_updates', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   current_hash: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'initial' },
@@ -17,7 +17,7 @@ const UpdateDB = database.define('bot_updates', {
   freezeTableName: true
 });
 
-// DB Ops
+// DB Operations
 async function initializeUpdateDB() {
   await UpdateDB.sync();
   await UpdateDB.findOrCreate({
@@ -43,10 +43,10 @@ async function setCurrentHash(hash) {
   }, { where: { id: 1 } });
 }
 
-// File Sync with database preservation
+// File Sync with preservation rules
 async function syncFiles(source, target) {
   const preserveFiles = ['app.json', 'settings.js', 'set.env'];
-  const preserveFolders = ['database', 'backups', 'logs'];
+  const preserveFolders = ['backups', 'logs']; // Removed 'database' from here
   
   const items = await fs.readdir(source);
 
@@ -70,26 +70,6 @@ async function syncFiles(source, target) {
   }
 }
 
-// Backup database before update (optional safety)
-async function backupDatabase() {
-  const backupDir = path.join(__dirname, '..', 'backups');
-  const dbDir = path.join(__dirname, '..', 'database');
-  
-  if (await fs.pathExists(dbDir)) {
-    await fs.ensureDir(backupDir);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(backupDir, `backup-${timestamp}.zip`);
-    
-    const zip = new AdmZip();
-    zip.addLocalFolder(dbDir, 'database');
-    zip.writeZip(backupPath);
-    
-    console.log(`📦 Database backed up to: ${backupPath}`);
-    return backupPath;
-  }
-  return null;
-}
-
 // Update Command
 keith({
   pattern: "update",
@@ -106,7 +86,7 @@ keith({
   try {
     await reply("🔍 Checking for updates...");
 
-    const repo = "keithkeizzah/KEITH-MD";
+    const repo = "keith-keizzah/Keith";
     const { data: commit } = await axios.get(
       `https://api.github.com/repos/${repo}/commits/main`,
       { timeout: 8000 }
@@ -116,10 +96,6 @@ keith({
     if (commit.sha === currentHash) {
       return reply("✅ Already running the latest version!");
     }
-
-    // Create backup before updating
-    await reply("💾 Creating database backup...");
-    await backupDatabase();
 
     await reply("⬇️ Downloading update...");
     const zipUrl = `https://github.com/${repo}/archive/${commit.sha}.zip`;
@@ -148,7 +124,7 @@ keith({
       .find(name => name.startsWith('KEITH-MD-'));
     const updateSrc = path.join(extractPath, extractedFolder);
 
-    await reply("🔄 Applying update (preserving database)...");
+    await reply("🔄 Applying update (preserving settings)...");
     await syncFiles(updateSrc, path.join(__dirname, '..'));
     await setCurrentHash(commit.sha);
 
@@ -169,5 +145,5 @@ keith({
   }
 });
 
-// Init DB
+// Initialize DB
 initializeUpdateDB().catch(console.error);
