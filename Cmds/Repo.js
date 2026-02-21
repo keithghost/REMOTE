@@ -187,8 +187,8 @@ keith({
 
 
 keith({
-  pattern: "repo",
-  aliases: ["script", "sc"],
+  pattern: "repo2",
+  aliases: ["script2", "sc2"],
   description: "Send KEITH-MD repo information",
   category: "General",
   filename: __filename
@@ -229,7 +229,7 @@ keith({
 });
 
 //
-/*keith({
+keith({
   pattern: "repo",
   aliases: ["script", "sc"],
   description: "Send KEITH-MD repo information",
@@ -239,7 +239,7 @@ keith({
   const { mek, pushName, botname, author } = conText;
 
   try {
-    const response = await axios.get("https://api.github.com/repos/Keithkeizzah/KEITH-MD");
+    const response = await axios.get("https://api.github.com/repos/laurentsams2/KEITH-MD");
     const repoData = response.data;
 
     const createdDate = new Date(repoData.created_at).toLocaleDateString("en-KE", {
@@ -290,4 +290,4 @@ keith({
       text: "❌ Failed to fetch repository information."
     }, { quoted: mek });
   }
-});*/
+});
